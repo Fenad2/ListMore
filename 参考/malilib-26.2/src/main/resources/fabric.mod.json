@@ -1,0 +1,51 @@
+{
+	"schemaVersion": 1,
+	"id": "malilib",
+	"name": "MaLiLib",
+	"version": "${mod_version}",
+
+	"description": "A library mod required by masa's client-side mods",
+	"authors": [
+		"masa"
+	],
+	"contributors": [
+		"Sakura-Ryoko"
+	],
+	"contact": {
+		"homepage": "https://www.curseforge.com/minecraft/mc-mods/malilib",
+		"issues": "https://github.com/maruohon/malilib/issues",
+		"sources": "https://github.com/maruohon/malilib",
+		"twitter": "https://twitter.com/maruohon",
+		"discord": "https://discordapp.com/channels/211786369951989762/453662800460644354/"
+	},
+
+	"license": "LGPLv3",
+	"icon": "assets/malilib/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"main": [
+			"fi.dy.masa.malilib.MaLiLib"
+		],
+		"modmenu": [
+			"fi.dy.masa.malilib.compat.modmenu.ModMenuImpl"
+		]
+	},
+	"mixins": [
+		"mixins.malilib.json"
+	],
+	"accessWidener": "malilib.accesswidener",
+
+	"depends": {
+		"minecraft": "~26.2-",
+		"fabric-networking-api-v1": ">=6.3.3",
+        "fabric-resource-loader-v1": "*"
+	},
+	"breaks": {
+        "sodium": "<0.9.0-",
+		"iris": "<1.11.1-",
+		"itemscroller": "<0.32.0-",
+		"litematica": "<0.28.2-",
+		"minihud": "<0.40.2-",
+		"tweakeroo": "<0.29.2-"
+	}
+}
