@@ -1,0 +1,11 @@
+{
+	"ohmylist.gui.title": "Oh My List",
+	"malilib.gui.button.all": "全部",
+	"ohmylist.gui.tab.generic": "通用",
+	"ohmylist.config.generic.name.playerXray": "玩家透视",
+	"ohmylist.config.generic.prettyName.playerXray": "玩家透视",
+	"ohmylist.config.generic.comment.playerXray": "为其他玩家添加原版发光描边效果，可以隔墙看见。",
+	"ohmylist.config.generic.name.playerXrayColor": "玩家透视颜色",
+	"ohmylist.config.generic.prettyName.playerXrayColor": "玩家透视颜色",
+	"ohmylist.config.generic.comment.playerXrayColor": "使用十六进制颜色代码设置玩家透视的描边颜色，右侧调色板可直接选色。"
+}

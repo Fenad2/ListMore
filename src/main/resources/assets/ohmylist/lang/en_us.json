@@ -1,0 +1,11 @@
+{
+	"ohmylist.gui.title": "Oh My List",
+	"malilib.gui.button.all": "All",
+	"ohmylist.gui.tab.generic": "Generic",
+	"ohmylist.config.generic.name.playerXray": "Player Xray",
+	"ohmylist.config.generic.prettyName.playerXray": "Player Xray",
+	"ohmylist.config.generic.comment.playerXray": "Highlights other players through walls with the vanilla glowing outline.",
+	"ohmylist.config.generic.name.playerXrayColor": "Player Xray Color",
+	"ohmylist.config.generic.prettyName.playerXrayColor": "Player Xray Color",
+	"ohmylist.config.generic.comment.playerXrayColor": "Sets the glowing outline color for Player Xray using a hex color value."
+}

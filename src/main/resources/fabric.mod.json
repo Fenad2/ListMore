@@ -3,20 +3,23 @@
 	"id": "ohmylist",
 	"version": "${version}",
 	"name": "OhMyList",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"description": "A client-side utility mod for quality-of-life tweaks.",
 	"authors": [
 		"Fenad2"
 	],
 	"contact": {
 		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"sources": "https://github.com/Fenad2/OhMyList"
 	},
 	"license": "LGPL-3.0",
 	"icon": "assets/ohmylist/icon.png",
-	"environment": "*",
+	"environment": "client",
 	"entrypoints": {
-		"main": [
+		"client": [
 			"com.ohmylist.OhMyList"
+		],
+		"modmenu": [
+			"com.ohmylist.OhMyListModMenuApiImpl"
 		]
 	},
 	"mixins": [
@@ -28,5 +31,8 @@
 		"java": ">=25",
 		"fabric-api": "*",
 		"malilib": "*"
+	},
+	"custom": {
+		"modmenu:clientsideOnly": true
 	}
 }

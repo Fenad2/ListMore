@@ -22,20 +22,24 @@ repositories {
 }
 
 dependencies {
-	def malilibFabricGa = project.getProperties().getOrDefault('dependencies.api.malilib_version.use_sakura_fork', false) ?
-		'com.github.sakura-ryoko:malilib' : 'maven.modrinth:malilib'
+	def useSakuraMalilib = project.findProperty('dependencies.api.malilib_version.use_sakura_fork')?.toString()?.toBoolean() ?: false
+	def malilibFabricGa = useSakuraMalilib ? 'com.github.sakura-ryoko:malilib' : 'maven.modrinth:malilib'
 	def malilibVersion = project.findProperty('dependencies.api.malilib_version')
 	def malilibCoordinate = malilibVersion.contains(':') ? malilibVersion : "${malilibFabricGa}:${malilibVersion}"
+	def modMenuJar = file('参考/[模组菜单] modmenu-20.0.0-beta.4.jar')
 
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
-	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
 	// MaLiLib is a required dependency for OML.
-	modImplementation malilibCoordinate
+	implementation malilibCoordinate
+
+	// Temporary local Mod Menu API dependency for the config screen integration.
+	compileOnly files(modMenuJar)
 }
 
 processResources {
@@ -49,9 +53,16 @@ processResources {
 
 tasks.withType(JavaCompile).configureEach {
 	it.options.release = 25
+	it.javaCompiler = javaToolchains.compilerFor {
+		languageVersion = JavaLanguageVersion.of(25)
+	}
 }
 
 java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(25)
+	}
+
 	// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
 	// if it is present.
 	// If you remove this line, sources will not be generated.
