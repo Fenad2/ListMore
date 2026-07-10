@@ -24,10 +24,16 @@ public class OhMyListConfigs implements IConfigHandler {
 	public static class Generic {
 		public static final ConfigBoolean PLAYER_XRAY = createPlayerXray();
 		public static final ConfigColor PLAYER_XRAY_COLOR = createPlayerXrayColor();
+		public static final ConfigBoolean PLAYER_TRACER = createPlayerTracer();
+		public static final ConfigColor PLAYER_TRACER_COLOR = createPlayerTracerColor();
+		public static final ConfigBoolean PROJECTILE_LANDING_PREDICTION = createProjectileLandingPrediction();
 
 		public static final ImmutableList<IConfigBase> OPTIONS = ImmutableList.of(
 			PLAYER_XRAY,
-			PLAYER_XRAY_COLOR
+			PLAYER_XRAY_COLOR,
+			PLAYER_TRACER,
+			PLAYER_TRACER_COLOR,
+			PROJECTILE_LANDING_PREDICTION
 		);
 	}
 
@@ -39,6 +45,24 @@ public class OhMyListConfigs implements IConfigHandler {
 
 	private static ConfigColor createPlayerXrayColor() {
 		ConfigColor config = new ConfigColor("playerXrayColor", "#FFFFFFFF").apply(GENERIC_KEY);
+		config.setValueChangeCallback(value -> INSTANCE.save());
+		return config;
+	}
+
+	private static ConfigBoolean createPlayerTracer() {
+		ConfigBoolean config = new ConfigBoolean("playerTracer", false).apply(GENERIC_KEY);
+		config.setValueChangeCallback(value -> INSTANCE.save());
+		return config;
+	}
+
+	private static ConfigColor createPlayerTracerColor() {
+		ConfigColor config = new ConfigColor("playerTracerColor", "#FF55FFFF").apply(GENERIC_KEY);
+		config.setValueChangeCallback(value -> INSTANCE.save());
+		return config;
+	}
+
+	private static ConfigBoolean createProjectileLandingPrediction() {
+		ConfigBoolean config = new ConfigBoolean("projectileLandingPrediction", false).apply(GENERIC_KEY);
 		config.setValueChangeCallback(value -> INSTANCE.save());
 		return config;
 	}

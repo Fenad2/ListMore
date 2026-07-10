@@ -2,7 +2,7 @@
 	"schemaVersion": 1,
 	"id": "ohmylist",
 	"version": "${version}",
-	"name": "OhMyList",
+	"name": "Oh My List",
 	"description": "A client-side utility mod for quality-of-life tweaks.",
 	"authors": [
 		"Fenad2"

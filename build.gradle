@@ -26,7 +26,6 @@ dependencies {
 	def malilibFabricGa = useSakuraMalilib ? 'com.github.sakura-ryoko:malilib' : 'maven.modrinth:malilib'
 	def malilibVersion = project.findProperty('dependencies.api.malilib_version')
 	def malilibCoordinate = malilibVersion.contains(':') ? malilibVersion : "${malilibFabricGa}:${malilibVersion}"
-	def modMenuJar = file('参考/[模组菜单] modmenu-20.0.0-beta.4.jar')
 
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
@@ -38,8 +37,8 @@ dependencies {
 	// MaLiLib is a required dependency for OML.
 	implementation malilibCoordinate
 
-	// Temporary local Mod Menu API dependency for the config screen integration.
-	compileOnly files(modMenuJar)
+	// Mod Menu is optional at runtime, but the API is needed to compile the integration entrypoint.
+	compileOnly "maven.modrinth:modmenu:20.0.0-beta.4"
 }
 
 processResources {
