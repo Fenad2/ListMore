@@ -3,12 +3,12 @@
 	"id": "ohmylist",
 	"version": "${version}",
 	"name": "Oh My List",
-	"description": "A client-side utility mod for quality-of-life tweaks.",
+	"description": "Oh My List!",
 	"authors": [
 		"Fenad2"
 	],
 	"contact": {
-		"homepage": "https://fabricmc.net/",
+		"homepage": "https://github.com/Fenad2/OhMyList",
 		"sources": "https://github.com/Fenad2/OhMyList"
 	},
 	"license": "LGPL-3.0",
