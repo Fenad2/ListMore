@@ -1,8 +1,7 @@
 package com.ohmylist.mixin;
 
-import com.ohmylist.OhMyList;
+import com.ohmylist.render.EntityOutlineRenderer;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
 
 import org.spongepowered.asm.mixin.Mixin;
@@ -13,15 +12,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(Entity.class)
 public class EntityMixin {
 	@Inject(method = "getTeamColor", at = @At("RETURN"), cancellable = true)
-	private void ohmylist$playerXrayColor(CallbackInfoReturnable<Integer> cir) {
+	private void ohmylist$entityRenderingColor(CallbackInfoReturnable<Integer> cir) {
 		Entity entity = (Entity) (Object) this;
-		if (!OhMyList.shouldApplyPlayerXray(entity)) {
-			return;
+		if (EntityOutlineRenderer.shouldRender(entity)) {
+			cir.setReturnValue(EntityOutlineRenderer.getOutlineColorRgb());
 		}
-		if (!Minecraft.getInstance().shouldEntityAppearGlowing(entity)) {
-			return;
-		}
-
-		cir.setReturnValue(OhMyList.getPlayerXrayColorRgb());
 	}
 }

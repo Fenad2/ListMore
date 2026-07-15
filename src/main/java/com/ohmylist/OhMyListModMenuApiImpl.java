@@ -1,5 +1,6 @@
 package com.ohmylist;
 
+import com.ohmylist.config.OhMyListConfigGui;
 import com.terraformersmc.modmenu.api.ConfigScreenFactory;
 import com.terraformersmc.modmenu.api.ModMenuApi;
 

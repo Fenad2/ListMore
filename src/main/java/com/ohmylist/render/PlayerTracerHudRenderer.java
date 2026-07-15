@@ -1,7 +1,7 @@
 package com.ohmylist.render;
 
 import com.ohmylist.OhMyList;
-import com.ohmylist.OhMyListConfigs;
+import com.ohmylist.config.OhMyListConfigs;
 
 import fi.dy.masa.malilib.interfaces.IRenderer;
 import fi.dy.masa.malilib.render.GuiContext;

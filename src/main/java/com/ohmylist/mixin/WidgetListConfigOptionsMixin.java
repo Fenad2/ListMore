@@ -2,7 +2,7 @@ package com.ohmylist.mixin;
 
 import java.util.List;
 
-import com.ohmylist.OhMyListConfigGui;
+import com.ohmylist.config.OhMyListConfigGui;
 
 import fi.dy.masa.malilib.gui.GuiConfigsBase;
 import fi.dy.masa.malilib.gui.widgets.WidgetConfigOption;

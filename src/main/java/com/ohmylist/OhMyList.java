@@ -1,5 +1,9 @@
 package com.ohmylist;
 
+import com.ohmylist.config.OhMyListConfigGui;
+import com.ohmylist.config.OhMyListConfigs;
+import com.ohmylist.input.CopyTargetIdInputHandler;
+import com.ohmylist.render.EntityOutlineRenderer;
 import com.ohmylist.render.PlayerTracerHudRenderer;
 import com.ohmylist.render.ProjectileLandingRenderer;
 
@@ -10,6 +14,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 
+import fi.dy.masa.malilib.event.InputEventHandler;
 import fi.dy.masa.malilib.event.RenderEventHandler;
 import fi.dy.masa.malilib.registry.Registry;
 import fi.dy.masa.malilib.util.data.ModInfo;
@@ -25,6 +30,8 @@ public class OhMyList implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		initializeConfigs();
+		CopyTargetIdInputHandler.getInstance().init();
+		InputEventHandler.getKeybindManager().registerKeybindProvider(CopyTargetIdInputHandler.getInstance());
 		RenderEventHandler.getInstance().registerInGameGuiRenderer(PlayerTracerHudRenderer.getInstance());
 		RenderEventHandler.getInstance().registerWorldLastRenderer(ProjectileLandingRenderer.getInstance());
 		Registry.CONFIG_SCREEN.registerConfigScreenFactory(new ModInfo(MOD_ID, "Oh My List", OhMyListConfigGui::new));
@@ -44,26 +51,7 @@ public class OhMyList implements ClientModInitializer {
 
 	public static void reloadConfigs() {
 		OhMyListConfigs.loadFromFile();
-	}
-
-	public static boolean shouldApplyPlayerXray(Entity entity) {
-		if (!(entity instanceof Player)) {
-			return false;
-		}
-		if (!OhMyListConfigs.Generic.PLAYER_XRAY.getBooleanValue()) {
-			return false;
-		}
-
-		Minecraft client = Minecraft.getInstance();
-		if (client.player == null || client.level == null) {
-			return false;
-		}
-
-		return entity != client.player;
-	}
-
-	public static int getPlayerXrayColorRgb() {
-		return OhMyListConfigs.Generic.PLAYER_XRAY_COLOR.getIntegerValue() & 0x00FFFFFF;
+		EntityOutlineRenderer.refreshSelectedEntityTypes();
 	}
 
 	public static boolean shouldRenderPlayerTracer(Entity entity) {

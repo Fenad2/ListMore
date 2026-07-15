@@ -1,6 +1,6 @@
 package com.ohmylist.render;
 
-import com.ohmylist.OhMyListConfigs;
+import com.ohmylist.config.OhMyListConfigs;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
