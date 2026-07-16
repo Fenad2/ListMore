@@ -34,13 +34,12 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4fc;
 import org.joml.Vector4f;
 
-/** Draws a compact world-space marker at the predicted projectile impact point. */
 public final class ProjectileLandingRenderer implements IRenderer {
     private static final int MAX_TICKS = 200;
     private static final double HIT_RADIUS = 0.1D;
     private static final float HALF_SIZE = 0.125F;
     private static final ProjectileLandingRenderer INSTANCE = new ProjectileLandingRenderer();
-    // MaLiLib 把计算和实际绘制拆成了两个阶段。
+    // MaLiLib把计算和实际绘制拆成了两个阶段
     private LandingPoint pendingLanding;
 
     private ProjectileLandingRenderer() {
@@ -77,7 +76,7 @@ public final class ProjectileLandingRenderer implements IRenderer {
                 this.pendingLanding = null;
                 return;
             }
-            // 弓没拉满就不能按满蓄力速度来算。
+            // 弓没拉满就不能按满蓄力速度来算
             speed *= pull;
         }
 
@@ -138,7 +137,7 @@ public final class ProjectileLandingRenderer implements IRenderer {
     }
 
     private static void drawMarker(LandingPoint landing) {
-        // 这条渲染管线要的是相对相机的坐标，不是世界原点坐标。
+        // 这条渲染管线要的是相对相机的坐标
         Vec3 position = landing.position.subtract(Minecraft.getInstance().gameRenderer.mainCamera().position());
         Color4f color = landing.hitEntity ? new Color4f(1.0F, 0.0F, 0.0F, 0.6F) : new Color4f(0.0F, 1.0F, 0.2F, 0.6F);
         RenderContext context = new RenderContext(

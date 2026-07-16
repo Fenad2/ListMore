@@ -25,7 +25,7 @@ public class PlayerTracerHudRenderer implements IRenderer {
         return INSTANCE;
     }
 
-    // 在提取GUI覆盖层后调用，用于渲染玩家追踪线
+    // 在提取GUI覆盖层后调用
     @Override
     public void onExtractGuiOverlayPost(GuiContext ctx, float partialTicks, ProfilerFiller profiler) {
         Minecraft client = Minecraft.getInstance();

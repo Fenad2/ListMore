@@ -16,6 +16,7 @@ import fi.dy.masa.malilib.config.IConfigHandler;
 import fi.dy.masa.malilib.config.options.ConfigBoolean;
 import fi.dy.masa.malilib.config.options.ConfigColor;
 import fi.dy.masa.malilib.config.options.ConfigHotkey;
+import fi.dy.masa.malilib.config.options.ConfigInteger;
 import fi.dy.masa.malilib.config.options.ConfigStringList;
 import fi.dy.masa.malilib.util.FileUtils;
 import fi.dy.masa.malilib.util.data.json.JsonUtils;
@@ -30,6 +31,8 @@ public class OhMyListConfigs implements IConfigHandler {
 		public static final ConfigBoolean ENTITY_RENDERING = createEntityRendering();
 		public static final ConfigStringList ENTITY_RENDERING_LIST = createEntityRenderingList();
 		public static final ConfigColor ENTITY_RENDERING_COLOR = createEntityRenderingColor();
+		public static final ConfigBoolean FURNACE_ASH_ASSISTANT = createFurnaceAshAssistant();
+		public static final ConfigInteger FURNACE_ASH_ASSISTANT_RANGE = createFurnaceAshAssistantRange();
 		public static final ConfigBoolean PLAYER_TRACER = createPlayerTracer();
 		public static final ConfigColor PLAYER_TRACER_COLOR = createPlayerTracerColor();
 		public static final ConfigBoolean PROJECTILE_LANDING_PREDICTION = createProjectileLandingPrediction();
@@ -39,6 +42,8 @@ public class OhMyListConfigs implements IConfigHandler {
 			ENTITY_RENDERING,
 			ENTITY_RENDERING_LIST,
 			ENTITY_RENDERING_COLOR,
+			FURNACE_ASH_ASSISTANT,
+			FURNACE_ASH_ASSISTANT_RANGE,
 			PLAYER_TRACER,
 			PLAYER_TRACER_COLOR,
 			PROJECTILE_LANDING_PREDICTION
@@ -71,6 +76,18 @@ public class OhMyListConfigs implements IConfigHandler {
 
 	private static ConfigColor createEntityRenderingColor() {
 		ConfigColor config = new ConfigColor("entityRenderingColor", "#FFFFFFFF").apply(GENERIC_KEY);
+		config.setValueChangeCallback(value -> INSTANCE.save());
+		return config;
+	}
+
+	private static ConfigBoolean createFurnaceAshAssistant() {
+		ConfigBoolean config = new ConfigBoolean("furnaceAshAssistant", false).apply(GENERIC_KEY);
+		config.setValueChangeCallback(value -> INSTANCE.save());
+		return config;
+	}
+
+	private static ConfigInteger createFurnaceAshAssistantRange() {
+		ConfigInteger config = new ConfigInteger("furnaceAshAssistantRange", 1, 0, 8).apply(GENERIC_KEY);
 		config.setValueChangeCallback(value -> INSTANCE.save());
 		return config;
 	}

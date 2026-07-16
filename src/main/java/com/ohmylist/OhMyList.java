@@ -4,6 +4,7 @@ import com.ohmylist.config.OhMyListConfigGui;
 import com.ohmylist.config.OhMyListConfigs;
 import com.ohmylist.input.CopyTargetIdInputHandler;
 import com.ohmylist.render.EntityOutlineRenderer;
+import com.ohmylist.render.FurnaceAshAssistantRenderer;
 import com.ohmylist.render.PlayerTracerHudRenderer;
 import com.ohmylist.render.ProjectileLandingRenderer;
 
@@ -34,6 +35,7 @@ public class OhMyList implements ClientModInitializer {
 		InputEventHandler.getKeybindManager().registerKeybindProvider(CopyTargetIdInputHandler.getInstance());
 		RenderEventHandler.getInstance().registerInGameGuiRenderer(PlayerTracerHudRenderer.getInstance());
 		RenderEventHandler.getInstance().registerWorldLastRenderer(ProjectileLandingRenderer.getInstance());
+		RenderEventHandler.getInstance().registerWorldLastRenderer(FurnaceAshAssistantRenderer.getInstance());
 		Registry.CONFIG_SCREEN.registerConfigScreenFactory(new ModInfo(MOD_ID, "Oh My List", OhMyListConfigGui::new));
 	}
 
