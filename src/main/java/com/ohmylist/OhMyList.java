@@ -4,6 +4,7 @@ import com.ohmylist.config.OhMyListConfigGui;
 import com.ohmylist.config.OhMyListConfigs;
 import com.ohmylist.input.CopyTargetIdInputHandler;
 import com.ohmylist.render.EntityOutlineRenderer;
+import com.ohmylist.render.EntityRenderBlacklist;
 import com.ohmylist.render.FurnaceAshAssistantRenderer;
 import com.ohmylist.render.PlayerTracerHudRenderer;
 import com.ohmylist.render.ProjectileLandingRenderer;
@@ -54,6 +55,7 @@ public class OhMyList implements ClientModInitializer {
 	public static void reloadConfigs() {
 		OhMyListConfigs.loadFromFile();
 		EntityOutlineRenderer.refreshSelectedEntityTypes();
+		EntityRenderBlacklist.refreshBlockedEntityTypes();
 	}
 
 	public static boolean shouldRenderPlayerTracer(Entity entity) {

@@ -8,6 +8,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.ohmylist.OhMyList;
 import com.ohmylist.render.EntityOutlineRenderer;
+import com.ohmylist.render.EntityRenderBlacklist;
 
 import fi.dy.masa.malilib.config.ConfigManager;
 import fi.dy.masa.malilib.config.ConfigUtils;
@@ -31,6 +32,9 @@ public class OhMyListConfigs implements IConfigHandler {
 		public static final ConfigBoolean ENTITY_RENDERING = createEntityRendering();
 		public static final ConfigStringList ENTITY_RENDERING_LIST = createEntityRenderingList();
 		public static final ConfigColor ENTITY_RENDERING_COLOR = createEntityRenderingColor();
+		public static final ConfigBoolean ENTITY_RENDERING_BLACKLIST = createEntityRenderingBlacklist();
+		public static final ConfigStringList ENTITY_RENDERING_BLACKLIST_LIST = createEntityRenderingBlacklistList();
+		public static final ConfigInteger ENTITY_RENDERING_BLACKLIST_RANGE = createEntityRenderingBlacklistRange();
 		public static final ConfigBoolean FURNACE_ASH_ASSISTANT = createFurnaceAshAssistant();
 		public static final ConfigInteger FURNACE_ASH_ASSISTANT_RANGE = createFurnaceAshAssistantRange();
 		public static final ConfigBoolean PLAYER_TRACER = createPlayerTracer();
@@ -42,6 +46,9 @@ public class OhMyListConfigs implements IConfigHandler {
 			ENTITY_RENDERING,
 			ENTITY_RENDERING_LIST,
 			ENTITY_RENDERING_COLOR,
+			ENTITY_RENDERING_BLACKLIST,
+			ENTITY_RENDERING_BLACKLIST_LIST,
+			ENTITY_RENDERING_BLACKLIST_RANGE,
 			FURNACE_ASH_ASSISTANT,
 			FURNACE_ASH_ASSISTANT_RANGE,
 			PLAYER_TRACER,
@@ -76,6 +83,27 @@ public class OhMyListConfigs implements IConfigHandler {
 
 	private static ConfigColor createEntityRenderingColor() {
 		ConfigColor config = new ConfigColor("entityRenderingColor", "#FFFFFFFF").apply(GENERIC_KEY);
+		config.setValueChangeCallback(value -> INSTANCE.save());
+		return config;
+	}
+
+	private static ConfigBoolean createEntityRenderingBlacklist() {
+		ConfigBoolean config = new ConfigBoolean("entityRenderingBlacklist", false).apply(GENERIC_KEY);
+		config.setValueChangeCallback(value -> INSTANCE.save());
+		return config;
+	}
+
+	private static ConfigStringList createEntityRenderingBlacklistList() {
+		ConfigStringList config = new ConfigStringList("entityRenderingBlacklistList", ImmutableList.of()).apply(GENERIC_KEY);
+		config.setValueChangeCallback(value -> {
+			EntityRenderBlacklist.refreshBlockedEntityTypes(value.getStrings());
+			INSTANCE.save();
+		});
+		return config;
+	}
+
+	private static ConfigInteger createEntityRenderingBlacklistRange() {
+		ConfigInteger config = new ConfigInteger("entityRenderingBlacklistRange", 0, 0, 256).apply(GENERIC_KEY);
 		config.setValueChangeCallback(value -> INSTANCE.save());
 		return config;
 	}
