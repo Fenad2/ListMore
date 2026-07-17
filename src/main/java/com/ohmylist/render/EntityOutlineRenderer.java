@@ -21,7 +21,7 @@ public final class EntityOutlineRenderer {
 		if (entity == null || entity.isRemoved()) {
 			return false;
 		}
-		if (!OhMyListConfigs.Generic.ENTITY_RENDERING.getBooleanValue()) {
+		if (!OhMyListConfigs.Generic.ENTITY_HIGHLIGHT_OUTLINE.getBooleanValue()) {
 			return false;
 		}
 
@@ -35,11 +35,11 @@ public final class EntityOutlineRenderer {
 	}
 
 	public static int getOutlineColorRgb() {
-		return OhMyListConfigs.Generic.ENTITY_RENDERING_COLOR.getIntegerValue() & 0x00FFFFFF;
+		return OhMyListConfigs.Generic.ENTITY_HIGHLIGHT_OUTLINE_COLOR.getIntegerValue() & 0x00FFFFFF;
 	}
 
 	public static void refreshSelectedEntityTypes() {
-		refreshSelectedEntityTypes(OhMyListConfigs.Generic.ENTITY_RENDERING_LIST.getStrings());
+		refreshSelectedEntityTypes(OhMyListConfigs.Generic.ENTITY_HIGHLIGHT_OUTLINE_LIST.getStrings());
 	}
 
 	public static void refreshSelectedEntityTypes(List<String> entries) {
