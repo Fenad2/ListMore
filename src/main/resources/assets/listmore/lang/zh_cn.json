@@ -5,7 +5,6 @@
   "listmore.config.generic.name.copyTargetId": "复制准星目标 ID",
   "listmore.config.generic.prettyName.copyTargetId": "复制准星目标 ID",
   "listmore.config.generic.comment.copyTargetId": "复制准星所指的方块或实体 ID",
-  "malilib.gui.button.all": "全部",
   "listmore.gui.tab.generic": "通用",
   "listmore.config.generic.name.entityHighlightOutline": "实体高亮边框",
   "listmore.config.generic.prettyName.entityHighlightOutline": "实体高亮边框",

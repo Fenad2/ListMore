@@ -5,7 +5,6 @@
   "listmore.config.generic.name.copyTargetId": "Copy Target ID",
   "listmore.config.generic.prettyName.copyTargetId": "Copy Target ID",
   "listmore.config.generic.comment.copyTargetId": "Copy the ID of the block or entity pointed by the cursor",
-  "malilib.gui.button.all": "All",
   "listmore.gui.tab.generic": "General",
   "listmore.config.generic.name.entityHighlightOutline": "Entity Highlight Outline",
   "listmore.config.generic.prettyName.entityHighlightOutline": "Entity Highlight Outline",
