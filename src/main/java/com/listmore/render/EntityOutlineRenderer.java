@@ -1,10 +1,10 @@
-package com.ohmylist.render;
+package com.listmore.render;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.ohmylist.config.OhMyListConfigs;
+import com.listmore.config.ListMoreConfigs;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -21,7 +21,7 @@ public final class EntityOutlineRenderer {
 		if (entity == null || entity.isRemoved()) {
 			return false;
 		}
-		if (!OhMyListConfigs.Generic.ENTITY_HIGHLIGHT_OUTLINE.getBooleanValue()) {
+		if (!ListMoreConfigs.Generic.ENTITY_HIGHLIGHT_OUTLINE.getBooleanValue()) {
 			return false;
 		}
 
@@ -35,11 +35,11 @@ public final class EntityOutlineRenderer {
 	}
 
 	public static int getOutlineColorRgb() {
-		return OhMyListConfigs.Generic.ENTITY_HIGHLIGHT_OUTLINE_COLOR.getIntegerValue() & 0x00FFFFFF;
+		return ListMoreConfigs.Generic.ENTITY_HIGHLIGHT_OUTLINE_COLOR.getIntegerValue() & 0x00FFFFFF;
 	}
 
 	public static void refreshSelectedEntityTypes() {
-		refreshSelectedEntityTypes(OhMyListConfigs.Generic.ENTITY_HIGHLIGHT_OUTLINE_LIST.getStrings());
+		refreshSelectedEntityTypes(ListMoreConfigs.Generic.ENTITY_HIGHLIGHT_OUTLINE_LIST.getStrings());
 	}
 
 	public static void refreshSelectedEntityTypes(List<String> entries) {

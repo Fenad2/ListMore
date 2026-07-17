@@ -1,14 +1,15 @@
-package com.ohmylist.config;
+package com.listmore.config;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 import com.google.common.collect.ImmutableList;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.ohmylist.OhMyList;
-import com.ohmylist.render.EntityOutlineRenderer;
-import com.ohmylist.render.EntityRenderBlacklist;
+import com.listmore.ListMore;
+import com.listmore.render.EntityOutlineRenderer;
+import com.listmore.render.EntityRenderBlacklist;
 
 import fi.dy.masa.malilib.config.ConfigManager;
 import fi.dy.masa.malilib.config.ConfigUtils;
@@ -24,10 +25,11 @@ import fi.dy.masa.malilib.interfaces.IValueChangeCallback;
 import fi.dy.masa.malilib.util.FileUtils;
 import fi.dy.masa.malilib.util.data.json.JsonUtils;
 
-public class OhMyListConfigs implements IConfigHandler {
-	private static final String CONFIG_FILE_NAME = OhMyList.MOD_ID + ".json";
-	private static final String GENERIC_KEY = OhMyList.MOD_ID + ".config.generic";
-	private static final OhMyListConfigs INSTANCE = new OhMyListConfigs();
+public class ListMoreConfigs implements IConfigHandler {
+	private static final String LEGACY_CONFIG_FILE_NAME = "ohmylist.json";
+	private static final String CONFIG_FILE_NAME = ListMore.MOD_ID + ".json";
+	private static final String GENERIC_KEY = ListMore.MOD_ID + ".config.generic";
+	private static final ListMoreConfigs INSTANCE = new ListMoreConfigs();
 
 	public static class Generic {
 		public static final ConfigHotkey COPY_TARGET_ID = createCopyTargetId();
@@ -124,11 +126,13 @@ public class OhMyListConfigs implements IConfigHandler {
 	}
 
 	public static void init() {
-		ConfigManager.getInstance().registerConfigHandler(OhMyList.MOD_ID, INSTANCE);
+		ConfigManager.getInstance().registerConfigHandler(ListMore.MOD_ID, INSTANCE);
 	}
 
 	public static void loadFromFile() {
-		Path configFile = FileUtils.getConfigDirectory().resolve(CONFIG_FILE_NAME);
+		Path configDirectory = FileUtils.getConfigDirectory();
+		migrateLegacyConfig(configDirectory);
+		Path configFile = configDirectory.resolve(CONFIG_FILE_NAME);
 
 		if (!Files.exists(configFile) || !Files.isReadable(configFile)) {
 			return;
@@ -138,6 +142,21 @@ public class OhMyListConfigs implements IConfigHandler {
 		if (element != null && element.isJsonObject()) {
 			JsonObject root = element.getAsJsonObject();
 			ConfigUtils.readConfigBase(root, "Generic", Generic.OPTIONS);
+		}
+	}
+
+	private static void migrateLegacyConfig(Path configDirectory) {
+		Path configFile = configDirectory.resolve(CONFIG_FILE_NAME);
+		Path legacyConfigFile = configDirectory.resolve(LEGACY_CONFIG_FILE_NAME);
+
+		if (Files.exists(configFile) || !Files.isRegularFile(legacyConfigFile)) {
+			return;
+		}
+
+		try {
+			Files.copy(legacyConfigFile, configFile);
+		} catch (IOException exception) {
+			ListMore.LOGGER.warn("Failed to migrate legacy config file {}", legacyConfigFile, exception);
 		}
 	}
 

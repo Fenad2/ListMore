@@ -1,13 +1,13 @@
-package com.ohmylist;
+package com.listmore;
 
-import com.ohmylist.config.OhMyListConfigGui;
-import com.ohmylist.config.OhMyListConfigs;
-import com.ohmylist.input.CopyTargetIdInputHandler;
-import com.ohmylist.render.EntityOutlineRenderer;
-import com.ohmylist.render.EntityRenderBlacklist;
-import com.ohmylist.render.FurnaceAshAssistantRenderer;
-import com.ohmylist.render.PlayerTracerHudRenderer;
-import com.ohmylist.render.ProjectileLandingRenderer;
+import com.listmore.config.ListMoreConfigGui;
+import com.listmore.config.ListMoreConfigs;
+import com.listmore.input.CopyTargetIdInputHandler;
+import com.listmore.render.EntityOutlineRenderer;
+import com.listmore.render.EntityRenderBlacklist;
+import com.listmore.render.FurnaceAshAssistantRenderer;
+import com.listmore.render.PlayerTracerHudRenderer;
+import com.listmore.render.ProjectileLandingRenderer;
 
 import net.fabricmc.api.ClientModInitializer;
 
@@ -24,8 +24,8 @@ import fi.dy.masa.malilib.util.data.ModInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class OhMyList implements ClientModInitializer {
-	public static final String MOD_ID = "ohmylist";
+public class ListMore implements ClientModInitializer {
+	public static final String MOD_ID = "listmore";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 	private static boolean configHandlerRegistered;
 
@@ -37,7 +37,7 @@ public class OhMyList implements ClientModInitializer {
 		RenderEventHandler.getInstance().registerInGameGuiRenderer(PlayerTracerHudRenderer.getInstance());
 		RenderEventHandler.getInstance().registerWorldLastRenderer(ProjectileLandingRenderer.getInstance());
 		RenderEventHandler.getInstance().registerWorldLastRenderer(FurnaceAshAssistantRenderer.getInstance());
-		Registry.CONFIG_SCREEN.registerConfigScreenFactory(new ModInfo(MOD_ID, "Oh My List", OhMyListConfigGui::new));
+		Registry.CONFIG_SCREEN.registerConfigScreenFactory(new ModInfo(MOD_ID, "ListMore", ListMoreConfigGui::new));
 	}
 
 	public static Identifier id(String path) {
@@ -46,14 +46,14 @@ public class OhMyList implements ClientModInitializer {
 
 	public static void initializeConfigs() {
 		if (configHandlerRegistered == false) {
-			OhMyListConfigs.init();
+			ListMoreConfigs.init();
 			configHandlerRegistered = true;
 		}
 		reloadConfigs();
 	}
 
 	public static void reloadConfigs() {
-		OhMyListConfigs.loadFromFile();
+		ListMoreConfigs.loadFromFile();
 		EntityOutlineRenderer.refreshSelectedEntityTypes();
 		EntityRenderBlacklist.refreshBlockedEntityTypes();
 	}
@@ -62,7 +62,7 @@ public class OhMyList implements ClientModInitializer {
 		if (!(entity instanceof Player)) {
 			return false;
 		}
-		if (!OhMyListConfigs.Generic.PLAYER_TRACER.getBooleanValue()) {
+		if (!ListMoreConfigs.Generic.PLAYER_TRACER.getBooleanValue()) {
 			return false;
 		}
 
@@ -78,6 +78,6 @@ public class OhMyList implements ClientModInitializer {
 	}
 
 	public static int getPlayerTracerColorArgb() {
-		return OhMyListConfigs.Generic.PLAYER_TRACER_COLOR.getIntegerValue();
+		return ListMoreConfigs.Generic.PLAYER_TRACER_COLOR.getIntegerValue();
 	}
 }

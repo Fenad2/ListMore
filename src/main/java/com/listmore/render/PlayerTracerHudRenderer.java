@@ -1,7 +1,7 @@
-package com.ohmylist.render;
+package com.listmore.render;
 
-import com.ohmylist.OhMyList;
-import com.ohmylist.config.OhMyListConfigs;
+import com.listmore.ListMore;
+import com.listmore.config.ListMoreConfigs;
 
 import fi.dy.masa.malilib.interfaces.IRenderer;
 import fi.dy.masa.malilib.render.GuiContext;
@@ -30,7 +30,7 @@ public class PlayerTracerHudRenderer implements IRenderer {
 	public void onExtractGuiOverlayPost(GuiContext ctx, float partialTicks, ProfilerFiller profiler) {
 		Minecraft client = Minecraft.getInstance();
 
-		if (client.player == null || client.level == null || client.gui.screen() != null || !OhMyListConfigs.Generic.PLAYER_TRACER.getBooleanValue()) {
+		if (client.player == null || client.level == null || client.gui.screen() != null || !ListMoreConfigs.Generic.PLAYER_TRACER.getBooleanValue()) {
 			return;
 		}
 
@@ -39,10 +39,10 @@ public class PlayerTracerHudRenderer implements IRenderer {
 		float physicalPixelScale = guiWidth / (float) client.getWindow().getWidth();
 		float startX = guiWidth * 0.5F;
 		float startY = 0.0F;
-		int color = OhMyList.getPlayerTracerColorArgb();
+		int color = ListMore.getPlayerTracerColorArgb();
 
 		for (Player player : client.level.players()) {
-			if (!OhMyList.shouldRenderPlayerTracer(player)) {
+			if (!ListMore.shouldRenderPlayerTracer(player)) {
 				continue;
 			}
 

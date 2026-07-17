@@ -1,9 +1,9 @@
-package com.ohmylist.config;
+package com.listmore.config;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import com.ohmylist.OhMyList;
+import com.listmore.ListMore;
 
 import fi.dy.masa.malilib.config.IConfigBase;
 import fi.dy.masa.malilib.gui.GuiConfigsBase;
@@ -13,11 +13,11 @@ import fi.dy.masa.malilib.gui.button.IButtonActionListener;
 import fi.dy.masa.malilib.gui.interfaces.IConfigGuiAllTab;
 import fi.dy.masa.malilib.util.StringUtils;
 
-public class OhMyListConfigGui extends GuiConfigsBase implements IConfigGuiAllTab {
+public class ListMoreConfigGui extends GuiConfigsBase implements IConfigGuiAllTab {
 	private static ConfigTab tab = ConfigTab.GENERIC;
 
-	public OhMyListConfigGui() {
-		super(10, 50, OhMyList.MOD_ID, null, "ohmylist.gui.title");
+	public ListMoreConfigGui() {
+		super(10, 50, ListMore.MOD_ID, null, "listmore.gui.title");
 	}
 
 	@Override
@@ -67,7 +67,7 @@ public class OhMyListConfigGui extends GuiConfigsBase implements IConfigGuiAllTa
 	@Override
 	public List<ConfigOptionWrapper> getAllConfigs() {
 		List<ConfigOptionWrapper> configs = new ArrayList<>();
-		configs.addAll(ConfigOptionWrapper.createFor(OhMyListConfigs.Generic.OPTIONS));
+		configs.addAll(ConfigOptionWrapper.createFor(ListMoreConfigs.Generic.OPTIONS));
 		return configs;
 	}
 
@@ -79,7 +79,7 @@ public class OhMyListConfigGui extends GuiConfigsBase implements IConfigGuiAllTa
 			return this.getAllConfigs();
 		}
 		if (tab == ConfigTab.GENERIC) {
-			configs = OhMyListConfigs.Generic.OPTIONS;
+			configs = ListMoreConfigs.Generic.OPTIONS;
 		} else {
 			return List.of();
 		}
@@ -87,10 +87,10 @@ public class OhMyListConfigGui extends GuiConfigsBase implements IConfigGuiAllTa
 		return ConfigOptionWrapper.createFor(configs);
 	}
 
-	private record ButtonListener(ConfigTab tab, OhMyListConfigGui parent) implements IButtonActionListener {
+	private record ButtonListener(ConfigTab tab, ListMoreConfigGui parent) implements IButtonActionListener {
 		@Override
 		public void actionPerformedWithButton(ButtonBase button, int mouseButton) {
-			OhMyListConfigGui.tab = this.tab;
+			ListMoreConfigGui.tab = this.tab;
 			this.parent.reCreateListWidget();
 			if (this.parent.getListWidget() != null) {
 				this.parent.getListWidget().resetScrollbarPosition();
@@ -101,7 +101,7 @@ public class OhMyListConfigGui extends GuiConfigsBase implements IConfigGuiAllTa
 
 	private enum ConfigTab {
 		ALL(IConfigGuiAllTab.getTranslationKey()),
-		GENERIC("ohmylist.gui.tab.generic");
+		GENERIC("listmore.gui.tab.generic");
 
 		private final String translationKey;
 

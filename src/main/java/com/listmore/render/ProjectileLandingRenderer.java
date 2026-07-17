@@ -1,6 +1,6 @@
-package com.ohmylist.render;
+package com.listmore.render;
 
-import com.ohmylist.config.OhMyListConfigs;
+import com.listmore.config.ListMoreConfigs;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
@@ -54,7 +54,7 @@ public final class ProjectileLandingRenderer implements IRenderer {
 		Minecraft client = Minecraft.getInstance();
 		LocalPlayer player = client.player;
 		Level level = client.level;
-		if (player == null || level == null || !OhMyListConfigs.Generic.PROJECTILE_LANDING_PREDICTION.getBooleanValue()) {
+		if (player == null || level == null || !ListMoreConfigs.Generic.PROJECTILE_LANDING_PREDICTION.getBooleanValue()) {
 			this.pendingLanding = null;
 			return;
 		}
@@ -141,7 +141,7 @@ public final class ProjectileLandingRenderer implements IRenderer {
 		Vec3 position = landing.position.subtract(Minecraft.getInstance().gameRenderer.mainCamera().position());
 		Color4f color = landing.hitEntity ? new Color4f(1.0F, 0.0F, 0.0F, 0.6F) : new Color4f(0.0F, 1.0F, 0.2F, 0.6F);
 		RenderContext context = new RenderContext(
-				() -> "ohmylist:projectile_landing",
+				() -> "listmore:projectile_landing",
 				MaLiLibPipelines.DEBUG_LINES_MASA_SIMPLE_NO_DEPTH_NO_CULL,
 				0
 		);

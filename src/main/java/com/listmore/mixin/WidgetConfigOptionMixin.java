@@ -1,7 +1,7 @@
-package com.ohmylist.mixin;
+package com.listmore.mixin;
 
-import com.ohmylist.config.OhMyListConfigs;
-import com.ohmylist.feature.CopyTargetIdFeature;
+import com.listmore.config.ListMoreConfigs;
+import com.listmore.feature.CopyTargetIdFeature;
 
 import fi.dy.masa.malilib.gui.GuiConfigsBase;
 import fi.dy.masa.malilib.gui.button.ButtonGeneric;
@@ -44,7 +44,7 @@ public abstract class WidgetConfigOptionMixin extends WidgetConfigOptionBase<Gui
 	protected abstract void addKeybindResetButton(int x, int y, IKeybind keybind, ConfigButtonKeybind buttonHotkey);
 
 	@Inject(method = "addHotkeyConfigElements", at = @At("HEAD"), cancellable = true)
-	private void ohmylist$addCopyTargetIdTrigger(
+	private void listmore$addCopyTargetIdTrigger(
 		int x,
 		int y,
 		int configWidth,
@@ -52,7 +52,7 @@ public abstract class WidgetConfigOptionMixin extends WidgetConfigOptionBase<Gui
 		IHotkey hotkey,
 		CallbackInfo ci
 	) {
-		if (hotkey != OhMyListConfigs.Generic.COPY_TARGET_ID) {
+		if (hotkey != ListMoreConfigs.Generic.COPY_TARGET_ID) {
 			return;
 		}
 
@@ -61,7 +61,7 @@ public abstract class WidgetConfigOptionMixin extends WidgetConfigOptionBase<Gui
 			y,
 			-1,
 			20,
-			StringUtils.translate("ohmylist.gui.button.trigger")
+			StringUtils.translate("listmore.gui.button.trigger")
 		);
 		int triggerButtonWidth = triggerButton.getWidth();
 		x += triggerButtonWidth + 2;

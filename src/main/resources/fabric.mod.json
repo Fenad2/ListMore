@@ -1,29 +1,29 @@
 {
 	"schemaVersion": 1,
-	"id": "ohmylist",
+	"id": "listmore",
 	"version": "${version}",
-	"name": "Oh My List",
-	"description": "Oh My List!",
+	"name": "ListMore",
+	"description": "ListMore!",
 	"authors": [
 		"Fenad2"
 	],
 	"contact": {
-		"homepage": "https://github.com/Fenad2/OhMyList",
-		"sources": "https://github.com/Fenad2/OhMyList"
+		"homepage": "https://github.com/Fenad2/ListMore",
+		"sources": "https://github.com/Fenad2/ListMore"
 	},
 	"license": "LGPL-3.0",
-	"icon": "assets/ohmylist/icon.png",
+	"icon": "assets/listmore/icon.png",
 	"environment": "client",
 	"entrypoints": {
 		"client": [
-			"com.ohmylist.OhMyList"
+			"com.listmore.ListMore"
 		],
 		"modmenu": [
-			"com.ohmylist.OhMyListModMenuApiImpl"
+			"com.listmore.ListMoreModMenuApiImpl"
 		]
 	},
 	"mixins": [
-		"ohmylist.mixins.json"
+		"listmore.mixins.json"
 	],
 	"depends": {
 		"fabricloader": ">=0.19.3",

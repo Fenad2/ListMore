@@ -1,8 +1,8 @@
-package com.ohmylist.input;
+package com.listmore.input;
 
 import com.google.common.collect.ImmutableList;
-import com.ohmylist.config.OhMyListConfigs;
-import com.ohmylist.feature.CopyTargetIdFeature;
+import com.listmore.config.ListMoreConfigs;
+import com.listmore.feature.CopyTargetIdFeature;
 
 import fi.dy.masa.malilib.hotkeys.IKeybindManager;
 import fi.dy.masa.malilib.hotkeys.IKeybindProvider;
@@ -18,7 +18,7 @@ public final class CopyTargetIdInputHandler implements IKeybindProvider {
 	}
 
 	public void init() {
-		OhMyListConfigs.Generic.COPY_TARGET_ID.getKeybind().setCallback((action, keybind) -> {
+		ListMoreConfigs.Generic.COPY_TARGET_ID.getKeybind().setCallback((action, keybind) -> {
 			CopyTargetIdFeature.copyTargetId();
 			return true;
 		});
@@ -26,15 +26,15 @@ public final class CopyTargetIdInputHandler implements IKeybindProvider {
 
 	@Override
 	public void addKeysToMap(IKeybindManager manager) {
-		manager.addKeybindToMap(OhMyListConfigs.Generic.COPY_TARGET_ID.getKeybind());
+		manager.addKeybindToMap(ListMoreConfigs.Generic.COPY_TARGET_ID.getKeybind());
 	}
 
 	@Override
 	public void addHotkeys(IKeybindManager manager) {
 		manager.addHotkeysForCategory(
-			"Oh My List",
-			"ohmylist.hotkeys.category.generic",
-			ImmutableList.of(OhMyListConfigs.Generic.COPY_TARGET_ID)
+			"ListMore",
+			"listmore.hotkeys.category.generic",
+			ImmutableList.of(ListMoreConfigs.Generic.COPY_TARGET_ID)
 		);
 	}
 }

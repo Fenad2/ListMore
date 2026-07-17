@@ -1,6 +1,6 @@
-package com.ohmylist.mixin;
+package com.listmore.mixin;
 
-import com.ohmylist.render.EntityRenderBlacklist;
+import com.listmore.render.EntityRenderBlacklist;
 
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(EntityRenderDispatcher.class)
 public class EntityRenderDispatcherMixin {
 	@Inject(method = "shouldRender", at = @At("HEAD"), cancellable = true)
-	private <E extends Entity> void ohmylist$entityRenderingBlacklist(
+	private <E extends Entity> void listmore$entityRenderingBlacklist(
 		E entity,
 		Frustum frustum,
 		double x,

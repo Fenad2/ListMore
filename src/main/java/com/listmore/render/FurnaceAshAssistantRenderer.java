@@ -1,4 +1,4 @@
-package com.ohmylist.render;
+package com.listmore.render;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -7,7 +7,7 @@ import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
-import com.ohmylist.config.OhMyListConfigs;
+import com.listmore.config.ListMoreConfigs;
 
 import fi.dy.masa.malilib.interfaces.IRenderer;
 import fi.dy.masa.malilib.render.MaLiLibPipelines;
@@ -67,12 +67,12 @@ public final class FurnaceAshAssistantRenderer implements IRenderer {
 		Minecraft client = Minecraft.getInstance();
 		LocalPlayer player = client.player;
 		ClientLevel level = client.level;
-		if (player == null || level == null || !OhMyListConfigs.Generic.FURNACE_ASH_ASSISTANT.getBooleanValue()) {
+		if (player == null || level == null || !ListMoreConfigs.Generic.FURNACE_ASH_ASSISTANT.getBooleanValue()) {
 			clearResults();
 			return;
 		}
 
-		int range = OhMyListConfigs.Generic.FURNACE_ASH_ASSISTANT_RANGE.getIntegerValue();
+		int range = ListMoreConfigs.Generic.FURNACE_ASH_ASSISTANT_RANGE.getIntegerValue();
 		ChunkPos playerChunk = ChunkPos.containing(player.blockPosition());
 		long gameTime = level.getGameTime();
 		if (playerChunk.equals(lastPlayerChunk) && range == lastRange && gameTime - lastScanTick < SCAN_INTERVAL_TICKS) {
@@ -152,12 +152,12 @@ public final class FurnaceAshAssistantRenderer implements IRenderer {
 	private static void drawMarkers(List<BlockPos> furnaces) {
 		Vec3 cameraPosition = Minecraft.getInstance().gameRenderer.mainCamera().position();
 		RenderContext fillContext = new RenderContext(
-			() -> "ohmylist:furnace_ash_fill",
+			() -> "listmore:furnace_ash_fill",
 			MaLiLibPipelines.POSITION_COLOR_MASA_NO_DEPTH_NO_CULL,
 			0
 		);
 		RenderContext outlineContext = new RenderContext(
-			() -> "ohmylist:furnace_ash_outline",
+			() -> "listmore:furnace_ash_outline",
 			MaLiLibPipelines.DEBUG_LINES_MASA_SIMPLE_NO_DEPTH_NO_CULL,
 			0
 		);

@@ -1,8 +1,8 @@
-package com.ohmylist.mixin;
+package com.listmore.mixin;
 
 import java.util.List;
 
-import com.ohmylist.config.OhMyListConfigGui;
+import com.listmore.config.ListMoreConfigGui;
 
 import fi.dy.masa.malilib.gui.GuiConfigsBase;
 import fi.dy.masa.malilib.gui.widgets.WidgetConfigOption;
@@ -27,8 +27,8 @@ public abstract class WidgetListConfigOptionsMixin extends WidgetListConfigOptio
 	}
 
 	@Inject(method = "getMaxNameLengthWrapped", at = @At("RETURN"), cancellable = true)
-	private void ohmylist$fixLabelWidth(List<GuiConfigsBase.ConfigOptionWrapper> wrappers, CallbackInfoReturnable<Integer> cir) {
-		if (!(this.parent instanceof OhMyListConfigGui)) {
+	private void listmore$fixLabelWidth(List<GuiConfigsBase.ConfigOptionWrapper> wrappers, CallbackInfoReturnable<Integer> cir) {
+		if (!(this.parent instanceof ListMoreConfigGui)) {
 			return;
 		}
 

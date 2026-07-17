@@ -1,4 +1,4 @@
-package com.ohmylist.feature;
+package com.listmore.feature;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;

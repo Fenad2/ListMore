@@ -1,10 +1,10 @@
-package com.ohmylist.render;
+package com.listmore.render;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.ohmylist.config.OhMyListConfigs;
+import com.listmore.config.ListMoreConfigs;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -19,7 +19,7 @@ public final class EntityRenderBlacklist {
 
 	//判断是否应被跳过渲染
 	public static boolean shouldSkipRendering(Entity entity) {
-		if (entity == null || !OhMyListConfigs.Generic.ENTITY_RENDERING_BLACKLIST.getBooleanValue()) {
+		if (entity == null || !ListMoreConfigs.Generic.ENTITY_RENDERING_BLACKLIST.getBooleanValue()) {
 			return false;
 		}
 
@@ -28,7 +28,7 @@ public final class EntityRenderBlacklist {
 			return false;
 		}
 
-		int range = OhMyListConfigs.Generic.ENTITY_RENDERING_BLACKLIST_RANGE.getIntegerValue();
+		int range = ListMoreConfigs.Generic.ENTITY_RENDERING_BLACKLIST_RANGE.getIntegerValue();
 		if (range <= 0) {
 			return true;
 		}
@@ -38,7 +38,7 @@ public final class EntityRenderBlacklist {
 	}
 
 	public static void refreshBlockedEntityTypes() {
-		refreshBlockedEntityTypes(OhMyListConfigs.Generic.ENTITY_RENDERING_BLACKLIST_LIST.getStrings());
+		refreshBlockedEntityTypes(ListMoreConfigs.Generic.ENTITY_RENDERING_BLACKLIST_LIST.getStrings());
 	}
 	//根据填写的实体ID列表刷新实体类型集合
 	public static void refreshBlockedEntityTypes(List<String> entries) {
