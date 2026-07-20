@@ -3,7 +3,7 @@ package com.listmore;
 import com.listmore.config.ListMoreConfigGui;
 import com.listmore.config.ListMoreConfigs;
 import com.listmore.input.CopyTargetIdInputHandler;
-import com.listmore.render.FurnaceAshAssistantRenderer;
+import com.listmore.render.InvalidFurnaceInputRenderer;
 import com.listmore.render.PlayerTracerHudRenderer;
 import com.listmore.render.ProjectileLandingRenderer;
 
@@ -39,7 +39,7 @@ public class ListMore implements ClientModInitializer {
 				RenderEventHandler.getInstance().registerGameOverlayRenderer(PlayerTracerHudRenderer.getInstance());
 				//#endif
 				RenderEventHandler.getInstance().registerWorldLastRenderer(ProjectileLandingRenderer.getInstance());
-				RenderEventHandler.getInstance().registerWorldLastRenderer(FurnaceAshAssistantRenderer.getInstance());
+				RenderEventHandler.getInstance().registerWorldLastRenderer(InvalidFurnaceInputRenderer.getInstance());
 				Registry.CONFIG_SCREEN.registerConfigScreenFactory(new ModInfo(MOD_ID, "ListMore", ListMoreConfigGui::new));
 			}
 		});

@@ -49,24 +49,24 @@ import org.joml.Matrix4f;
 //$$ import org.joml.Vector4f;
 //#endif
 
-public final class FurnaceAshAssistantRenderer implements IRenderer {
+public final class InvalidFurnaceInputRenderer implements IRenderer {
 	// 玩家停留在同一区块时限制扫描频率，避免每帧遍历附近所有熔炉
 	private static final int SCAN_INTERVAL_TICKS = 10;
 	private static final float BOX_INSET = 0.16F;
 	private static final Color4f FILL_COLOR = new Color4f(1.0F, 0.23F, 0.02F, 0.28F);
 	private static final Color4f OUTLINE_COLOR = new Color4f(1.0F, 0.29F, 0.04F, 0.95F);
-	private static final FurnaceAshAssistantRenderer INSTANCE = new FurnaceAshAssistantRenderer();
+	private static final InvalidFurnaceInputRenderer INSTANCE = new InvalidFurnaceInputRenderer();
 
 	private List<BlockPos> invalidFurnaces = List.of();
 	private long lastScanTick = Long.MIN_VALUE;
 	private ChunkPos lastPlayerChunk;
 	private int lastRange = -1;
 
-	private FurnaceAshAssistantRenderer() {
+	private InvalidFurnaceInputRenderer() {
 	}
 
 	// 获取渲染器的单例实例
-	public static FurnaceAshAssistantRenderer getInstance() {
+	public static InvalidFurnaceInputRenderer getInstance() {
 		return INSTANCE;
 	}
 
@@ -91,12 +91,12 @@ public final class FurnaceAshAssistantRenderer implements IRenderer {
 		Minecraft client = Minecraft.getInstance();
 		LocalPlayer player = client.player;
 		ClientLevel level = client.level;
-		if (player == null || level == null || !ListMoreConfigs.Generic.FURNACE_ASH_ASSISTANT.getBooleanValue()) {
+		if (player == null || level == null || !ListMoreConfigs.Generic.INVALID_FURNACE_INPUT_HIGHLIGHTER.getBooleanValue()) {
 			clearResults();
 			return;
 		}
 
-		int range = ListMoreConfigs.Generic.FURNACE_ASH_ASSISTANT_RANGE.getIntegerValue();
+		int range = ListMoreConfigs.Generic.INVALID_FURNACE_INPUT_HIGHLIGHTER_RANGE.getIntegerValue();
 		//#if MC >= 26.1
 		//$$ ChunkPos playerChunk = ChunkPos.containing(player.blockPosition());
 		//#else
@@ -195,14 +195,14 @@ public final class FurnaceAshAssistantRenderer implements IRenderer {
 		Vec3 cameraPosition = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
 		//#endif
 		RenderContext fillContext = new RenderContext(
-			() -> "listmore:furnace_ash_fill",
+			() -> "listmore:invalid_furnace_input_fill",
 			MaLiLibPipelines.POSITION_COLOR_MASA_NO_DEPTH_NO_CULL
 			//#if MC >= 26.2
 			//$$ , 0
 			//#endif
 		);
 		RenderContext outlineContext = new RenderContext(
-			() -> "listmore:furnace_ash_outline",
+			() -> "listmore:invalid_furnace_input_outline",
 			MaLiLibPipelines.DEBUG_LINES_MASA_SIMPLE_NO_DEPTH_NO_CULL
 			//#if MC >= 26.2
 			//$$ , 0

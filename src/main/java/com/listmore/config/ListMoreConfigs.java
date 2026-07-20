@@ -43,8 +43,8 @@ public class ListMoreConfigs implements IConfigHandler {
 		public static final ConfigBoolean ENTITY_RENDERING_BLACKLIST = createEntityRenderingBlacklist();
 		public static final ConfigStringList ENTITY_RENDERING_BLACKLIST_LIST = createEntityRenderingBlacklistList();
 		public static final ConfigInteger ENTITY_RENDERING_BLACKLIST_RANGE = createEntityRenderingBlacklistRange();
-		public static final ConfigBoolean FURNACE_ASH_ASSISTANT = createFurnaceAshAssistant();
-		public static final ConfigInteger FURNACE_ASH_ASSISTANT_RANGE = createFurnaceAshAssistantRange();
+		public static final ConfigBoolean INVALID_FURNACE_INPUT_HIGHLIGHTER = createInvalidFurnaceInputHighlighter();
+		public static final ConfigInteger INVALID_FURNACE_INPUT_HIGHLIGHTER_RANGE = createInvalidFurnaceInputHighlighterRange();
 		public static final ConfigBoolean PLAYER_TRACER = createPlayerTracer();
 		public static final ConfigColor PLAYER_TRACER_COLOR = createPlayerTracerColor();
 		public static final ConfigBoolean PROJECTILE_LANDING_PREDICTION = createProjectileLandingPrediction();
@@ -57,8 +57,8 @@ public class ListMoreConfigs implements IConfigHandler {
 			ENTITY_RENDERING_BLACKLIST,
 			ENTITY_RENDERING_BLACKLIST_LIST,
 			ENTITY_RENDERING_BLACKLIST_RANGE,
-			FURNACE_ASH_ASSISTANT,
-			FURNACE_ASH_ASSISTANT_RANGE,
+			INVALID_FURNACE_INPUT_HIGHLIGHTER,
+			INVALID_FURNACE_INPUT_HIGHLIGHTER_RANGE,
 			PLAYER_TRACER,
 			PLAYER_TRACER_COLOR,
 			PROJECTILE_LANDING_PREDICTION
@@ -99,12 +99,12 @@ public class ListMoreConfigs implements IConfigHandler {
 		return createConfig(new ConfigInteger("entityRenderingBlacklistRange", 0, 0, 256));
 	}
 
-	private static ConfigBoolean createFurnaceAshAssistant() {
-		return createConfig(new ConfigBoolean("furnaceAshAssistant", false));
+	private static ConfigBoolean createInvalidFurnaceInputHighlighter() {
+		return createConfig(new ConfigBoolean("invalidFurnaceInputHighlighter", false));
 	}
 
-	private static ConfigInteger createFurnaceAshAssistantRange() {
-		return createConfig(new ConfigInteger("furnaceAshAssistantRange", 1, 0, 8));
+	private static ConfigInteger createInvalidFurnaceInputHighlighterRange() {
+		return createConfig(new ConfigInteger("invalidFurnaceInputHighlighterRange", 1, 0, 8));
 	}
 
 	private static ConfigBoolean createPlayerTracer() {
