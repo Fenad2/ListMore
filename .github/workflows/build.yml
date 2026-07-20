@@ -2,9 +2,12 @@ name: Build
 
 on:
   push:
-    branches: [ main, '*' ]
+    branches: [ '**' ]
     tags: [ '*' ]
   pull_request:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -33,15 +36,46 @@ jobs:
           GRADLE_OPTS: '-Xmx3G -Dorg.gradle.jvmargs=-Xmx3G'
         run: ./gradlew build --no-daemon --console=plain
 
+      - name: Collect Build Artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          mkdir -p artifacts
+          artifact_count=0
+
+          for version_dir in versions/*-fabric; do
+            minecraft_version="$(basename "$version_dir" -fabric)"
+            for file in "$version_dir"/build/libs/*.jar; do
+              file_name="$(basename "$file")"
+              if [[ "$file_name" == *-sources.jar ]]; then
+                stem="${file_name%-sources.jar}"
+                suffix="-sources"
+              else
+                stem="${file_name%.jar}"
+                suffix=""
+              fi
+
+              cp "$file" "artifacts/${stem}-mc${minecraft_version}${suffix}.jar"
+              artifact_count=$((artifact_count + 1))
+            done
+          done
+
+          if [[ "$artifact_count" -eq 0 ]]; then
+            echo 'No build artifacts were found' >&2
+            exit 1
+          fi
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: Build Artifacts
-          path: build/libs/
+          name: ListMore
+          path: artifacts/*.jar
+          if-no-files-found: error
 
       - name: Publish to GitHub Releases
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: build/libs/*.jar
+          files: artifacts/*.jar
           generate_release_notes: true
