@@ -1,84 +1,20 @@
 plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}"
-	id 'maven-publish'
+	id 'net.fabricmc.fabric-loom' version "${loom_version}" apply false
+	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}" apply false
+	id 'com.replaymod.preprocess' version "${preprocessor_version}"
 }
 
-version = project.mod_version
-group = project.maven_group
+preprocess {
+	strictExtraMappings.set(false)
 
-repositories {
-	maven {
-		name = 'Modrinth Maven'
-		url = 'https://api.modrinth.com/maven'
-	}
+	def mc1218Fabric = createNode('1.21.8-fabric', 1_21_08, '')
+	def mc12110Fabric = createNode('1.21.10-fabric', 1_21_10, '')
+	def mc12111Fabric = createNode('1.21.11-fabric', 1_21_11, '')
+	def mc2601Fabric = createNode('26.1-fabric', 26_01_02, '')
+	def mc2602Fabric = createNode('26.2-fabric', 26_02_00, '')
 
-	maven {
-		name = 'JitPack'
-		url = 'https://jitpack.io'
-		content {
-			includeGroupAndSubgroups('com.github.sakura-ryoko')
-		}
-	}
-}
-
-dependencies {
-	def useSakuraMalilib = project.findProperty('dependencies.api.malilib_version.use_sakura_fork')?.toString()?.toBoolean() ?: false
-	def malilibFabricGa = useSakuraMalilib ? 'com.github.sakura-ryoko:malilib' : 'maven.modrinth:malilib'
-	def malilibVersion = project.findProperty('dependencies.api.malilib_version')
-	def malilibCoordinate = malilibVersion.contains(':') ? malilibVersion : "${malilibFabricGa}:${malilibVersion}"
-
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-	implementation malilibCoordinate
-
-	compileOnly "maven.modrinth:modmenu:20.0.0-beta.4"
-}
-
-processResources {
-	def version = project.version
-	inputs.property "version", version
-
-	filesMatching("fabric.mod.json") {
-		expand "version": version
-	}
-}
-
-tasks.withType(JavaCompile).configureEach {
-	it.options.release = 25
-	it.javaCompiler = javaToolchains.compilerFor {
-		languageVersion = JavaLanguageVersion.of(25)
-	}
-}
-
-java {
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(25)
-	}
-
-	withSourcesJar()
-
-	sourceCompatibility = JavaVersion.VERSION_25
-	targetCompatibility = JavaVersion.VERSION_25
-}
-
-jar {
-	def projectName = project.name
-	inputs.property "projectName", projectName
-
-	from("LICENSE") {
-		rename { "${it}_$projectName"}
-	}
-}
-
-publishing {
-	publications {
-		create("mavenJava", MavenPublication) {
-			from components.java
-		}
-	}
-
-	repositories {
-
-	}
+	mc1218Fabric.link(mc12110Fabric, file('versions/mapping-fabric-1.21.8-1.21.10.txt'))
+	mc12110Fabric.link(mc12111Fabric, file('versions/mapping-fabric-1.21.10-1.21.11.txt'))
+	mc12111Fabric.link(mc2601Fabric, file('versions/mapping-fabric-1.21.11-26.1.txt'))
+	mc2601Fabric.link(mc2602Fabric, file('versions/mapping-fabric-26.1-26.2.txt'))
 }

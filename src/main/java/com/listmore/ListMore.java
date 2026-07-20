@@ -9,18 +9,21 @@ import com.listmore.render.FurnaceAshAssistantRenderer;
 import com.listmore.render.PlayerTracerHudRenderer;
 import com.listmore.render.ProjectileLandingRenderer;
 
-import net.fabricmc.api.ClientModInitializer;
-
-import net.minecraft.client.Minecraft;
-import net.minecraft.resources.Identifier;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Player;
-
 import fi.dy.masa.malilib.event.InputEventHandler;
+import fi.dy.masa.malilib.event.InitializationHandler;
 import fi.dy.masa.malilib.event.RenderEventHandler;
+import fi.dy.masa.malilib.interfaces.IInitializationHandler;
 import fi.dy.masa.malilib.registry.Registry;
 import fi.dy.masa.malilib.util.data.ModInfo;
+import net.fabricmc.api.ClientModInitializer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
 
+//#if MC >= 12111
+//$$ import net.minecraft.resources.Identifier;
+//#endif
+import net.minecraft.world.entity.player.Player;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,29 +34,42 @@ public class ListMore implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
-		initializeConfigs();
-		CopyTargetIdInputHandler.getInstance().init();
-		InputEventHandler.getKeybindManager().registerKeybindProvider(CopyTargetIdInputHandler.getInstance());
-		RenderEventHandler.getInstance().registerInGameGuiRenderer(PlayerTracerHudRenderer.getInstance());
-		RenderEventHandler.getInstance().registerWorldLastRenderer(ProjectileLandingRenderer.getInstance());
-		RenderEventHandler.getInstance().registerWorldLastRenderer(FurnaceAshAssistantRenderer.getInstance());
-		Registry.CONFIG_SCREEN.registerConfigScreenFactory(new ModInfo(MOD_ID, "ListMore", ListMoreConfigGui::new));
+		InitializationHandler.getInstance().registerInitializationHandler(new IInitializationHandler() {
+			@Override
+			public void registerModHandlers() {
+				initializeConfigs();
+				CopyTargetIdInputHandler.getInstance().init();
+				InputEventHandler.getKeybindManager().registerKeybindProvider(CopyTargetIdInputHandler.getInstance());
+				//#if MC >= 26.1
+				//$$ RenderEventHandler.getInstance().registerInGameGuiRenderer(PlayerTracerHudRenderer.getInstance());
+				//#else
+				RenderEventHandler.getInstance().registerGameOverlayRenderer(PlayerTracerHudRenderer.getInstance());
+				//#endif
+				RenderEventHandler.getInstance().registerWorldLastRenderer(ProjectileLandingRenderer.getInstance());
+				RenderEventHandler.getInstance().registerWorldLastRenderer(FurnaceAshAssistantRenderer.getInstance());
+				Registry.CONFIG_SCREEN.registerConfigScreenFactory(new ModInfo(MOD_ID, "ListMore", ListMoreConfigGui::new));
+			}
+		});
 	}
 
-	public static Identifier id(String path) {
-		return Identifier.fromNamespaceAndPath(MOD_ID, path);
+	//#if MC >= 12111
+	//$$ public static Identifier id(String path) {
+	//$$ 	return Identifier.fromNamespaceAndPath(MOD_ID, path);
+	//$$ }
+	//#else
+	public static ResourceLocation id(String path) {
+		return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
 	}
+	//#endif
 
 	public static void initializeConfigs() {
-		if (configHandlerRegistered == false) {
+		if (!configHandlerRegistered) {
 			ListMoreConfigs.init();
 			configHandlerRegistered = true;
 		}
-		reloadConfigs();
 	}
 
 	public static void reloadConfigs() {
-		ListMoreConfigs.loadFromFile();
 		EntityOutlineRenderer.refreshSelectedEntityTypes();
 		EntityRenderBlacklist.refreshBlockedEntityTypes();
 	}

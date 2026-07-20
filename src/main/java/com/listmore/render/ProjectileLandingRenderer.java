@@ -3,7 +3,9 @@ package com.listmore.render;
 import com.listmore.config.ListMoreConfigs;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
+//#if MC >= 26.1
+//$$ import com.mojang.blaze3d.buffers.GpuBufferSlice;
+//#endif
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import fi.dy.masa.malilib.interfaces.IRenderer;
 import fi.dy.masa.malilib.render.MaLiLibPipelines;
@@ -12,12 +14,16 @@ import fi.dy.masa.malilib.render.RenderUtils;
 import fi.dy.masa.malilib.util.data.Color4f;
 
 import net.minecraft.client.Camera;
-import net.minecraft.client.DeltaTracker;
+//#if MC >= 26.1
+//$$ import net.minecraft.client.DeltaTracker;
+//#endif
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.RenderBuffers;
 import net.minecraft.client.renderer.culling.Frustum;
-import net.minecraft.client.renderer.state.level.CameraRenderState;
+//#if MC >= 26.1
+//$$ import net.minecraft.client.renderer.state.level.CameraRenderState;
+//#endif
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.BowItem;
@@ -31,15 +37,18 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Matrix4fc;
-import org.joml.Vector4f;
+//#if MC >= 26.1
+//$$ import org.joml.Matrix4fc;
+//$$ import org.joml.Vector4f;
+//#else
+import org.joml.Matrix4f;
+//#endif
 
 public final class ProjectileLandingRenderer implements IRenderer {
 	private static final int MAX_TICKS = 200;
 	private static final double HIT_RADIUS = 0.1D;
 	private static final float HALF_SIZE = 0.125F;
 	private static final ProjectileLandingRenderer INSTANCE = new ProjectileLandingRenderer();
-	// MaLiLib把计算和实际绘制拆成了两个阶段
 	private LandingPoint pendingLanding;
 
 	private ProjectileLandingRenderer() {
@@ -49,8 +58,34 @@ public final class ProjectileLandingRenderer implements IRenderer {
 		return INSTANCE;
 	}
 
+	//#if MC >= 26.1
+	//$$ @Override
+	//$$ public void onExtractWorldLast(DeltaTracker deltaTracker, Camera camera, float partialTicks, ProfilerFiller profiler) {
+	//$$ 	updateLanding();
+	//$$ }
+	//#else
 	@Override
-	public void onExtractWorldLast(DeltaTracker deltaTracker, Camera camera, float partialTicks, ProfilerFiller profiler) {
+	public void onRenderWorldLastAdvanced(RenderTarget framebuffer, Matrix4f posMatrix, Matrix4f projMatrix,
+									Frustum frustum, Camera camera, RenderBuffers buffers, ProfilerFiller profiler) {
+		updateLanding();
+		if (this.pendingLanding != null) {
+			drawMarker(this.pendingLanding);
+		}
+	}
+	//#endif
+
+	//#if MC >= 26.1
+	//$$ @Override
+	//$$ public void onRenderWorldLast(RenderTarget framebuffer, Matrix4fc modelViewMatrix, CameraRenderState cameraState,
+	//$$ 								  Frustum culling, RenderBuffers buffers, GpuBufferSlice terrainFog,
+	//$$ 								  Vector4f fogColor, ProfilerFiller profiler) {
+	//$$ 	if (this.pendingLanding != null) {
+	//$$ 		drawMarker(this.pendingLanding);
+	//$$ 	}
+	//$$ }
+	//#endif
+
+	private void updateLanding() {
 		Minecraft client = Minecraft.getInstance();
 		LocalPlayer player = client.player;
 		Level level = client.level;
@@ -76,20 +111,10 @@ public final class ProjectileLandingRenderer implements IRenderer {
 				this.pendingLanding = null;
 				return;
 			}
-			// 弓没拉满就不能按满蓄力速度来算
 			speed *= pull;
 		}
 
 		this.pendingLanding = predict(player, level, spec, speed);
-	}
-
-	@Override
-	public void onRenderWorldLast(RenderTarget framebuffer, Matrix4fc modelViewMatrix, CameraRenderState cameraState,
-								  Frustum culling, RenderBuffers buffers, GpuBufferSlice terrainFog,
-								  Vector4f fogColor, ProfilerFiller profiler) {
-		if (this.pendingLanding != null) {
-			drawMarker(this.pendingLanding);
-		}
 	}
 
 	private static LandingPoint predict(LocalPlayer player, Level level, ProjectileSpec spec, double speed) {
@@ -102,7 +127,6 @@ public final class ProjectileLandingRenderer implements IRenderer {
 			EntityHit entityHit = findEntityHit(level, player, current, next);
 
 			double blockDistance = blockHit.getType() == HitResult.Type.MISS ? Double.MAX_VALUE : current.distanceToSqr(blockHit.getLocation());
-			// 这一 tick 谁更近，投射物先撞到谁。
 			if (entityHit != null && entityHit.distanceSquared < blockDistance) {
 				return new LandingPoint(entityHit.position, true);
 			}
@@ -137,21 +161,35 @@ public final class ProjectileLandingRenderer implements IRenderer {
 	}
 
 	private static void drawMarker(LandingPoint landing) {
-		// 这条渲染管线要的是相对相机的坐标
-		Vec3 position = landing.position.subtract(Minecraft.getInstance().gameRenderer.mainCamera().position());
+		//#if MC >= 26.2
+		//$$ Vec3 position = landing.position.subtract(Minecraft.getInstance().gameRenderer.mainCamera().position());
+		//#elseif MC >= 12111
+		//$$ Vec3 position = landing.position.subtract(Minecraft.getInstance().gameRenderer.getMainCamera().position());
+		//#else
+		Vec3 position = landing.position.subtract(Minecraft.getInstance().gameRenderer.getMainCamera().getPosition());
+		//#endif
 		Color4f color = landing.hitEntity ? new Color4f(1.0F, 0.0F, 0.0F, 0.6F) : new Color4f(0.0F, 1.0F, 0.2F, 0.6F);
 		RenderContext context = new RenderContext(
 				() -> "listmore:projectile_landing",
-				MaLiLibPipelines.DEBUG_LINES_MASA_SIMPLE_NO_DEPTH_NO_CULL,
-				0
+				MaLiLibPipelines.DEBUG_LINES_MASA_SIMPLE_NO_DEPTH_NO_CULL
+				//#if MC >= 26.2
+				//$$ , 0
+				//#endif
 		);
+		//#if MC < 12111
+		context.lineWidth(2.0F);
+		//#endif
 
 		try {
 			BufferBuilder builder = context.getBuilder();
 			RenderUtils.drawBoxAllEdgesBatchedLines(
 					(float) (position.x - HALF_SIZE), (float) (position.y - HALF_SIZE), (float) (position.z - HALF_SIZE),
 					(float) (position.x + HALF_SIZE), (float) (position.y + HALF_SIZE), (float) (position.z + HALF_SIZE),
-					color, 2.0F, builder
+					color
+					//#if MC >= 12111
+					//$$ , 2.0F
+					//#endif
+					, builder
 			);
 			draw(context, builder.build());
 		} finally {

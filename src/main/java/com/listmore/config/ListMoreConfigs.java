@@ -23,7 +23,11 @@ import fi.dy.masa.malilib.config.options.ConfigInteger;
 import fi.dy.masa.malilib.config.options.ConfigStringList;
 import fi.dy.masa.malilib.interfaces.IValueChangeCallback;
 import fi.dy.masa.malilib.util.FileUtils;
-import fi.dy.masa.malilib.util.data.json.JsonUtils;
+//#if MC>=260100
+//$$ import fi.dy.masa.malilib.util.data.json.JsonUtils;
+//#else
+import fi.dy.masa.malilib.util.JsonUtils;
+//#endif
 
 public class ListMoreConfigs implements IConfigHandler {
 	private static final String LEGACY_CONFIG_FILE_NAME = "ohmylist.json";
@@ -130,7 +134,11 @@ public class ListMoreConfigs implements IConfigHandler {
 	}
 
 	public static void loadFromFile() {
-		Path configDirectory = FileUtils.getConfigDirectory();
+		//#if MC>=260100
+		//$$ Path configDirectory = FileUtils.getConfigDirectory();
+		//#else
+		Path configDirectory = FileUtils.getConfigDirectoryAsPath();
+		//#endif
 		migrateLegacyConfig(configDirectory);
 		Path configFile = configDirectory.resolve(CONFIG_FILE_NAME);
 
@@ -138,7 +146,11 @@ public class ListMoreConfigs implements IConfigHandler {
 			return;
 		}
 
-		JsonElement element = JsonUtils.parseJsonFile(configFile);
+		//#if MC>=260100
+		//$$ JsonElement element = JsonUtils.parseJsonFile(configFile);
+		//#else
+		JsonElement element = JsonUtils.parseJsonFileAsPath(configFile);
+		//#endif
 		if (element != null && element.isJsonObject()) {
 			JsonObject root = element.getAsJsonObject();
 			ConfigUtils.readConfigBase(root, "Generic", Generic.OPTIONS);
@@ -161,7 +173,11 @@ public class ListMoreConfigs implements IConfigHandler {
 	}
 
 	public static void saveToFile() {
-		Path dir = FileUtils.getConfigDirectory();
+		//#if MC>=260100
+		//$$ Path dir = FileUtils.getConfigDirectory();
+		//#else
+		Path dir = FileUtils.getConfigDirectoryAsPath();
+		//#endif
 		if (!Files.exists(dir)) {
 			FileUtils.createDirectoriesIfMissing(dir);
 		}
@@ -172,12 +188,18 @@ public class ListMoreConfigs implements IConfigHandler {
 
 		JsonObject root = new JsonObject();
 		ConfigUtils.writeConfigBase(root, "Generic", Generic.OPTIONS);
-		JsonUtils.writeJsonToFile(root, dir.resolve(CONFIG_FILE_NAME));
+		//#if MC>=260100
+		//$$ JsonUtils.writeJsonToFile(root, dir.resolve(CONFIG_FILE_NAME));
+		//#else
+		JsonUtils.writeJsonToFileAsPath(root, dir.resolve(CONFIG_FILE_NAME));
+		//#endif
 	}
 
 	@Override
 	public void load() {
 		loadFromFile();
+		EntityOutlineRenderer.refreshSelectedEntityTypes();
+		EntityRenderBlacklist.refreshBlockedEntityTypes();
 	}
 
 	@Override

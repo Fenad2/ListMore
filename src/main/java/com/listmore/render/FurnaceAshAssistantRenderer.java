@@ -3,7 +3,9 @@ package com.listmore.render;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
+//#if MC >= 26.1
+//$$ import com.mojang.blaze3d.buffers.GpuBufferSlice;
+//#endif
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
@@ -16,13 +18,17 @@ import fi.dy.masa.malilib.render.RenderUtils;
 import fi.dy.masa.malilib.util.data.Color4f;
 
 import net.minecraft.client.Camera;
-import net.minecraft.client.DeltaTracker;
+//#if MC >= 26.1
+//$$ import net.minecraft.client.DeltaTracker;
+//#endif
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.RenderBuffers;
 import net.minecraft.client.renderer.culling.Frustum;
-import net.minecraft.client.renderer.state.level.CameraRenderState;
+//#if MC >= 26.1
+//$$ import net.minecraft.client.renderer.state.level.CameraRenderState;
+//#endif
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -37,8 +43,11 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.phys.Vec3;
 
-import org.joml.Matrix4fc;
-import org.joml.Vector4f;
+import org.joml.Matrix4f;
+//#if MC >= 26.1
+//$$ import org.joml.Matrix4fc;
+//$$ import org.joml.Vector4f;
+//#endif
 
 public final class FurnaceAshAssistantRenderer implements IRenderer {
 	// 玩家停留在同一区块时限制扫描频率，避免每帧遍历附近所有熔炉
@@ -62,8 +71,23 @@ public final class FurnaceAshAssistantRenderer implements IRenderer {
 	}
 
 	// 在世界渲染前更新当前范围内需要高亮的熔炉位置
+	//#if MC >= 26.1
+	//$$ @Override
+	//$$ public void onExtractWorldLast(DeltaTracker deltaTracker, Camera camera, float partialTicks, ProfilerFiller profiler) {
+	//$$ 	updateMarkers();
+	//$$ }
+	//#else
 	@Override
-	public void onExtractWorldLast(DeltaTracker deltaTracker, Camera camera, float partialTicks, ProfilerFiller profiler) {
+	public void onRenderWorldLastAdvanced(RenderTarget framebuffer, Matrix4f posMatrix, Matrix4f projMatrix,
+										Frustum frustum, Camera camera, RenderBuffers buffers, ProfilerFiller profiler) {
+		updateMarkers();
+		if (!this.invalidFurnaces.isEmpty()) {
+			drawMarkers(this.invalidFurnaces);
+		}
+	}
+	//#endif
+
+	private void updateMarkers() {
 		Minecraft client = Minecraft.getInstance();
 		LocalPlayer player = client.player;
 		ClientLevel level = client.level;
@@ -73,7 +97,11 @@ public final class FurnaceAshAssistantRenderer implements IRenderer {
 		}
 
 		int range = ListMoreConfigs.Generic.FURNACE_ASH_ASSISTANT_RANGE.getIntegerValue();
-		ChunkPos playerChunk = ChunkPos.containing(player.blockPosition());
+		//#if MC >= 26.1
+		//$$ ChunkPos playerChunk = ChunkPos.containing(player.blockPosition());
+		//#else
+		ChunkPos playerChunk = new ChunkPos(player.blockPosition());
+		//#endif
 		long gameTime = level.getGameTime();
 		if (playerChunk.equals(lastPlayerChunk) && range == lastRange && gameTime - lastScanTick < SCAN_INTERVAL_TICKS) {
 			return;
@@ -86,14 +114,16 @@ public final class FurnaceAshAssistantRenderer implements IRenderer {
 	}
 
 	// 在世界末尾阶段绘制已扫描到的高亮标记
-	@Override
-	public void onRenderWorldLast(RenderTarget framebuffer, Matrix4fc modelViewMatrix, CameraRenderState cameraState,
-								  Frustum culling, RenderBuffers buffers, GpuBufferSlice terrainFog,
-								  Vector4f fogColor, ProfilerFiller profiler) {
-		if (!this.invalidFurnaces.isEmpty()) {
-			drawMarkers(this.invalidFurnaces);
-		}
-	}
+	//#if MC >= 26.1
+	//$$ @Override
+	//$$ public void onRenderWorldLast(RenderTarget framebuffer, Matrix4fc modelViewMatrix, CameraRenderState cameraState,
+	//$$ 								  Frustum culling, RenderBuffers buffers, GpuBufferSlice terrainFog,
+	//$$ 								  Vector4f fogColor, ProfilerFiller profiler) {
+	//$$ 	if (!this.invalidFurnaces.isEmpty()) {
+	//$$ 		drawMarkers(this.invalidFurnaces);
+	//$$ 	}
+	//$$ }
+	//#endif
 
 	// 功能关闭或离开世界时清除缓存结果
 	private void clearResults() {
@@ -115,8 +145,15 @@ public final class FurnaceAshAssistantRenderer implements IRenderer {
 		RecipePropertySet furnaceInputs = clientLevel.recipeAccess().propertySet(RecipePropertySet.FURNACE_INPUT);
 		List<BlockPos> results = new ArrayList<>();
 
-		for (int chunkX = center.x() - range; chunkX <= center.x() + range; chunkX++) {
-			for (int chunkZ = center.z() - range; chunkZ <= center.z() + range; chunkZ++) {
+		//#if MC >= 26.1
+		//$$ int centerX = center.x();
+		//$$ int centerZ = center.z();
+		//#else
+		int centerX = center.x;
+		int centerZ = center.z;
+		//#endif
+		for (int chunkX = centerX - range; chunkX <= centerX + range; chunkX++) {
+			for (int chunkZ = centerZ - range; chunkZ <= centerZ + range; chunkZ++) {
 				LevelChunk chunk = getLoadedChunk(clientLevel, serverLevel, chunkX, chunkZ);
 				if (chunk == null) {
 					continue;
@@ -150,17 +187,30 @@ public final class FurnaceAshAssistantRenderer implements IRenderer {
 
 	// 为每个目标熔炉绘制
 	private static void drawMarkers(List<BlockPos> furnaces) {
-		Vec3 cameraPosition = Minecraft.getInstance().gameRenderer.mainCamera().position();
+		//#if MC >= 26.2
+		//$$ Vec3 cameraPosition = Minecraft.getInstance().gameRenderer.mainCamera().position();
+		//#elseif MC >= 12111
+		//$$ Vec3 cameraPosition = Minecraft.getInstance().gameRenderer.getMainCamera().position();
+		//#else
+		Vec3 cameraPosition = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+		//#endif
 		RenderContext fillContext = new RenderContext(
 			() -> "listmore:furnace_ash_fill",
-			MaLiLibPipelines.POSITION_COLOR_MASA_NO_DEPTH_NO_CULL,
-			0
+			MaLiLibPipelines.POSITION_COLOR_MASA_NO_DEPTH_NO_CULL
+			//#if MC >= 26.2
+			//$$ , 0
+			//#endif
 		);
 		RenderContext outlineContext = new RenderContext(
 			() -> "listmore:furnace_ash_outline",
-			MaLiLibPipelines.DEBUG_LINES_MASA_SIMPLE_NO_DEPTH_NO_CULL,
-			0
+			MaLiLibPipelines.DEBUG_LINES_MASA_SIMPLE_NO_DEPTH_NO_CULL
+			//#if MC >= 26.2
+			//$$ , 0
+			//#endif
 		);
+		//#if MC < 12111
+		outlineContext.lineWidth(2.0F);
+		//#endif
 
 		try {
 			// 世界末尾渲染使用相对于当前相机的坐标，使标记与视角保持正确对应
@@ -175,7 +225,11 @@ public final class FurnaceAshAssistantRenderer implements IRenderer {
 				float maxZ = minZ + 1.0F - BOX_INSET * 2.0F;
 
 				RenderUtils.drawBoxAllSidesBatchedQuads(minX, minY, minZ, maxX, maxY, maxZ, FILL_COLOR, fillBuilder);
-				RenderUtils.drawBoxAllEdgesBatchedLines(minX, minY, minZ, maxX, maxY, maxZ, OUTLINE_COLOR, 2.0F, outlineBuilder);
+				RenderUtils.drawBoxAllEdgesBatchedLines(minX, minY, minZ, maxX, maxY, maxZ, OUTLINE_COLOR
+					//#if MC >= 12111
+					//$$ , 2.0F
+					//#endif
+					, outlineBuilder);
 			}
 
 			draw(fillContext, fillBuilder.build());

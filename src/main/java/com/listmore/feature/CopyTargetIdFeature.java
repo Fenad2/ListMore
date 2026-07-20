@@ -2,7 +2,6 @@ package com.listmore.feature;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -17,22 +16,22 @@ public final class CopyTargetIdFeature {
 			return false;
 		}
 
-		Identifier id = getTargetId(client);
+		String id = getTargetId(client);
 		if (id == null) {
 			return false;
 		}
 
-		client.keyboardHandler.setClipboard(id.toString());
+		client.keyboardHandler.setClipboard(id);
 		return true;
 	}
 
-	private static Identifier getTargetId(Minecraft client) {
+	private static String getTargetId(Minecraft client) {
 		HitResult hitResult = client.hitResult;
 		if (hitResult instanceof EntityHitResult entityHitResult) {
-			return BuiltInRegistries.ENTITY_TYPE.getKey(entityHitResult.getEntity().getType());
+			return String.valueOf(BuiltInRegistries.ENTITY_TYPE.getKey(entityHitResult.getEntity().getType()));
 		}
 		if (hitResult instanceof BlockHitResult blockHitResult) {
-			return BuiltInRegistries.BLOCK.getKey(client.level.getBlockState(blockHitResult.getBlockPos()).getBlock());
+			return String.valueOf(BuiltInRegistries.BLOCK.getKey(client.level.getBlockState(blockHitResult.getBlockPos()).getBlock()));
 		}
 
 		return null;

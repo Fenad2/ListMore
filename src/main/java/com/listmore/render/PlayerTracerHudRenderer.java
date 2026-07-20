@@ -4,7 +4,11 @@ import com.listmore.ListMore;
 import com.listmore.config.ListMoreConfigs;
 
 import fi.dy.masa.malilib.interfaces.IRenderer;
-import fi.dy.masa.malilib.render.GuiContext;
+//#if MC >= 12111
+//$$ import fi.dy.masa.malilib.render.GuiContext;
+//#else
+import net.minecraft.client.gui.GuiGraphics;
+//#endif
 import fi.dy.masa.malilib.render.RenderUtils;
 
 import net.minecraft.client.Minecraft;
@@ -12,7 +16,6 @@ import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
-// 玩家追踪HUD渲染器类，实现IRender接口用于在游戏界面中绘制玩家追踪线
 public class PlayerTracerHudRenderer implements IRenderer {
 	private static final PlayerTracerHudRenderer INSTANCE = new PlayerTracerHudRenderer();
 	private static final int LINE_THICKNESS = 1;
@@ -20,17 +23,43 @@ public class PlayerTracerHudRenderer implements IRenderer {
 	private PlayerTracerHudRenderer() {
 	}
 
-	// 获取PlayerTracerHudRenderer的单例实例
 	public static PlayerTracerHudRenderer getInstance() {
 		return INSTANCE;
 	}
 
-	// 在提取GUI覆盖层后调用
+	//#if MC >= 26.1
+	//$$ @Override
+	//$$ public void onExtractGuiOverlayPost(GuiContext ctx, float partialTicks, ProfilerFiller profiler) {
+	//$$ 	render(ctx, partialTicks);
+	//$$ }
+	//#elseif MC >= 12111
+	//$$ @Override
+	//$$ public void onRenderGameOverlayPostAdvanced(GuiContext ctx, float partialTicks, ProfilerFiller profiler) {
+	//$$ 	render(ctx, partialTicks);
+	//$$ }
+	//#else
 	@Override
-	public void onExtractGuiOverlayPost(GuiContext ctx, float partialTicks, ProfilerFiller profiler) {
+	public void onRenderGameOverlayPostAdvanced(GuiGraphics ctx, float partialTicks, ProfilerFiller profiler, Minecraft client) {
+		render(ctx, partialTicks);
+	}
+	//#endif
+
+	private static void render(
+			//#if MC >= 12111
+			//$$ GuiContext ctx,
+			//#else
+			GuiGraphics ctx,
+			//#endif
+			float partialTicks) {
 		Minecraft client = Minecraft.getInstance();
 
-		if (client.player == null || client.level == null || client.gui.screen() != null || !ListMoreConfigs.Generic.PLAYER_TRACER.getBooleanValue()) {
+		if (client.player == null || client.level == null ||
+				//#if MC >= 26.2
+				//$$ client.gui.screen() != null ||
+				//#else
+				client.screen != null ||
+				//#endif
+				!ListMoreConfigs.Generic.PLAYER_TRACER.getBooleanValue()) {
 			return;
 		}
 
@@ -58,9 +87,8 @@ public class PlayerTracerHudRenderer implements IRenderer {
 		}
 	}
 
-	// 投影玩家边界框顶部中心点到屏幕坐标
 	private static ProjectedPoint projectBoundingBoxTopCenter(Player player, float partialTicks,
-															   int guiWidth, int guiHeight) {
+			int guiWidth, int guiHeight) {
 		Vec3 basePos = player.getPosition(partialTicks);
 		double halfWidth = player.getBbWidth() * 0.5D + 0.05D;
 		double height = player.getBbHeight() + 0.05D;
@@ -91,7 +119,6 @@ public class PlayerTracerHudRenderer implements IRenderer {
 		return best;
 	}
 
-	// 投影三维坐标点到屏幕坐标点
 	private static ProjectedPoint projectPoint(double x, double y, double z, int guiWidth, int guiHeight) {
 		Minecraft client = Minecraft.getInstance();
 		Vec3 screenPos = client.gameRenderer.projectPointToScreen(new Vec3(x, y, z));
@@ -108,8 +135,13 @@ public class PlayerTracerHudRenderer implements IRenderer {
 		return new ProjectedPoint(scaledX, scaledY);
 	}
 
-	// 在GUI上下文中绘制从起点到终点的颜色线
-	private static void drawLine(GuiContext ctx, float startX, float startY, float endX, float endY, int color, float physicalPixelScale) {
+	private static void drawLine(
+			//#if MC >= 12111
+			//$$ GuiContext ctx,
+			//#else
+			GuiGraphics ctx,
+			//#endif
+			float startX, float startY, float endX, float endY, int color, float physicalPixelScale) {
 		float pixelStartX = startX / physicalPixelScale;
 		float pixelStartY = startY / physicalPixelScale;
 		float pixelEndX = endX / physicalPixelScale;
@@ -126,7 +158,6 @@ public class PlayerTracerHudRenderer implements IRenderer {
 		}
 	}
 
-	// 记录屏幕投影点的坐标
 	private record ProjectedPoint(float x, float y) {
 	}
 }

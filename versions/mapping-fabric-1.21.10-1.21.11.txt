@@ -1,0 +1,8 @@
+fi.dy.masa.malilib.util.JsonUtils fi.dy.masa.malilib.util.data.json.JsonUtils
+fi.dy.masa.malilib.util.ItemType fi.dy.masa.malilib.util.data.ItemType
+
+net.minecraft.client.Camera getEntity() entity()
+net.minecraft.client.Camera getPosition() position()
+
+org.apache.commons.lang3.mutable.MutableFloat getValue() floatValue()
+org.apache.commons.lang3.mutable.MutableObject getValue() get()
