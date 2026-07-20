@@ -25,7 +25,7 @@
   "listmore.config.generic.prettyName.entityHighlightOutlineColor": "实体高亮边框颜色",
   "listmore.config.generic.comment.entityHighlightOutlineColor": "设置名单中实体的描边颜色",
   "listmore.config.generic.name.invalidFurnaceInputHighlighter": "掏炉灰助手开关",
-  "listmore.config.generic.prettyName.invalidFurnaceInputHighlighter": "掏炉灰助手开关",
+  "listmore.config.generic.prettyName.invalidFurnaceInputHighlighter": "掏炉灰助手-开关",
   "listmore.config.generic.comment.invalidFurnaceInputHighlighter": "高亮输入槽含有无法烧制物品的普通熔炉",
   "listmore.config.generic.name.invalidFurnaceInputHighlighterRange": "掏炉灰助手范围设置",
   "listmore.config.generic.prettyName.invalidFurnaceInputHighlighterRange": "掏炉灰助手范围设置",
