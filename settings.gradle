@@ -1,3 +1,5 @@
+import groovy.json.JsonSlurper
+
 pluginManagement {
 	repositories {
 		maven {
@@ -6,8 +8,39 @@ pluginManagement {
 		}
 		mavenCentral()
 		gradlePluginPortal()
+		maven {
+			name = 'JitPack'
+			url = 'https://jitpack.io'
+			content {
+				includeGroupAndSubgroups('com.github.Fallen-Breath')
+			}
+		}
+	}
+
+	resolutionStrategy {
+		eachPlugin {
+			if (requested.id.id == 'com.replaymod.preprocess') {
+				useModule("com.github.Fallen-Breath:preprocessor:${requested.version}")
+			}
+		}
 	}
 }
 
-// Should match your modid
+Map<String, List<String>> settings = file('settings.json').withReader {
+	new JsonSlurper().parse(it) as Map<String, List<String>>
+}
+List<String> versions = settings.get('versions')
+String mainProject = file('versions/mainProject').getText('UTF-8').trim()
+
+if (!versions.contains(mainProject)) {
+	throw new IllegalArgumentException("Invalid main project: ${mainProject}")
+}
+
+for (String version : versions) {
+	include(":${version}")
+	ProjectDescriptor project = project(":${version}")
+	project.projectDir = file("versions/${version}")
+	project.buildFileName = "../${mainProject}/build.gradle"
+}
+
 rootProject.name = 'listmore'

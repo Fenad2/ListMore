@@ -8,11 +8,10 @@ import com.listmore.config.ListMoreConfigs;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 
 public final class EntityOutlineRenderer {
-	private static Set<Identifier> selectedEntityIds = Set.of();
+	private static Set<String> selectedEntityIds = Set.of();
 
 	private EntityOutlineRenderer() {
 	}
@@ -30,8 +29,7 @@ public final class EntityOutlineRenderer {
 			return false;
 		}
 
-		Identifier entityId = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
-		return entityId != null && selectedEntityIds.contains(entityId);
+		return selectedEntityIds.contains(String.valueOf(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType())));
 	}
 
 	public static int getOutlineColorRgb() {
@@ -43,10 +41,10 @@ public final class EntityOutlineRenderer {
 	}
 
 	public static void refreshSelectedEntityTypes(List<String> entries) {
-		Set<Identifier> entityIds = new HashSet<>();
+		Set<String> entityIds = new HashSet<>();
 
 		for (String entry : entries) {
-			Identifier entityId = parseEntityId(entry);
+			String entityId = parseEntityId(entry);
 			if (entityId != null) {
 				entityIds.add(entityId);
 			}
@@ -55,7 +53,7 @@ public final class EntityOutlineRenderer {
 		selectedEntityIds = Set.copyOf(entityIds);
 	}
 
-	private static Identifier parseEntityId(String entry) {
+	private static String parseEntityId(String entry) {
 		if (entry == null) {
 			return null;
 		}
@@ -64,11 +62,14 @@ public final class EntityOutlineRenderer {
 		if (entityIdText.isEmpty()) {
 			return null;
 		}
-		if (!entityIdText.contains(":")) {
-			entityIdText = "minecraft:" + entityIdText;
+
+		for (var entityType : BuiltInRegistries.ENTITY_TYPE) {
+			String entityId = String.valueOf(BuiltInRegistries.ENTITY_TYPE.getKey(entityType));
+			if (entityIdText.equals(entityId)) {
+				return entityId;
+			}
 		}
 
-		Identifier entityId = Identifier.tryParse(entityIdText);
-		return entityId != null && BuiltInRegistries.ENTITY_TYPE.getOptional(entityId).isPresent() ? entityId : null;
+		return null;
 	}
 }

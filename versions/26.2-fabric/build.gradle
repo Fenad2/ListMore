@@ -1,0 +1,89 @@
+plugins {
+	id 'maven-publish'
+}
+
+apply plugin: 'net.fabricmc.fabric-loom'
+apply plugin: 'com.replaymod.preprocess'
+
+repositories {
+	maven {
+		name = 'Modrinth Maven'
+		url = 'https://api.modrinth.com/maven'
+	}
+
+	maven {
+		name = 'JitPack'
+		url = 'https://jitpack.io'
+		content {
+			includeGroupAndSubgroups('com.github.sakura-ryoko')
+		}
+	}
+}
+
+dependencies {
+	def useSakuraMalilib = project.findProperty('dependencies.api.malilib_version.use_sakura_fork')?.toString()?.toBoolean() ?: false
+	def malilibFabricGa = useSakuraMalilib ? 'com.github.sakura-ryoko:malilib' : 'maven.modrinth:malilib'
+	def malilibVersion = project.findProperty('dependencies.api.malilib_version')
+	def malilibCoordinate = malilibVersion.contains(':') ? malilibVersion : "${malilibFabricGa}:${malilibVersion}"
+
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	implementation malilibCoordinate
+}
+
+processResources {
+	def version = project.version
+	inputs.property 'version', version
+	inputs.property 'minecraft_dependency', project.minecraft_dependency
+	inputs.property 'loader_version', project.loader_version
+	inputs.property 'java_version', project.java_version
+
+	filesMatching('fabric.mod.json') {
+		expand(
+			version: version,
+			minecraft_dependency: project.minecraft_dependency,
+			loader_version: project.loader_version,
+			java_version: project.java_version
+		)
+	}
+
+	filesMatching('listmore.mixins.json') {
+		expand(java_version: project.java_version)
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = project.java_version as int
+	it.javaCompiler = javaToolchains.compilerFor {
+		languageVersion = JavaLanguageVersion.of(project.java_version as int)
+	}
+}
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(project.java_version as int)
+	}
+
+	withSourcesJar()
+
+	sourceCompatibility = JavaVersion.toVersion(project.java_version)
+	targetCompatibility = JavaVersion.toVersion(project.java_version)
+}
+
+jar {
+	def projectName = project.name
+	inputs.property 'projectName', projectName
+
+	from(rootProject.file('LICENSE')) {
+		rename { "${it}_${projectName}" }
+	}
+}
+
+publishing {
+	publications {
+		create('mavenJava', MavenPublication) {
+			from components.java
+		}
+	}
+}

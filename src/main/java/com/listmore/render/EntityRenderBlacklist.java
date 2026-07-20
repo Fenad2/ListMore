@@ -8,23 +8,22 @@ import com.listmore.config.ListMoreConfigs;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 
 public final class EntityRenderBlacklist {
-	private static Set<Identifier> blockedEntityIds = Set.of();
+	private static Set<String> blockedEntityIds = Set.of();
 
 	private EntityRenderBlacklist() {
 	}
 
-	//判断是否应被跳过渲染
+	// 判断是否应被跳过渲染
 	public static boolean shouldSkipRendering(Entity entity) {
 		if (entity == null || !ListMoreConfigs.Generic.ENTITY_RENDERING_BLACKLIST.getBooleanValue()) {
 			return false;
 		}
 
-		Identifier entityId = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
-		if (entityId == null || !blockedEntityIds.contains(entityId)) {
+		String entityId = String.valueOf(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()));
+		if (!blockedEntityIds.contains(entityId)) {
 			return false;
 		}
 
@@ -40,12 +39,13 @@ public final class EntityRenderBlacklist {
 	public static void refreshBlockedEntityTypes() {
 		refreshBlockedEntityTypes(ListMoreConfigs.Generic.ENTITY_RENDERING_BLACKLIST_LIST.getStrings());
 	}
-	//根据填写的实体ID列表刷新实体类型集合
+
+	// 根据填写的实体 ID 列表刷新实体类型集合
 	public static void refreshBlockedEntityTypes(List<String> entries) {
-		Set<Identifier> entityIds = new HashSet<>();
+		Set<String> entityIds = new HashSet<>();
 
 		for (String entry : entries) {
-			Identifier entityId = parseEntityId(entry);
+			String entityId = parseEntityId(entry);
 			if (entityId != null) {
 				entityIds.add(entityId);
 			}
@@ -54,7 +54,7 @@ public final class EntityRenderBlacklist {
 		blockedEntityIds = Set.copyOf(entityIds);
 	}
 
-	private static Identifier parseEntityId(String entry) {
+	private static String parseEntityId(String entry) {
 		if (entry == null) {
 			return null;
 		}
@@ -63,11 +63,14 @@ public final class EntityRenderBlacklist {
 		if (entityIdText.isEmpty()) {
 			return null;
 		}
-		if (!entityIdText.contains(":")) {
-			entityIdText = "minecraft:" + entityIdText;
+
+		for (var entityType : BuiltInRegistries.ENTITY_TYPE) {
+			String entityId = String.valueOf(BuiltInRegistries.ENTITY_TYPE.getKey(entityType));
+			if (entityIdText.equals(entityId)) {
+				return entityId;
+			}
 		}
 
-		Identifier entityId = Identifier.tryParse(entityIdText);
-		return entityId != null && BuiltInRegistries.ENTITY_TYPE.getOptional(entityId).isPresent() ? entityId : null;
+		return null;
 	}
 }
