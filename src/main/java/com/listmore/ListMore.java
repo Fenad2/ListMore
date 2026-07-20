@@ -6,6 +6,7 @@ import com.listmore.input.CopyTargetIdInputHandler;
 import com.listmore.render.FurnaceAshAssistantRenderer;
 import com.listmore.render.PlayerTracerHudRenderer;
 import com.listmore.render.ProjectileLandingRenderer;
+import com.listmore.render.TntExplosionPreviewRenderer;
 
 import fi.dy.masa.malilib.event.InitializationHandler;
 import fi.dy.masa.malilib.event.InputEventHandler;
@@ -40,6 +41,7 @@ public class ListMore implements ClientModInitializer {
 				//#endif
 				RenderEventHandler.getInstance().registerWorldLastRenderer(ProjectileLandingRenderer.getInstance());
 				RenderEventHandler.getInstance().registerWorldLastRenderer(FurnaceAshAssistantRenderer.getInstance());
+				RenderEventHandler.getInstance().registerWorldLastRenderer(TntExplosionPreviewRenderer.getInstance());
 				Registry.CONFIG_SCREEN.registerConfigScreenFactory(new ModInfo(MOD_ID, "ListMore", ListMoreConfigGui::new));
 			}
 		});

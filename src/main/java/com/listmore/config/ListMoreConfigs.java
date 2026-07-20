@@ -20,6 +20,7 @@ import fi.dy.masa.malilib.config.options.ConfigBoolean;
 import fi.dy.masa.malilib.config.options.ConfigColor;
 import fi.dy.masa.malilib.config.options.ConfigHotkey;
 import fi.dy.masa.malilib.config.options.ConfigInteger;
+import fi.dy.masa.malilib.config.options.ConfigOptionList;
 import fi.dy.masa.malilib.config.options.ConfigStringList;
 import fi.dy.masa.malilib.interfaces.IValueChangeCallback;
 import fi.dy.masa.malilib.util.FileUtils;
@@ -45,6 +46,8 @@ public class ListMoreConfigs implements IConfigHandler {
 		public static final ConfigInteger ENTITY_RENDERING_BLACKLIST_RANGE = createEntityRenderingBlacklistRange();
 		public static final ConfigBoolean FURNACE_ASH_ASSISTANT = createFurnaceAshAssistant();
 		public static final ConfigInteger FURNACE_ASH_ASSISTANT_RANGE = createFurnaceAshAssistantRange();
+		public static final ConfigBoolean TNT_EXPLOSION_PREVIEW = createTntExplosionPreview();
+		public static final ConfigOptionList TNT_EXPLOSION_PREVIEW_MODE = createTntExplosionPreviewMode();
 		public static final ConfigBoolean PLAYER_TRACER = createPlayerTracer();
 		public static final ConfigColor PLAYER_TRACER_COLOR = createPlayerTracerColor();
 		public static final ConfigBoolean PROJECTILE_LANDING_PREDICTION = createProjectileLandingPrediction();
@@ -59,6 +62,8 @@ public class ListMoreConfigs implements IConfigHandler {
 			ENTITY_RENDERING_BLACKLIST_RANGE,
 			FURNACE_ASH_ASSISTANT,
 			FURNACE_ASH_ASSISTANT_RANGE,
+			TNT_EXPLOSION_PREVIEW,
+			TNT_EXPLOSION_PREVIEW_MODE,
 			PLAYER_TRACER,
 			PLAYER_TRACER_COLOR,
 			PROJECTILE_LANDING_PREDICTION
@@ -105,6 +110,14 @@ public class ListMoreConfigs implements IConfigHandler {
 
 	private static ConfigInteger createFurnaceAshAssistantRange() {
 		return createConfig(new ConfigInteger("furnaceAshAssistantRange", 1, 0, 8));
+	}
+
+	private static ConfigBoolean createTntExplosionPreview() {
+		return createConfig(new ConfigBoolean("tntExplosionPreview", false));
+	}
+
+	private static ConfigOptionList createTntExplosionPreviewMode() {
+		return createConfig(new ConfigOptionList("tntExplosionPreviewMode", TntExplosionPreviewMode.FULL));
 	}
 
 	private static ConfigBoolean createPlayerTracer() {
