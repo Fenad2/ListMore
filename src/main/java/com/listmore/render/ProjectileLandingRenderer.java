@@ -43,7 +43,7 @@ import net.minecraft.world.phys.Vec3;
 //#else
 import org.joml.Matrix4f;
 //#endif
-
+//弓、三叉戟、雪球、末影珍珠、鸡蛋。"弩"？
 public final class ProjectileLandingRenderer implements IRenderer {
 	private static final int MAX_TICKS = 200;
 	private static final double HIT_RADIUS = 0.1D;
@@ -94,7 +94,9 @@ public final class ProjectileLandingRenderer implements IRenderer {
 			return;
 		}
 
+		//获取主手物品弹射物信息
 		ProjectileSpec spec = ProjectileSpec.from(player.getMainHandItem().getItem());
+		//如果为空或未蓄力则null
 		if (spec == null || (spec.requiresUse && !player.isUsingItem())) {
 			this.pendingLanding = null;
 			return;
@@ -107,7 +109,7 @@ public final class ProjectileLandingRenderer implements IRenderer {
 		double speed = spec.speed;
 		if (spec == ProjectileSpec.BOW) {
 			float pull = BowItem.getPowerForTime(player.getTicksUsingItem());
-			if (pull < 0.1F) {
+			if (pull < 0.1F) {	// 力度太小，忽略
 				this.pendingLanding = null;
 				return;
 			}
@@ -126,6 +128,7 @@ public final class ProjectileLandingRenderer implements IRenderer {
 			HitResult blockHit = level.clip(new ClipContext(current, next, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
 			EntityHit entityHit = findEntityHit(level, player, current, next);
 
+			// 取方块和实体中更近的碰撞点
 			double blockDistance = blockHit.getType() == HitResult.Type.MISS ? Double.MAX_VALUE : current.distanceToSqr(blockHit.getLocation());
 			if (entityHit != null && entityHit.distanceSquared < blockDistance) {
 				return new LandingPoint(entityHit.position, true);
@@ -148,6 +151,7 @@ public final class ProjectileLandingRenderer implements IRenderer {
 		AABB searchBox = new AABB(start, end).inflate(HIT_RADIUS);
 		EntityHit closest = null;
 		for (Entity entity : level.getEntities(player, searchBox, entity -> entity.isAlive() && entity.isPickable())) {
+			// 检测射线是否穿过实体的碰撞箱
 			var hit = entity.getBoundingBox().inflate(HIT_RADIUS).clip(start, end);
 			if (hit.isEmpty()) {
 				continue;

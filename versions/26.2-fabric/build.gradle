@@ -5,10 +5,6 @@ plugins {
 apply plugin: 'net.fabricmc.fabric-loom'
 apply plugin: 'com.replaymod.preprocess'
 
-version = project.mod_version
-
-group = project.maven_group
-
 repositories {
 	maven {
 		name = 'Modrinth Maven'

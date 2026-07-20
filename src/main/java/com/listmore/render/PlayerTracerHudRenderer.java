@@ -75,6 +75,7 @@ public class PlayerTracerHudRenderer implements IRenderer {
 				continue;
 			}
 
+			// 将玩家碰撞箱顶部中心投影到屏幕坐标
 			ProjectedPoint target = projectBoundingBoxTopCenter(player, partialTicks, guiWidth, guiHeight);
 			if (target == null) {
 				continue;
@@ -121,6 +122,7 @@ public class PlayerTracerHudRenderer implements IRenderer {
 
 	private static ProjectedPoint projectPoint(double x, double y, double z, int guiWidth, int guiHeight) {
 		Minecraft client = Minecraft.getInstance();
+		//projectPointToScreen返回NDC坐标
 		Vec3 screenPos = client.gameRenderer.projectPointToScreen(new Vec3(x, y, z));
 
 		if (!Double.isFinite(screenPos.x) || !Double.isFinite(screenPos.y) || !Double.isFinite(screenPos.z)) {

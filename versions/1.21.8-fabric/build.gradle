@@ -12,9 +12,6 @@ loom {
 	}
 }
 
-version = project.mod_version
-group = project.maven_group
-
 repositories {
 	maven {
 		name = 'Fallen-Breath JitPack Mirror'

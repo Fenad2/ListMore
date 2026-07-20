@@ -4,6 +4,17 @@ plugins {
 	id 'com.replaymod.preprocess' version "${preprocessor_version}"
 }
 
+subprojects {
+	version = rootProject.mod_version
+	group = rootProject.maven_group
+
+	plugins.withId('java') {
+		base {
+			archivesName = rootProject.archives_base_name
+		}
+	}
+}
+
 preprocess {
 	strictExtraMappings.set(false)
 

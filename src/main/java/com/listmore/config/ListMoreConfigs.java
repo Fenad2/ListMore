@@ -112,7 +112,7 @@ public class ListMoreConfigs implements IConfigHandler {
 	}
 
 	private static ConfigColor createPlayerTracerColor() {
-		return createConfig(new ConfigColor("playerTracerColor", "#FF55FFFF"));
+		return createConfig(new ConfigColor("playerTracerColor", "#FFFFFFFF"));
 	}
 
 	private static ConfigBoolean createProjectileLandingPrediction() {

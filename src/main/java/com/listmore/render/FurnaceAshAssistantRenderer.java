@@ -240,7 +240,7 @@ public final class FurnaceAshAssistantRenderer implements IRenderer {
 		}
 	}
 
-	// 提交网格并在绘制完成后释放资源
+	// 提交网格并在绘制完成后释放
 	private static void draw(RenderContext context, MeshData mesh) {
 		if (mesh == null) {
 			return;
