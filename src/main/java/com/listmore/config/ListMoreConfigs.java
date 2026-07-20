@@ -44,8 +44,8 @@ public class ListMoreConfigs implements IConfigHandler {
 		public static final ConfigBoolean ENTITY_RENDERING_BLACKLIST = createEntityRenderingBlacklist();
 		public static final ConfigStringList ENTITY_RENDERING_BLACKLIST_LIST = createEntityRenderingBlacklistList();
 		public static final ConfigInteger ENTITY_RENDERING_BLACKLIST_RANGE = createEntityRenderingBlacklistRange();
-		public static final ConfigBoolean FURNACE_ASH_ASSISTANT = createFurnaceAshAssistant();
-		public static final ConfigInteger FURNACE_ASH_ASSISTANT_RANGE = createFurnaceAshAssistantRange();
+		public static final ConfigBoolean INVALID_FURNACE_INPUT_HIGHLIGHTER = createInvalidFurnaceInputHighlighter();
+		public static final ConfigInteger INVALID_FURNACE_INPUT_HIGHLIGHTER_RANGE = createInvalidFurnaceInputHighlighterRange();
 		public static final ConfigBoolean TNT_EXPLOSION_PREVIEW = createTntExplosionPreview();
 		public static final ConfigOptionList TNT_EXPLOSION_PREVIEW_MODE = createTntExplosionPreviewMode();
 		public static final ConfigBoolean PLAYER_TRACER = createPlayerTracer();
@@ -60,8 +60,8 @@ public class ListMoreConfigs implements IConfigHandler {
 			ENTITY_RENDERING_BLACKLIST,
 			ENTITY_RENDERING_BLACKLIST_LIST,
 			ENTITY_RENDERING_BLACKLIST_RANGE,
-			FURNACE_ASH_ASSISTANT,
-			FURNACE_ASH_ASSISTANT_RANGE,
+			INVALID_FURNACE_INPUT_HIGHLIGHTER,
+			INVALID_FURNACE_INPUT_HIGHLIGHTER_RANGE,
 			TNT_EXPLOSION_PREVIEW,
 			TNT_EXPLOSION_PREVIEW_MODE,
 			PLAYER_TRACER,
@@ -104,12 +104,12 @@ public class ListMoreConfigs implements IConfigHandler {
 		return createConfig(new ConfigInteger("entityRenderingBlacklistRange", 0, 0, 256));
 	}
 
-	private static ConfigBoolean createFurnaceAshAssistant() {
-		return createConfig(new ConfigBoolean("furnaceAshAssistant", false));
+	private static ConfigBoolean createInvalidFurnaceInputHighlighter() {
+		return createConfig(new ConfigBoolean("invalidFurnaceInputHighlighter", false));
 	}
 
-	private static ConfigInteger createFurnaceAshAssistantRange() {
-		return createConfig(new ConfigInteger("furnaceAshAssistantRange", 1, 0, 8));
+	private static ConfigInteger createInvalidFurnaceInputHighlighterRange() {
+		return createConfig(new ConfigInteger("invalidFurnaceInputHighlighterRange", 1, 0, 8));
 	}
 
 	private static ConfigBoolean createTntExplosionPreview() {
