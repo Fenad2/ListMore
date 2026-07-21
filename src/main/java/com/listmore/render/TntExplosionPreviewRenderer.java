@@ -58,10 +58,10 @@ public final class TntExplosionPreviewRenderer implements IRenderer {
 	private static final float RAY_DECAY = 0.22500001F;
 	private static final int RAY_GRID_SIZE = 16;
 	private static final float BOX_INSET = 0.16F;
-	private static final Color4f CONSERVATIVE_FILL_COLOR = new Color4f(1.0F, 0.05F, 0.02F, 0.28F);
-	private static final Color4f CONSERVATIVE_OUTLINE_COLOR = new Color4f(1.0F, 0.08F, 0.02F, 0.95F);
-	private static final Color4f POSSIBLE_FILL_COLOR = new Color4f(1.0F, 0.78F, 0.02F, 0.25F);
-	private static final Color4f POSSIBLE_OUTLINE_COLOR = new Color4f(1.0F, 0.82F, 0.05F, 0.90F);
+	private static final Color4f CONSERVATIVE_FILL_COLOR = new Color4f(1.0F, 0.05F, 0.02F, 0.28F);	// 0.28F
+	private static final Color4f CONSERVATIVE_OUTLINE_COLOR = new Color4f(1.0F, 0.08F, 0.02F, 0.95F);	// 0.95F
+	private static final Color4f POSSIBLE_FILL_COLOR = new Color4f(1.0F, 0.78F, 0.02F, 0.25F);	// 0.25F;
+	private static final Color4f POSSIBLE_OUTLINE_COLOR = new Color4f(1.0F, 0.82F, 0.05F, 0.90F);	// 0.90F
 	private static final ExplosionDamageCalculator DAMAGE_CALCULATOR = new ExplosionDamageCalculator();
 	private static final TntExplosionPreviewRenderer INSTANCE = new TntExplosionPreviewRenderer();
 
@@ -150,7 +150,7 @@ public final class TntExplosionPreviewRenderer implements IRenderer {
 					if (xIndex != 0 && xIndex != RAY_GRID_SIZE - 1
 						&& yIndex != 0 && yIndex != RAY_GRID_SIZE - 1
 						&& zIndex != 0 && zIndex != RAY_GRID_SIZE - 1) {
-						continue;
+							continue;
 					}
 
 					double directionX = xIndex / (double) (RAY_GRID_SIZE - 1) * 2.0D - 1.0D;

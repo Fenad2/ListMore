@@ -6,7 +6,7 @@
   "listmore.config.generic.name.playerTracer": "玩家追踪线",
   "listmore.config.generic.prettyName.playerTracer": "玩家追踪线",
   "listmore.config.generic.comment.playerTracer": "连线到附近玩家",
-  "listmore.config.generic.name.playerTracerColor": "玩家追踪线颜色",
+  "listmore.config.generic.name.playerTracerColor": "玩家追踪线-颜色",
   "listmore.config.generic.prettyName.playerTracerColor": "玩家追踪线颜色",
   "listmore.config.generic.comment.playerTracerColor": "设置追踪线的颜色",
   "listmore.config.generic.name.projectileLandingPrediction": "投射物落点预测",
