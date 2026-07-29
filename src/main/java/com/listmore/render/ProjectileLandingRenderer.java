@@ -1,16 +1,12 @@
 package com.listmore.render;
 
 import com.listmore.config.ListMoreConfigs;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.MeshData;
+import com.listmore.utils.WorldRenderUtils;
 //#if MC >= 26.1
 //$$ import com.mojang.blaze3d.buffers.GpuBufferSlice;
 //#endif
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import fi.dy.masa.malilib.interfaces.IRenderer;
-import fi.dy.masa.malilib.render.MaLiLibPipelines;
-import fi.dy.masa.malilib.render.RenderContext;
-import fi.dy.masa.malilib.render.RenderUtils;
 import fi.dy.masa.malilib.util.data.Color4f;
 
 import net.minecraft.client.Camera;
@@ -165,58 +161,14 @@ public final class ProjectileLandingRenderer implements IRenderer {
 	}
 
 	private static void drawMarker(LandingPoint landing) {
-		//#if MC >= 26.2
-		//$$ Vec3 position = landing.position.subtract(Minecraft.getInstance().gameRenderer.mainCamera().position());
-		//#elseif MC >= 12111
-		//$$ Vec3 position = landing.position.subtract(Minecraft.getInstance().gameRenderer.getMainCamera().position());
-		//#else
-		Vec3 position = landing.position.subtract(Minecraft.getInstance().gameRenderer.getMainCamera().getPosition());
-		//#endif
+		Vec3 position = landing.position.subtract(WorldRenderUtils.getCameraPosition());
 		Color4f color = landing.hitEntity ? new Color4f(1.0F, 0.0F, 0.0F, 0.6F) : new Color4f(0.0F, 1.0F, 0.2F, 0.6F);
-		RenderContext context = new RenderContext(
-				() -> "listmore:projectile_landing",
-				MaLiLibPipelines.DEBUG_LINES_MASA_SIMPLE_NO_DEPTH_NO_CULL
-				//#if MC >= 26.2
-				//$$ , 0
-				//#endif
+		WorldRenderUtils.drawOutlinedBox(
+			"listmore:projectile_landing",
+			position,
+			HALF_SIZE,
+			color
 		);
-		//#if MC < 12111
-		context.lineWidth(2.0F);
-		//#endif
-
-		try {
-			BufferBuilder builder = context.getBuilder();
-			RenderUtils.drawBoxAllEdgesBatchedLines(
-					(float) (position.x - HALF_SIZE), (float) (position.y - HALF_SIZE), (float) (position.z - HALF_SIZE),
-					(float) (position.x + HALF_SIZE), (float) (position.y + HALF_SIZE), (float) (position.z + HALF_SIZE),
-					color
-					//#if MC >= 12111
-					//$$ , 2.0F
-					//#endif
-					, builder
-			);
-			draw(context, builder.build());
-		} finally {
-			closeQuietly(context);
-		}
-	}
-
-	private static void draw(RenderContext context, MeshData mesh) {
-		if (mesh == null) {
-			return;
-		}
-		try {
-			context.draw(mesh, false, true);
-		} finally {
-			mesh.close();
-		}
-	}
-
-	private static void closeQuietly(RenderContext context) {
-		try {
-			context.close();
-		} catch (Exception ignored) {
-		}
 	}
 
 	private enum ProjectileSpec {

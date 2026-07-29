@@ -9,15 +9,11 @@ import java.util.Set;
 //$$ import com.mojang.blaze3d.buffers.GpuBufferSlice;
 //#endif
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.MeshData;
 import com.listmore.config.ListMoreConfigs;
 import com.listmore.config.TntExplosionPreviewMode;
+import com.listmore.utils.WorldRenderUtils;
 
 import fi.dy.masa.malilib.interfaces.IRenderer;
-import fi.dy.masa.malilib.render.MaLiLibPipelines;
-import fi.dy.masa.malilib.render.RenderContext;
-import fi.dy.masa.malilib.render.RenderUtils;
 import fi.dy.masa.malilib.util.data.Color4f;
 
 import net.minecraft.client.Camera;
@@ -199,13 +195,7 @@ public final class TntExplosionPreviewRenderer implements IRenderer {
 
 	// 半预览仅绘制红色范围，全预览额外绘制红黄
 	private static void drawMarkers(PreviewBlocks blocks) {
-		//#if MC >= 26.2
-		//$$ Vec3 cameraPosition = Minecraft.getInstance().gameRenderer.mainCamera().position();
-		//#elseif MC >= 12111
-		//$$ Vec3 cameraPosition = Minecraft.getInstance().gameRenderer.getMainCamera().position();
-		//#else
-		Vec3 cameraPosition = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-		//#endif
+		Vec3 cameraPosition = WorldRenderUtils.getCameraPosition();
 		drawMarkers(blocks.conservative(), cameraPosition, "conservative", CONSERVATIVE_FILL_COLOR, CONSERVATIVE_OUTLINE_COLOR);
 		if (ListMoreConfigs.Generic.TNT_EXPLOSION_PREVIEW_MODE.getOptionListValue() == TntExplosionPreviewMode.FULL) {
 			drawMarkers(blocks.possible(), cameraPosition, "possible", POSSIBLE_FILL_COLOR, POSSIBLE_OUTLINE_COLOR);
@@ -217,69 +207,14 @@ public final class TntExplosionPreviewRenderer implements IRenderer {
 		if (positions.isEmpty()) {
 			return;
 		}
-
-		RenderContext fillContext = new RenderContext(
-			() -> "listmore:tnt_explosion_" + type + "_fill",
-			MaLiLibPipelines.POSITION_COLOR_MASA_NO_DEPTH_NO_CULL
-			//#if MC >= 26.2
-			//$$ , 0
-			//#endif
+		WorldRenderUtils.drawFilledOutlinedBlockBoxes(
+			"listmore:tnt_explosion_" + type,
+			positions,
+			cameraPosition,
+			BOX_INSET,
+			fillColor,
+			outlineColor
 		);
-		RenderContext outlineContext = new RenderContext(
-			() -> "listmore:tnt_explosion_" + type + "_outline",
-			MaLiLibPipelines.DEBUG_LINES_MASA_SIMPLE_NO_DEPTH_NO_CULL
-			//#if MC >= 26.2
-			//$$ , 0
-			//#endif
-		);
-		//#if MC < 12111
-		outlineContext.lineWidth(2.0F);
-		//#endif
-
-		try {
-			BufferBuilder fillBuilder = fillContext.getBuilder();
-			BufferBuilder outlineBuilder = outlineContext.getBuilder();
-			for (BlockPos position : positions) {
-				float minX = (float) (position.getX() + BOX_INSET - cameraPosition.x);
-				float minY = (float) (position.getY() + BOX_INSET - cameraPosition.y);
-				float minZ = (float) (position.getZ() + BOX_INSET - cameraPosition.z);
-				float maxX = minX + 1.0F - BOX_INSET * 2.0F;
-				float maxY = minY + 1.0F - BOX_INSET * 2.0F;
-				float maxZ = minZ + 1.0F - BOX_INSET * 2.0F;
-
-				RenderUtils.drawBoxAllSidesBatchedQuads(minX, minY, minZ, maxX, maxY, maxZ, fillColor, fillBuilder);
-				RenderUtils.drawBoxAllEdgesBatchedLines(minX, minY, minZ, maxX, maxY, maxZ, outlineColor
-					//#if MC >= 12111
-					//$$ , 2.0F
-					//#endif
-					, outlineBuilder);
-			}
-
-			draw(fillContext, fillBuilder.build());
-			draw(outlineContext, outlineBuilder.build());
-		} finally {
-			closeQuietly(fillContext);
-			closeQuietly(outlineContext);
-		}
-	}
-
-	// 绘制后立即释放
-	private static void draw(RenderContext context, MeshData mesh) {
-		if (mesh == null) {
-			return;
-		}
-		try {
-			context.draw(mesh, false, true);
-		} finally {
-			mesh.close();
-		}
-	}
-
-	private static void closeQuietly(RenderContext context) {
-		try {
-			context.close();
-		} catch (Exception ignored) {
-		}
 	}
 
 	private record PreviewBlocks(Set<BlockPos> conservative, Set<BlockPos> possible) {
