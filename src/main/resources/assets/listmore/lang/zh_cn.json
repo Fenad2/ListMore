@@ -2,6 +2,7 @@
   "listmore.gui.title": "ListMore",
   "listmore.gui.button.trigger": "触发",
   "listmore.hotkeys.category.generic": "通用快捷键",
+  "listmore.gui.tab.all": "全部",
   "listmore.gui.tab.generic": "通用",
   "listmore.config.generic.name.playerTracer": "玩家追踪线",
   "listmore.config.generic.prettyName.playerTracer": "玩家追踪线",

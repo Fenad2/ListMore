@@ -2,6 +2,7 @@
   "listmore.gui.title": "ListMore",
   "listmore.gui.button.trigger": "Trigger",
   "listmore.hotkeys.category.generic": "General Hotkeys",
+  "listmore.gui.tab.all": "All",
   "listmore.gui.tab.generic": "General",
   "listmore.config.generic.name.playerTracer": "Player Tracers",
   "listmore.config.generic.prettyName.playerTracer": "Player Tracers",
