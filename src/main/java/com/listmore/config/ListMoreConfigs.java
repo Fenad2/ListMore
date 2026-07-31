@@ -24,7 +24,7 @@ import fi.dy.masa.malilib.config.options.ConfigOptionList;
 import fi.dy.masa.malilib.config.options.ConfigStringList;
 import fi.dy.masa.malilib.interfaces.IValueChangeCallback;
 import fi.dy.masa.malilib.util.FileUtils;
-//#if MC>=260100
+//#if MC>=26.1
 //$$ import fi.dy.masa.malilib.util.data.json.JsonUtils;
 //#else
 import fi.dy.masa.malilib.util.JsonUtils;
@@ -147,7 +147,7 @@ public class ListMoreConfigs implements IConfigHandler {
 	}
 
 	public static void loadFromFile() {
-		//#if MC>=260100
+		//#if MC>=26.1
 		//$$ Path configDirectory = FileUtils.getConfigDirectory();
 		//#else
 		Path configDirectory = FileUtils.getConfigDirectoryAsPath();
@@ -159,7 +159,7 @@ public class ListMoreConfigs implements IConfigHandler {
 			return;
 		}
 
-		//#if MC>=260100
+		//#if MC>=26.1
 		//$$ JsonElement element = JsonUtils.parseJsonFile(configFile);
 		//#else
 		JsonElement element = JsonUtils.parseJsonFileAsPath(configFile);
@@ -186,7 +186,7 @@ public class ListMoreConfigs implements IConfigHandler {
 	}
 
 	public static void saveToFile() {
-		//#if MC>=260100
+		//#if MC>=26.1
 		//$$ Path dir = FileUtils.getConfigDirectory();
 		//#else
 		Path dir = FileUtils.getConfigDirectoryAsPath();
@@ -201,7 +201,7 @@ public class ListMoreConfigs implements IConfigHandler {
 
 		JsonObject root = new JsonObject();
 		ConfigUtils.writeConfigBase(root, "Generic", Generic.OPTIONS);
-		//#if MC>=260100
+		//#if MC>=26.1
 		//$$ JsonUtils.writeJsonToFile(root, dir.resolve(CONFIG_FILE_NAME));
 		//#else
 		JsonUtils.writeJsonToFileAsPath(root, dir.resolve(CONFIG_FILE_NAME));

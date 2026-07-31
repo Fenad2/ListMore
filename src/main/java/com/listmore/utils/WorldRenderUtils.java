@@ -19,7 +19,7 @@ public final class WorldRenderUtils {
 	public static Vec3 getCameraPosition() {
 		//#if MC >= 26.2
 		//$$ return Minecraft.getInstance().gameRenderer.mainCamera().position();
-		//#elseif MC >= 12111
+		//#elseif MC >= 1.21.11
 		//$$ return Minecraft.getInstance().gameRenderer.getMainCamera().position();
 		//#else
 		return Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
@@ -91,7 +91,7 @@ public final class WorldRenderUtils {
 			//$$ , 0
 			//#endif
 		);
-		//#if MC < 12111
+		//#if MC < 1.21.11
 		context.lineWidth(2.0F);
 		//#endif
 		return context;
@@ -101,7 +101,7 @@ public final class WorldRenderUtils {
 	private static void drawBoxOutline(float minX, float minY, float minZ, float maxX, float maxY, float maxZ,
 			Color4f color, BufferBuilder builder) {
 		RenderUtils.drawBoxAllEdgesBatchedLines(minX, minY, minZ, maxX, maxY, maxZ, color
-			//#if MC >= 12111
+			//#if MC >= 1.21.11
 			//$$ , 2.0F
 			//#endif
 			, builder);

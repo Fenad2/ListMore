@@ -4,7 +4,7 @@ import com.listmore.ListMore;
 import com.listmore.config.ListMoreConfigs;
 
 import fi.dy.masa.malilib.interfaces.IRenderer;
-//#if MC >= 12111
+//#if MC >= 1.21.11
 //$$ import fi.dy.masa.malilib.render.GuiContext;
 //#else
 import net.minecraft.client.gui.GuiGraphics;
@@ -32,7 +32,7 @@ public class PlayerTracerHudRenderer implements IRenderer {
 	//$$ public void onExtractGuiOverlayPost(GuiContext ctx, float partialTicks, ProfilerFiller profiler) {
 	//$$ 	render(ctx, partialTicks);
 	//$$ }
-	//#elseif MC >= 12111
+	//#elseif MC >= 1.21.11
 	//$$ @Override
 	//$$ public void onRenderGameOverlayPostAdvanced(GuiContext ctx, float partialTicks, ProfilerFiller profiler) {
 	//$$ 	render(ctx, partialTicks);
@@ -45,7 +45,7 @@ public class PlayerTracerHudRenderer implements IRenderer {
 	//#endif
 
 	private static void render(
-			//#if MC >= 12111
+			//#if MC >= 1.21.11
 			//$$ GuiContext ctx,
 			//#else
 			GuiGraphics ctx,
@@ -138,7 +138,7 @@ public class PlayerTracerHudRenderer implements IRenderer {
 	}
 
 	private static void drawLine(
-			//#if MC >= 12111
+			//#if MC >= 1.21.11
 			//$$ GuiContext ctx,
 			//#else
 			GuiGraphics ctx,
