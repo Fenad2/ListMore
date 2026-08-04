@@ -48,8 +48,6 @@ public class ListMoreConfigs implements IConfigHandler {
 		public static final ConfigInteger INVALID_FURNACE_INPUT_HIGHLIGHTER_RANGE = createInvalidFurnaceInputHighlighterRange();
 		public static final ConfigBoolean TNT_EXPLOSION_PREVIEW = createTntExplosionPreview();
 		public static final ConfigOptionList TNT_EXPLOSION_PREVIEW_MODE = createTntExplosionPreviewMode();
-		public static final ConfigBoolean PLAYER_TRACER = createPlayerTracer();
-		public static final ConfigColor PLAYER_TRACER_COLOR = createPlayerTracerColor();
 		public static final ConfigBoolean PROJECTILE_LANDING_PREDICTION = createProjectileLandingPrediction();
 
 		public static final ImmutableList<IConfigBase> OPTIONS = ImmutableList.of(
@@ -64,8 +62,6 @@ public class ListMoreConfigs implements IConfigHandler {
 			INVALID_FURNACE_INPUT_HIGHLIGHTER_RANGE,
 			TNT_EXPLOSION_PREVIEW,
 			TNT_EXPLOSION_PREVIEW_MODE,
-			PLAYER_TRACER,
-			PLAYER_TRACER_COLOR,
 			PROJECTILE_LANDING_PREDICTION
 		);
 	}
@@ -118,14 +114,6 @@ public class ListMoreConfigs implements IConfigHandler {
 
 	private static ConfigOptionList createTntExplosionPreviewMode() {
 		return createConfig(new ConfigOptionList("tntExplosionPreviewMode", TntExplosionPreviewMode.FULL));
-	}
-
-	private static ConfigBoolean createPlayerTracer() {
-		return createConfig(new ConfigBoolean("playerTracer", false));
-	}
-
-	private static ConfigColor createPlayerTracerColor() {
-		return createConfig(new ConfigColor("playerTracerColor", "#FFFFFFFF"));
 	}
 
 	private static ConfigBoolean createProjectileLandingPrediction() {
