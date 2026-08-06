@@ -49,6 +49,7 @@ public class ListMoreConfigs implements IConfigHandler {
 		public static final ConfigBoolean TNT_EXPLOSION_PREVIEW = createTntExplosionPreview();
 		public static final ConfigOptionList TNT_EXPLOSION_PREVIEW_MODE = createTntExplosionPreviewMode();
 		public static final ConfigBoolean PROJECTILE_LANDING_PREDICTION = createProjectileLandingPrediction();
+		public static final ConfigBoolean SCHEMATIC_DYNAMIC_PREVIEW = createSchematicDynamicPreview();
 
 		public static final ImmutableList<IConfigBase> OPTIONS = ImmutableList.of(
 			COPY_TARGET_ID,
@@ -62,7 +63,8 @@ public class ListMoreConfigs implements IConfigHandler {
 			INVALID_FURNACE_INPUT_HIGHLIGHTER_RANGE,
 			TNT_EXPLOSION_PREVIEW,
 			TNT_EXPLOSION_PREVIEW_MODE,
-			PROJECTILE_LANDING_PREDICTION
+			PROJECTILE_LANDING_PREDICTION,
+			SCHEMATIC_DYNAMIC_PREVIEW
 		);
 	}
 
@@ -118,6 +120,10 @@ public class ListMoreConfigs implements IConfigHandler {
 
 	private static ConfigBoolean createProjectileLandingPrediction() {
 		return createConfig(new ConfigBoolean("projectileLandingPrediction", false));
+	}
+
+	private static ConfigBoolean createSchematicDynamicPreview() {
+		return createConfig(new ConfigBoolean("schematicDynamicPreview", false));
 	}
 
 	private static <T extends ConfigBase<T>> T createConfig(T config) {

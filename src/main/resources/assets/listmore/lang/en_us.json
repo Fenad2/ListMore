@@ -41,5 +41,13 @@
   "listmore.config.generic.prettyName.tntExplosionPreviewMode": "TNT Explosion Preview - Display Mode",
   "listmore.config.generic.comment.tntExplosionPreviewMode": "Choose whether to display possible destruction blocks",
   "listmore.label.tntExplosionPreviewMode.full": "Full Preview",
-  "listmore.label.tntExplosionPreviewMode.partial": "Partial Preview"
+  "listmore.label.tntExplosionPreviewMode.partial": "Partial Preview",
+  "listmore.config.generic.name.schematicDynamicPreview": "Schematic Dynamic Preview",
+  "listmore.config.generic.prettyName.schematicDynamicPreview": "Schematic Dynamic Preview",
+  "listmore.config.generic.comment.schematicDynamicPreview": "Replace Litematica's static schematic thumbnail with a real-time 3D preview",
+  "listmore.schematic_preview.loading": "Loading preview...",
+  "listmore.schematic_preview.failed": "Preview load failed",
+  "listmore.schematic_preview.empty": "Select a litematic file",
+  "listmore.schematic_preview.building": "Building model...",
+  "listmore.schematic_preview.blocks": "%d blocks"
 }
