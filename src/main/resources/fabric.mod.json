@@ -33,6 +33,7 @@
 		"malilib": "*"
 	},
 	"custom": {
+		"conditional-mixin": ">=0.2.0",
 		"modmenu:clientsideOnly": true
 	}
 }

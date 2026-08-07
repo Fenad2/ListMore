@@ -5,7 +5,8 @@
 	"client": [
 		"MinecraftMixin",
 		"EntityMixin",
-		"EntityRenderDispatcherMixin"
+		"EntityRenderDispatcherMixin",
+		"litematica.GuiSchematicBrowserBaseMixin"
 	],
 	"mixins": [
 		"WidgetConfigOptionMixin",

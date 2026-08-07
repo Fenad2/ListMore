@@ -9,6 +9,7 @@ import fi.dy.masa.malilib.gui.button.ButtonBase;
 import fi.dy.masa.malilib.gui.button.ButtonGeneric;
 import fi.dy.masa.malilib.gui.button.IButtonActionListener;
 import fi.dy.masa.malilib.util.StringUtils;
+import net.fabricmc.loader.api.FabricLoader;
 
 public class ListMoreConfigGui extends GuiConfigsBase {
 	private static ConfigTab tab = ConfigTab.GENERIC;
@@ -24,6 +25,9 @@ public class ListMoreConfigGui extends GuiConfigsBase {
 
 		int x = 10;
 		for (ConfigTab currentTab : ConfigTab.values()) {
+			if (!currentTab.isAvailable()) {
+				continue;
+			}
 			x += this.createButton(x, 26, -1, currentTab) + 2;
 		}
 	}
@@ -56,7 +60,15 @@ public class ListMoreConfigGui extends GuiConfigsBase {
 
 	@Override
 	public List<ConfigOptionWrapper> getConfigs() {
-		return ConfigOptionWrapper.createFor(ListMoreConfigs.Generic.OPTIONS);
+		return ConfigOptionWrapper.createFor(switch (tab) {
+			case ALL -> FabricLoader.getInstance().isModLoaded("litematica")
+				? ListMoreConfigs.Generic.OPTIONS
+				: ListMoreConfigs.Generic.GENERIC_OPTIONS;
+			case GENERIC -> ListMoreConfigs.Generic.GENERIC_OPTIONS;
+			case LITEMATICA -> FabricLoader.getInstance().isModLoaded("litematica")
+				? ListMoreConfigs.Generic.LITEMATICA_OPTIONS
+				: List.of();
+		});
 	}
 
 	private record ButtonListener(ConfigTab tab, ListMoreConfigGui parent) implements IButtonActionListener {
@@ -73,7 +85,8 @@ public class ListMoreConfigGui extends GuiConfigsBase {
 
 	private enum ConfigTab {
 		ALL("malilib.gui.title.all"),
-		GENERIC("listmore.gui.tab.generic");
+		GENERIC("listmore.gui.tab.generic"),
+		LITEMATICA("listmore.gui.tab.litematica");
 
 		private final String translationKey;
 
@@ -83,6 +96,10 @@ public class ListMoreConfigGui extends GuiConfigsBase {
 
 		public String getDisplayName() {
 			return StringUtils.translate(this.translationKey);
+		}
+
+		public boolean isAvailable() {
+			return this != LITEMATICA || FabricLoader.getInstance().isModLoaded("litematica");
 		}
 	}
 }

@@ -4,6 +4,7 @@
   "listmore.hotkeys.category.generic": "通用快捷键",
   "listmore.gui.tab.all": "全部",
   "listmore.gui.tab.generic": "通用",
+  "listmore.gui.tab.litematica": "Litematica",
   "listmore.config.generic.name.projectileLandingPrediction": "投射物落点预测",
   "listmore.config.generic.prettyName.projectileLandingPrediction": "投射物落点预测",
   "listmore.config.generic.comment.projectileLandingPrediction": "显示支持投射物的预测落点",
@@ -41,5 +42,13 @@
   "listmore.config.generic.prettyName.tntExplosionPreviewMode": "TNT爆炸预览-显示模式",
   "listmore.config.generic.comment.tntExplosionPreviewMode": "选择是否显示可能被炸坏的方块",
   "listmore.label.tntExplosionPreviewMode.full": "全预览",
-  "listmore.label.tntExplosionPreviewMode.partial": "半预览"
+  "listmore.label.tntExplosionPreviewMode.partial": "半预览",
+  "listmore.config.generic.name.schematicDynamicPreview": "投影实时预览",
+  "listmore.config.generic.prettyName.schematicDynamicPreview": "投影实时预览",
+  "listmore.config.generic.comment.schematicDynamicPreview": "将 Litematica 的静态投影缩略图替换为实时 3D 预览",
+  "listmore.schematic_preview.loading": "正在加载预览...",
+  "listmore.schematic_preview.failed": "预览加载失败",
+  "listmore.schematic_preview.empty": "请选择一个 litematic 文件",
+  "listmore.schematic_preview.building": "正在构建模型...",
+  "listmore.schematic_preview.blocks": "%d 个方块"
 }
