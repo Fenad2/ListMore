@@ -3,7 +3,6 @@ package com.listmore.schematic;
 import java.util.Date;
 import org.jetbrains.annotations.Nullable;
 
-import fi.dy.masa.litematica.Litematica;
 import fi.dy.masa.litematica.gui.GuiSchematicBrowserBase;
 import fi.dy.masa.litematica.gui.widgets.WidgetSchematicBrowser;
 import fi.dy.masa.litematica.schematic.LitematicaSchematic;
@@ -11,15 +10,20 @@ import fi.dy.masa.litematica.schematic.SchematicMetadata;
 import fi.dy.masa.litematica.schematic.SchematicSchema;
 import fi.dy.masa.malilib.gui.interfaces.ISelectionListener;
 import fi.dy.masa.malilib.gui.widgets.WidgetFileBrowserBase.DirectoryEntry;
-import fi.dy.masa.malilib.render.GuiContext;
+//#if MC >= 1.21.11
+//$$ import fi.dy.masa.malilib.render.GuiContext;
+//#else
+import net.minecraft.client.gui.GuiGraphics;
+//#endif
 import fi.dy.masa.malilib.render.RenderUtils;
 import fi.dy.masa.malilib.util.StringUtils;
 import fi.dy.masa.malilib.util.data.Schema;
-import net.minecraft.client.input.MouseButtonEvent;
+//#if MC >= 1.21.10
+//$$ import net.minecraft.client.input.MouseButtonEvent;
+//#endif
 import net.minecraft.core.Vec3i;
 import org.apache.commons.lang3.tuple.Pair;
 
-/** 26.2 implementation of the Litematica browser preview extension. */
 public final class ListMoreSchematicBrowser extends WidgetSchematicBrowser {
 	private final SchematicPreviewSession previewSession = new SchematicPreviewSession();
 	@Nullable private SchematicPreviewLayout previewLayout;
@@ -32,14 +36,26 @@ public final class ListMoreSchematicBrowser extends WidgetSchematicBrowser {
 	}
 
 	@Override
-	protected void drawAdditionalContents(GuiContext context, int mouseX, int mouseY) {
+	protected void drawAdditionalContents(
+			//#if MC >= 1.21.11
+			//$$ GuiContext context,
+			//#else
+			GuiGraphics context,
+			//#endif
+			int mouseX, int mouseY) {
 		this.lastMouseX = mouseX;
 		this.lastMouseY = mouseY;
 		super.drawAdditionalContents(context, mouseX, mouseY);
 	}
 
 	@Override
-	protected void drawSelectedSchematicInfo(GuiContext context, @Nullable DirectoryEntry entry) {
+	protected void drawSelectedSchematicInfo(
+			//#if MC >= 1.21.11
+			//$$ GuiContext context,
+			//#else
+			GuiGraphics context,
+			//#endif
+			@Nullable DirectoryEntry entry) {
 		if (!isLitematic(entry)) {
 			this.previewLayout = null;
 			super.drawSelectedSchematicInfo(context, entry);
@@ -123,25 +139,47 @@ public final class ListMoreSchematicBrowser extends WidgetSchematicBrowser {
 	}
 
 	@Override
-	public boolean onMouseClicked(MouseButtonEvent click, boolean doubleClick) {
-		if (click.input() == 0 && this.previewLayout != null) {
-			if (this.previewLayout.zoomOutBounds().contains(click.x(), click.y())) {
+	//#if MC >= 1.21.10
+	//$$ public boolean onMouseClicked(MouseButtonEvent click, boolean doubleClick) {
+	//$$ 		if (click.input() == 0 && this.previewLayout != null) {
+	//$$ 			if (this.previewLayout.zoomOutBounds().contains(click.x(), click.y())) {
+	//$$ 				this.previewSession.transform().zoomOut();
+	//$$ 				return true;
+	//$$ 			}
+	//$$ 			if (this.previewLayout.zoomInBounds().contains(click.x(), click.y())) {
+	//$$ 				this.previewSession.transform().zoomIn();
+	//$$ 				return true;
+	//$$ 			}
+	//$$ 			for (SchematicPreviewDirection direction : SchematicPreviewDirection.values()) {
+	//$$ 				if (this.previewLayout.buttonBounds(direction).contains(click.x(), click.y())) {
+	//$$ 					this.previewSession.transform().applyDirection(direction);
+	//$$ 					return true;
+	//$$ 				}
+	//$$ 			}
+	//$$ 		}
+	//$$ 		return super.onMouseClicked(click, doubleClick);
+	//$$ }
+	//#else
+	public boolean onMouseClicked(int mouseX, int mouseY, int button) {
+		if (button == 0 && this.previewLayout != null) {
+			if (this.previewLayout.zoomOutBounds().contains(mouseX, mouseY)) {
 				this.previewSession.transform().zoomOut();
 				return true;
 			}
-			if (this.previewLayout.zoomInBounds().contains(click.x(), click.y())) {
+			if (this.previewLayout.zoomInBounds().contains(mouseX, mouseY)) {
 				this.previewSession.transform().zoomIn();
 				return true;
 			}
 			for (SchematicPreviewDirection direction : SchematicPreviewDirection.values()) {
-				if (this.previewLayout.buttonBounds(direction).contains(click.x(), click.y())) {
+				if (this.previewLayout.buttonBounds(direction).contains(mouseX, mouseY)) {
 					this.previewSession.transform().applyDirection(direction);
 					return true;
 				}
 			}
 		}
-		return super.onMouseClicked(click, doubleClick);
+		return super.onMouseClicked(mouseX, mouseY, button);
 	}
+	//#endif
 
 	@Override
 	public void onClose() {

@@ -51,6 +51,25 @@ public class ListMoreConfigs implements IConfigHandler {
 		public static final ConfigBoolean PROJECTILE_LANDING_PREDICTION = createProjectileLandingPrediction();
 		public static final ConfigBoolean SCHEMATIC_DYNAMIC_PREVIEW = createSchematicDynamicPreview();
 
+		public static final ImmutableList<IConfigBase> GENERIC_OPTIONS = ImmutableList.of(
+			COPY_TARGET_ID,
+			ENTITY_HIGHLIGHT_OUTLINE,
+			ENTITY_HIGHLIGHT_OUTLINE_LIST,
+			ENTITY_HIGHLIGHT_OUTLINE_COLOR,
+			ENTITY_RENDERING_BLACKLIST,
+			ENTITY_RENDERING_BLACKLIST_LIST,
+			ENTITY_RENDERING_BLACKLIST_RANGE,
+			INVALID_FURNACE_INPUT_HIGHLIGHTER,
+			INVALID_FURNACE_INPUT_HIGHLIGHTER_RANGE,
+			TNT_EXPLOSION_PREVIEW,
+			TNT_EXPLOSION_PREVIEW_MODE,
+			PROJECTILE_LANDING_PREDICTION
+		);
+
+		public static final ImmutableList<IConfigBase> LITEMATICA_OPTIONS = ImmutableList.of(
+			SCHEMATIC_DYNAMIC_PREVIEW
+		);
+
 		public static final ImmutableList<IConfigBase> OPTIONS = ImmutableList.of(
 			COPY_TARGET_ID,
 			ENTITY_HIGHLIGHT_OUTLINE,

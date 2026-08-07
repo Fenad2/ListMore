@@ -9,7 +9,7 @@ import fi.dy.masa.malilib.util.StringUtils;
 import net.minecraft.client.gui.GuiGraphics;
 //#endif
 
-/** 原理图浏览器右侧区域的 GUI 覆盖层。实际方块渲染由后续独立渲染器负责。 */
+// 原理图浏览器右侧区域的GUI覆盖层 -> 渲染层
 public final class SchematicPreviewOverlay {
 	private static final int BACKGROUND_COLOR = 0xEE111820;
 	private static final int BORDER_COLOR = 0xFF5C7185;
@@ -19,7 +19,8 @@ public final class SchematicPreviewOverlay {
 	private SchematicPreviewOverlay() {
 	}
 
-	/** 绘制预览背景、加载状态和八方向操作按钮。 */
+	// 绘制预览背景、加载状态和方向操作按钮
+	// 组件层级：背景 -> 边框 -> 状态提示/3D 模型/占位符 -> 方向按钮 -> 缩放按钮
 	public static void draw(
 			//#if MC >= 1.21.11
 			//$$ GuiContext context,
@@ -76,6 +77,7 @@ public final class SchematicPreviewOverlay {
 		RenderUtils.drawRect(context, layout.x() + layout.width() - 1, layout.y(), 1, layout.height(), BORDER_COLOR);
 	}
 
+	// 当渲染后端不可用时显示的占位符，绘制一个绿色方框和方块数量
 	private static void drawModelPlaceholder(
 			//#if MC >= 1.21.11
 			//$$ GuiContext context,

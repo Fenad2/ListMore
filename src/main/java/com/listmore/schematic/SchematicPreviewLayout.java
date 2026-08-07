@@ -1,6 +1,6 @@
 package com.listmore.schematic;
 
-/** 原理图浏览器右侧预览区域及方向按钮的纯布局计算。 */
+// 原理图浏览器右侧预览区域及方向按钮的布局计算
 public final class SchematicPreviewLayout {
 	private static final int BUTTON_SIZE = 16;
 	private static final int BUTTON_GAP = 2;
@@ -23,7 +23,7 @@ public final class SchematicPreviewLayout {
 	public int width() { return this.width; }
 	public int height() { return this.height; }
 
-	/** 模型实际可绘制的区域，底部方向按钮不覆盖这个区域。 */
+	// 实际可绘制的区域
 	public int contentX() { return this.x + 1; }
 	public int contentY() { return this.y + 1; }
 	public int contentWidth() { return Math.max(0, this.width - 2); }
@@ -38,15 +38,15 @@ public final class SchematicPreviewLayout {
 		int centerX = this.x + this.width / 2;
 		int centerY = this.y + this.height / 2;
 		return switch (direction) {
-			case NORTH -> new ButtonBounds(centerX - BUTTON_SIZE / 2, this.y + EDGE_OFFSET,
+			case UP -> new ButtonBounds(centerX - BUTTON_SIZE / 2, this.y + EDGE_OFFSET,
 					BUTTON_SIZE, BUTTON_SIZE);
-			case WEST -> new ButtonBounds(this.x + EDGE_OFFSET, centerY - BUTTON_SIZE / 2,
+			case LEFT -> new ButtonBounds(this.x + EDGE_OFFSET, centerY - BUTTON_SIZE / 2,
 					BUTTON_SIZE, BUTTON_SIZE);
-			case CENTER -> new ButtonBounds(this.x + this.width - BUTTON_SIZE - EDGE_OFFSET,
+			case RESET -> new ButtonBounds(this.x + this.width - BUTTON_SIZE - EDGE_OFFSET,
 					this.y + this.height - BUTTON_SIZE - EDGE_OFFSET, BUTTON_SIZE, BUTTON_SIZE);
-			case EAST -> new ButtonBounds(this.x + this.width - BUTTON_SIZE - EDGE_OFFSET,
+			case RIGHT -> new ButtonBounds(this.x + this.width - BUTTON_SIZE - EDGE_OFFSET,
 					centerY - BUTTON_SIZE / 2, BUTTON_SIZE, BUTTON_SIZE);
-			case SOUTH -> new ButtonBounds(centerX - BUTTON_SIZE / 2,
+			case DOWN -> new ButtonBounds(centerX - BUTTON_SIZE / 2,
 					this.y + this.height - BUTTON_SIZE - EDGE_OFFSET, BUTTON_SIZE, BUTTON_SIZE);
 		};
 	}

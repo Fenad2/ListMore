@@ -1,12 +1,11 @@
 package com.listmore.schematic;
 
-/** 预览区域中的八个固定观察方向。 */
 public enum SchematicPreviewDirection {
-	NORTH("↑"),
-	WEST("←"),
-	CENTER("↻"),
-	EAST("→"),
-	SOUTH("↓");
+	UP("↑"),
+	LEFT("←"),
+	RESET("↻"),
+	RIGHT("→"),
+	DOWN("↓");
 
 	private final String label;
 

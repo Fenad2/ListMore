@@ -4,6 +4,7 @@
   "listmore.hotkeys.category.generic": "通用快捷键",
   "listmore.gui.tab.all": "全部",
   "listmore.gui.tab.generic": "通用",
+  "listmore.gui.tab.litematica": "Litematica",
   "listmore.config.generic.name.projectileLandingPrediction": "投射物落点预测",
   "listmore.config.generic.prettyName.projectileLandingPrediction": "投射物落点预测",
   "listmore.config.generic.comment.projectileLandingPrediction": "显示支持投射物的预测落点",

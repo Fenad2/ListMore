@@ -4,23 +4,19 @@ import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.listmore.ListMore;
 import fi.dy.masa.litematica.schematic.LitematicaSchematic;
 import net.minecraft.core.Vec3i;
 
-/**
- * 单个原理图浏览器的预览生命周期。
- * 异步加载完成后会检查 generation，避免之前选择的文件覆盖当前预览。
- */
+// 单个原理图浏览器的预览状态
 public final class SchematicPreviewSession {
 	private final AtomicLong generation = new AtomicLong();
 	private final SchematicPreviewTransform transform = new SchematicPreviewTransform();
-	private final SchematicPreviewRenderer renderer = new SchematicPreviewRenderer();
+	private final SchematicPreviewRenderManager renderer = new SchematicPreviewRenderManager();
 	private Path file;
 	private CompletableFuture<LitematicaSchematic> loadingTask;
 	private SchematicPreviewModel model;
 	private Throwable loadFailure;
-	/** 后台加载线程写入，GUI 绘制线程读取。 */
+	// 后台加载线程写入，GUI绘制线程读取
 	private volatile LoadResult pendingResult;
 	private boolean closed;
 
@@ -28,8 +24,8 @@ public final class SchematicPreviewSession {
 		return this.transform;
 	}
 
-	/** 返回当前浏览器专属的预览渲染器。 */
-	public SchematicPreviewRenderer renderer() {
+	// 返回当前浏览器专属的预览渲染器
+	public SchematicPreviewRenderManager renderer() {
 		return this.renderer;
 	}
 
@@ -49,24 +45,28 @@ public final class SchematicPreviewSession {
 		return this.loadFailure != null;
 	}
 
-	/** 仅在用户在原理图列表中选中新的 litematic 文件时启动新的加载任务。 */
+	// 仅在列表中选中新的 litematic 文件时启动新的加载任务
+	// 流程：路径规范化 -> 去重检查 -> 重置旧状态 -> 启动异步加载 -> 结果写入 pendingResult
+	// generation 防止旧请求的结果覆盖新请求
 	public void setFile(Path file) {
 		Path normalizedFile = file.toAbsolutePath().normalize();
 		if (this.closed || normalizedFile.equals(this.file)) {
 			return;
 		}
 
+		// 重置所有状态，准备新文件加载
 		this.file = normalizedFile;
-		ListMore.LOGGER.info("Schematic preview: selected {}", normalizedFile);
 		this.model = null;
 		this.renderer.close();
 		this.loadFailure = null;
 		this.pendingResult = null;
 		this.transform.reset();
+		// 递增 generation 使旧请求的回调失效
 		long requestGeneration = this.generation.incrementAndGet();
 		CompletableFuture<LitematicaSchematic> task = SchematicPreviewLoader.load(normalizedFile);
 		this.loadingTask = task;
 		task.whenComplete((loaded, throwable) -> {
+			// 检查：未关闭 + generation 匹配 + 未被新任务替换
 			if (this.closed || requestGeneration != this.generation.get() || task != this.loadingTask) {
 				return;
 			}
@@ -74,7 +74,9 @@ public final class SchematicPreviewSession {
 		});
 	}
 
-	/** 在 GUI 绘制线程应用后台加载结果，避免后台线程修改渲染状态。 */
+	// 在 GUI 绘制线程调用，消费后台加载线程写入的 pendingResult
+	// 检查 generation 确保只处理最新请求的结果，忽略已过期的加载任务
+	// 加载成功后从 LitematicaSchematic 提取 SchematicPreviewModel 并提交给渲染器
 	public void update() {
 		LoadResult result = this.pendingResult;
 		if (result == null || result.generation() != this.generation.get()) {
@@ -83,7 +85,6 @@ public final class SchematicPreviewSession {
 
 		this.pendingResult = null;
 		if (result.throwable() != null) {
-			ListMore.LOGGER.error("Schematic preview: load result failed for {}", this.file, result.throwable());
 			this.loadFailure = result.throwable();
 			return;
 		}
@@ -93,18 +94,15 @@ public final class SchematicPreviewSession {
 		}
 
 		try {
+			// 加载成功 -> 提取模型并提交给渲染器
 			this.model = SchematicPreviewModel.from(result.schematic());
-			ListMore.LOGGER.info("Schematic preview: model ready for {} (size={}x{}x{}, nonAirBlocks={})", this.file,
-					this.model.size().getX(), this.model.size().getY(), this.model.size().getZ(), this.model.blocks().size());
 			this.renderer.setSchematic(result.schematic());
 			this.renderer.setModel(this.model);
 		} catch (Throwable throwable) {
-			ListMore.LOGGER.error("Schematic preview: model creation failed for {}", this.file, throwable);
 			this.loadFailure = throwable;
 		}
 	}
 
-	/** 关闭浏览器时取消仍在等待的任务，并使所有回调失效。 */
 	public void close() {
 		this.closed = true;
 		this.generation.incrementAndGet();

@@ -4,6 +4,7 @@
   "listmore.hotkeys.category.generic": "General Hotkeys",
   "listmore.gui.tab.all": "All",
   "listmore.gui.tab.generic": "General",
+  "listmore.gui.tab.litematica": "Litematica",
   "listmore.config.generic.name.projectileLandingPrediction": "Projectile Landing Prediction",
   "listmore.config.generic.prettyName.projectileLandingPrediction": "Projectile Landing Prediction",
   "listmore.config.generic.comment.projectileLandingPrediction": "Show the predicted landing point for supported projectiles",
