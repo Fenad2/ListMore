@@ -1,5 +1,8 @@
-package com.listmore.schematic;
+package com.listmore.schematic.preview.render;
 
+import com.listmore.schematic.preview.SchematicPreviewModel;
+import com.listmore.schematic.preview.SchematicPreviewTransform;
+import com.listmore.schematic.preview.gui.SchematicPreviewLayout;
 // 原理图预览的版本专属渲染后端，公共预览逻辑只通过这个接口调用
 public interface SchematicPreviewRenderBackend extends AutoCloseable {
 	default void setSchematic(Object schematic) {

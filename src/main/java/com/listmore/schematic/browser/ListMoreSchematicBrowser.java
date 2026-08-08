@@ -1,6 +1,10 @@
-package com.listmore.schematic;
+package com.listmore.schematic.browser;
 
 import java.util.Date;
+import com.listmore.schematic.preview.SchematicPreviewDirection;
+import com.listmore.schematic.preview.SchematicPreviewSession;
+import com.listmore.schematic.preview.gui.SchematicPreviewLayout;
+import com.listmore.schematic.preview.gui.SchematicPreviewOverlay;
 import org.jetbrains.annotations.Nullable;
 
 import fi.dy.masa.litematica.gui.GuiSchematicBrowserBase;

@@ -28,14 +28,13 @@ public abstract class GuiSchematicBrowserBaseMixin {
 			return;
 		}
 		try {
-			Class<?> browserClass = Class.forName("com.listmore.schematic.ListMoreSchematicBrowser");
+			Class<?> browserClass = Class.forName("com.listmore.schematic.browser.ListMoreSchematicBrowser");
 			Object browser = browserClass.getConstructor(int.class, int.class, int.class, int.class,
 					GuiSchematicBrowserBase.class, ISelectionListener.class)
 					.newInstance(listX, listY, 100, 100, (GuiSchematicBrowserBase) (Object) this,
 							this.getSelectionListener());
 			cir.setReturnValue((WidgetSchematicBrowser) browser);
 		} catch (ReflectiveOperationException ignored) {
-			// The version-specific preview browser is intentionally optional.
 		}
 	}
 }

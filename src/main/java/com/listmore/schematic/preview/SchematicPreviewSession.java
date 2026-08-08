@@ -1,9 +1,10 @@
-package com.listmore.schematic;
+package com.listmore.schematic.preview;
 
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.listmore.schematic.preview.render.SchematicPreviewRenderManager;
 import fi.dy.masa.litematica.schematic.LitematicaSchematic;
 import net.minecraft.core.Vec3i;
 

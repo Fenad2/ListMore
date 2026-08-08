@@ -1,4 +1,4 @@
-package com.listmore.schematic;
+package com.listmore.schematic.preview;
 
 public enum SchematicPreviewDirection {
 	UP("↑"),
