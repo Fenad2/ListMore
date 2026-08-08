@@ -1,4 +1,8 @@
-package com.listmore.schematic;
+package com.listmore.schematic.preview.render;
+
+import com.listmore.schematic.preview.SchematicPreviewModel;
+import com.listmore.schematic.preview.SchematicPreviewTransform;
+import com.listmore.schematic.preview.gui.SchematicPreviewLayout;
 
 //#if MC >= 1.21.11
 //$$ import fi.dy.masa.malilib.render.GuiContext;
@@ -64,7 +68,7 @@ public final class SchematicPreviewRenderManager implements AutoCloseable {
 	// 如果当前版本没有对应的 SchematicPreviewRenderer 类，回退到 null（GUI 占位预览）
 	private static SchematicPreviewRenderBackend createBackend() {
 		try {
-			Class<?> backendClass = Class.forName("com.listmore.schematic.SchematicPreviewRenderer");
+			Class<?> backendClass = Class.forName("com.listmore.schematic.preview.render.SchematicPreviewRenderer");
 			return backendClass.asSubclass(SchematicPreviewRenderBackend.class).getConstructor().newInstance();
 		} catch (ReflectiveOperationException ignored) {
 			// 当前版本尚未提供专属后端时保留 GUI 占位预览

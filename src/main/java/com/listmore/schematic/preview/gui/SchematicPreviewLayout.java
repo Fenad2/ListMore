@@ -1,4 +1,6 @@
-package com.listmore.schematic;
+package com.listmore.schematic.preview.gui;
+
+import com.listmore.schematic.preview.SchematicPreviewDirection;
 
 // 原理图浏览器右侧预览区域及方向按钮的布局计算
 public final class SchematicPreviewLayout {

@@ -1,4 +1,4 @@
-package com.listmore.schematic;
+package com.listmore.schematic.preview;
 
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
