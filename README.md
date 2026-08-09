@@ -14,7 +14,7 @@
 - **实体高亮边框-选择列表**
 
     每行一个实体 ID
-    ![](docs/EntityHighlightBorderSelectList.jpg)
+  ![](docs/entityHighlightOutlineList.jpg)
 
 - **实体高亮边框-颜色**
 
