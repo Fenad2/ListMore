@@ -2,6 +2,7 @@ package com.listmore.render;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 import com.listmore.config.ListMoreConfigs;
@@ -58,7 +59,7 @@ public final class EntityOutlineRenderer {
 			return null;
 		}
 
-		String entityIdText = entry.trim();
+		String entityIdText = entry.trim().toLowerCase(Locale.ROOT);
 		if (entityIdText.isEmpty()) {
 			return null;
 		}
