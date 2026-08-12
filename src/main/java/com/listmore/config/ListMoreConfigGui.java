@@ -41,10 +41,6 @@ public class ListMoreConfigGui extends GuiConfigsBase {
 
 	@Override
 	protected int getConfigWidth() {
-		if (tab == ConfigTab.GENERIC) {
-			return 200;
-		}
-
 		return 200;
 	}
 
