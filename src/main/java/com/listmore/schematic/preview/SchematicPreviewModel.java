@@ -1,11 +1,14 @@
 package com.listmore.schematic.preview;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import fi.dy.masa.litematica.schematic.LitematicaSchematic;
+import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStatePalette;
+import fi.dy.masa.litematica.schematic.container.LitematicaBitArray;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainer;
 import fi.dy.masa.litematica.selection.Box;
 import net.minecraft.core.BlockPos;
@@ -20,17 +23,15 @@ public final class SchematicPreviewModel {
 	private final float centerZ;
 	private final List<Block> blocks;
 	private final Map<Long, BlockState> statesByPosition;
-	private final Map<Long, Object> blockEntitiesByPosition;
 
 	private SchematicPreviewModel(Vec3i size, float centerX, float centerY, float centerZ, List<Block> blocks,
-			Map<Long, BlockState> statesByPosition, Map<Long, Object> blockEntitiesByPosition) {
+			Map<Long, BlockState> statesByPosition) {
 		this.size = size;
 		this.centerX = centerX;
 		this.centerY = centerY;
 		this.centerZ = centerZ;
-		this.blocks = List.copyOf(blocks);
-		this.statesByPosition = Map.copyOf(statesByPosition);
-		this.blockEntitiesByPosition = Map.copyOf(blockEntitiesByPosition);
+		this.blocks = Collections.unmodifiableList(blocks);
+		this.statesByPosition = Collections.unmodifiableMap(statesByPosition);
 	}
 
 	public Vec3i size() { return this.size; }
@@ -38,10 +39,6 @@ public final class SchematicPreviewModel {
 	public float centerY() { return this.centerY; }
 	public float centerZ() { return this.centerZ; }
 	public List<Block> blocks() { return this.blocks; }
-
-	public Object blockEntityDataAt(int x, int y, int z) {
-		return this.blockEntitiesByPosition.get(packPosition(x, y, z));
-	}
 
 	// 查询预览坐标中的方块状态
 	public BlockState blockStateAt(int x, int y, int z) {
@@ -94,7 +91,6 @@ public final class SchematicPreviewModel {
 		// 从每个区域中提取非空气方块，转换为相对坐标
 		List<Block> blocks = new ArrayList<>();
 		Map<Long, BlockState> statesByPosition = new HashMap<>();
-		Map<Long, Object> blockEntitiesByPosition = new HashMap<>();
 		for (Map.Entry<String, Box> entry : areas.entrySet()) {
 			LitematicaBlockStateContainer container = schematic.getSubRegionContainer(entry.getKey());
 			BlockPos first = entry.getValue().getPos1();
@@ -107,11 +103,19 @@ public final class SchematicPreviewModel {
 			int originY = Math.min(first.getY(), second.getY());
 			int originZ = Math.min(first.getZ(), second.getZ());
 			// 遍历容器内所有方块，只保留非空气方块
+			LitematicaBitArray storage = container.getArray();
+			ILitematicaBlockStatePalette palette = container.getPalette();
+			boolean[] airIds = findAirIds(palette);
+			long storageIndex = 0L;
 			for (int y = 0; y < regionSize.getY(); y++) {
 				for (int z = 0; z < regionSize.getZ(); z++) {
 					for (int x = 0; x < regionSize.getX(); x++) {
-					BlockState state = container.get(x, y, z);
-					if (!state.isAir()) {
+					int paletteId = storage.getAt(storageIndex++);
+					if (paletteId < 0 || paletteId >= airIds.length || !airIds[paletteId]) {
+						BlockState state = palette.getBlockState(paletteId);
+						if (state == null || state.isAir()) {
+							continue;
+						}
 						// 绝对坐标 -> 相对坐标：减去全局包围盒原点
 						int relativeX = x + originX - minX;
 						int relativeY = y + originY - minY;
@@ -125,31 +129,27 @@ public final class SchematicPreviewModel {
 					}
 				}
 			}
-			// 收集方块实体数据（如箱子、告示牌等）
-			Map<BlockPos, ?> blockEntities = schematic.getBlockEntityMapForRegion(entry.getKey());
-			if (blockEntities != null) {
-				for (Map.Entry<BlockPos, ?> blockEntity : blockEntities.entrySet()) {
-					if (blockEntity.getValue() == null) {
-						continue;
-					}
-					BlockPos position = blockEntity.getKey();
-					int relativeX = position.getX() + originX - minX;
-					int relativeY = position.getY() + originY - minY;
-					int relativeZ = position.getZ() + originZ - minZ;
-					blockEntitiesByPosition.putIfAbsent(packPosition(relativeX, relativeY, relativeZ), blockEntity.getValue());
-				}
-			}
 		}
 
 		// 包围盒尺寸 = 远端 - 原点，中心 = 尺寸 * 0.5（几何中心）
 		Vec3i size = new Vec3i(maxXExclusive - minX, maxYExclusive - minY, maxZExclusive - minZ);
 		return new SchematicPreviewModel(size, size.getX() * 0.5F, size.getY() * 0.5F, size.getZ() * 0.5F,
-				blocks, statesByPosition, blockEntitiesByPosition);
+				blocks, statesByPosition);
 	}
 
 	private static SchematicPreviewModel empty() {
-		return new SchematicPreviewModel(BlockPos.ZERO, 0.0F, 0.0F, 0.0F, List.of(), Map.of(), Map.of());
+		return new SchematicPreviewModel(BlockPos.ZERO, 0.0F, 0.0F, 0.0F, List.of(), Map.of());
 	}
+
+	private static boolean[] findAirIds(ILitematicaBlockStatePalette palette) {
+		boolean[] airIds = new boolean[palette.getPaletteSize()];
+		for (int id = 0; id < airIds.length; id++) {
+			BlockState state = palette.getBlockState(id);
+			airIds[id] = state == null || state.isAir();
+		}
+		return airIds;
+	}
+	//突然想到一个很神的点子，如果用c/c++或者rust去写计算部分呢？真神人了
 
 	// 将坐标打包为 long
 	private static long packPosition(int x, int y, int z) {
