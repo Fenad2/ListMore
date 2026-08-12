@@ -4,8 +4,8 @@ import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.listmore.schematic.preview.SchematicPreviewLoader.LoadedPreview;
 import com.listmore.schematic.preview.render.SchematicPreviewRenderManager;
-import fi.dy.masa.litematica.schematic.LitematicaSchematic;
 import net.minecraft.core.Vec3i;
 
 // 单个原理图浏览器的预览状态
@@ -14,7 +14,7 @@ public final class SchematicPreviewSession {
 	private final SchematicPreviewTransform transform = new SchematicPreviewTransform();
 	private final SchematicPreviewRenderManager renderer = new SchematicPreviewRenderManager();
 	private Path file;
-	private CompletableFuture<LitematicaSchematic> loadingTask;
+	private CompletableFuture<LoadedPreview> loadingTask;
 	private SchematicPreviewModel model;
 	private Throwable loadFailure;
 	// 后台加载线程写入，GUI绘制线程读取
@@ -64,7 +64,7 @@ public final class SchematicPreviewSession {
 		this.transform.reset();
 		// 递增 generation 使旧请求的回调失效
 		long requestGeneration = this.generation.incrementAndGet();
-		CompletableFuture<LitematicaSchematic> task = SchematicPreviewLoader.load(normalizedFile);
+		CompletableFuture<LoadedPreview> task = SchematicPreviewLoader.load(normalizedFile);
 		this.loadingTask = task;
 		task.whenComplete((loaded, throwable) -> {
 			// 检查：未关闭 + generation 匹配 + 未被新任务替换
@@ -77,7 +77,7 @@ public final class SchematicPreviewSession {
 
 	// 在 GUI 绘制线程调用，消费后台加载线程写入的 pendingResult
 	// 检查 generation 确保只处理最新请求的结果，忽略已过期的加载任务
-	// 加载成功后从 LitematicaSchematic 提取 SchematicPreviewModel 并提交给渲染器
+	// 加载成功后将后台生成的模型提交给渲染器
 	public void update() {
 		LoadResult result = this.pendingResult;
 		if (result == null || result.generation() != this.generation.get()) {
@@ -89,15 +89,15 @@ public final class SchematicPreviewSession {
 			this.loadFailure = result.throwable();
 			return;
 		}
-		if (result.schematic() == null) {
-			this.loadFailure = new IllegalStateException("Litematica returned no schematic");
+		if (result.preview() == null) {
+			this.loadFailure = new IllegalStateException("Litematica returned no preview");
 			return;
 		}
 
 		try {
-			// 加载成功 -> 提取模型并提交给渲染器
-			this.model = SchematicPreviewModel.from(result.schematic());
-			this.renderer.setSchematic(result.schematic());
+			// 加载成功 -> 提交模型给渲染器
+			this.model = result.preview().model();
+			this.renderer.setSchematic(result.preview().schematic());
 			this.renderer.setModel(this.model);
 		} catch (Throwable throwable) {
 			this.loadFailure = throwable;
@@ -113,6 +113,6 @@ public final class SchematicPreviewSession {
 		this.renderer.close();
 	}
 
-	private record LoadResult(long generation, LitematicaSchematic schematic, Throwable throwable) {
+	private record LoadResult(long generation, LoadedPreview preview, Throwable throwable) {
 	}
 }

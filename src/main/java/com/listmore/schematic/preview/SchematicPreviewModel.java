@@ -1,11 +1,14 @@
 package com.listmore.schematic.preview;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import fi.dy.masa.litematica.schematic.LitematicaSchematic;
+import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStatePalette;
+import fi.dy.masa.litematica.schematic.container.LitematicaBitArray;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainer;
 import fi.dy.masa.litematica.selection.Box;
 import net.minecraft.core.BlockPos;
@@ -27,8 +30,8 @@ public final class SchematicPreviewModel {
 		this.centerX = centerX;
 		this.centerY = centerY;
 		this.centerZ = centerZ;
-		this.blocks = List.copyOf(blocks);
-		this.statesByPosition = Map.copyOf(statesByPosition);
+		this.blocks = Collections.unmodifiableList(blocks);
+		this.statesByPosition = Collections.unmodifiableMap(statesByPosition);
 	}
 
 	public Vec3i size() { return this.size; }
@@ -100,11 +103,19 @@ public final class SchematicPreviewModel {
 			int originY = Math.min(first.getY(), second.getY());
 			int originZ = Math.min(first.getZ(), second.getZ());
 			// 遍历容器内所有方块，只保留非空气方块
+			LitematicaBitArray storage = container.getArray();
+			ILitematicaBlockStatePalette palette = container.getPalette();
+			boolean[] airIds = findAirIds(palette);
+			long storageIndex = 0L;
 			for (int y = 0; y < regionSize.getY(); y++) {
 				for (int z = 0; z < regionSize.getZ(); z++) {
 					for (int x = 0; x < regionSize.getX(); x++) {
-					BlockState state = container.get(x, y, z);
-					if (!state.isAir()) {
+					int paletteId = storage.getAt(storageIndex++);
+					if (paletteId < 0 || paletteId >= airIds.length || !airIds[paletteId]) {
+						BlockState state = palette.getBlockState(paletteId);
+						if (state == null || state.isAir()) {
+							continue;
+						}
 						// 绝对坐标 -> 相对坐标：减去全局包围盒原点
 						int relativeX = x + originX - minX;
 						int relativeY = y + originY - minY;
@@ -129,6 +140,16 @@ public final class SchematicPreviewModel {
 	private static SchematicPreviewModel empty() {
 		return new SchematicPreviewModel(BlockPos.ZERO, 0.0F, 0.0F, 0.0F, List.of(), Map.of());
 	}
+
+	private static boolean[] findAirIds(ILitematicaBlockStatePalette palette) {
+		boolean[] airIds = new boolean[palette.getPaletteSize()];
+		for (int id = 0; id < airIds.length; id++) {
+			BlockState state = palette.getBlockState(id);
+			airIds[id] = state == null || state.isAir();
+		}
+		return airIds;
+	}
+	//突然想到一个很神的点子，如果用c/c++或者rust去写计算部分呢？真神人了
 
 	// 将坐标打包为 long
 	private static long packPosition(int x, int y, int z) {
