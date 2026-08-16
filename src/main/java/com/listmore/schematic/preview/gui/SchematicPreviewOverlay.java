@@ -1,6 +1,5 @@
 package com.listmore.schematic.preview.gui;
 
-import com.listmore.schematic.preview.SchematicPreviewDirection;
 import com.listmore.schematic.preview.SchematicPreviewSession;
 import fi.dy.masa.malilib.render.RenderUtils;
 import fi.dy.masa.malilib.util.StringUtils;
@@ -21,8 +20,8 @@ public final class SchematicPreviewOverlay {
 	private SchematicPreviewOverlay() {
 	}
 
-	// 绘制预览背景、加载状态和方向操作按钮
-	// 组件层级：背景 -> 边框 -> 状态提示/3D 模型/占位符 -> 方向按钮 -> 缩放按钮
+	// 绘制预览背景、加载状态和重置按钮
+	// 组件层级：背景 -> 边框 -> 状态提示/3D 模型/占位符 -> 重置按钮
 	public static void draw(
 			//#if MC >= 1.21.11
 			//$$ GuiContext context,
@@ -46,12 +45,7 @@ public final class SchematicPreviewOverlay {
 			drawCentered(context, layout, StringUtils.translate("listmore.schematic_preview.empty"));
 		}
 
-		for (SchematicPreviewDirection direction : SchematicPreviewDirection.values()) {
-			SchematicPreviewLayout.ButtonBounds button = layout.buttonBounds(direction);
-			drawButton(context, button, direction.label(), mouseX, mouseY);
-		}
-		drawButton(context, layout.zoomOutBounds(), "-", mouseX, mouseY);
-		drawButton(context, layout.zoomInBounds(), "+", mouseX, mouseY);
+		drawButton(context, layout.resetBounds(), "↻", mouseX, mouseY);
 	}
 
 	private static void drawButton(
