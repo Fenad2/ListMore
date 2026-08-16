@@ -1,6 +1,7 @@
 package com.listmore.mixin.litematica;
 
 import com.listmore.config.ListMoreConfigs;
+import com.listmore.mixin.accessor.GuiListBaseAccessor;
 import fi.dy.masa.litematica.gui.GuiSchematicBrowserBase;
 import fi.dy.masa.litematica.gui.widgets.WidgetSchematicBrowser;
 import fi.dy.masa.malilib.gui.interfaces.ISelectionListener;
@@ -13,6 +14,9 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+//#if MC >= 1.21.10
+//$$ import net.minecraft.client.input.MouseButtonEvent;
+//#endif
 
 @Pseudo
 @Restriction(require = @Condition("litematica"))
@@ -36,5 +40,28 @@ public abstract class GuiSchematicBrowserBaseMixin {
 			cir.setReturnValue((WidgetSchematicBrowser) browser);
 		} catch (ReflectiveOperationException ignored) {
 		}
+	}
+
+	//#if MC >= 1.21.11
+	//$$ public boolean onMouseDragged(MouseButtonEvent click, double dragX, double dragY) {
+	//$$ 	return this.listmore$getListWidget() instanceof com.listmore.schematic.browser.ListMoreSchematicBrowser browser
+	//$$ 			&& browser.handlePreviewMouseDragged(click.x(), click.y(), click.input(), dragX, dragY);
+	//$$ }
+	//#endif
+
+	//#if MC >= 1.21.10 && MC < 1.21.11
+	//$$ public boolean mouseDragged(MouseButtonEvent click, double dragX, double dragY) {
+	//$$ 	return this.listmore$getListWidget() instanceof com.listmore.schematic.browser.ListMoreSchematicBrowser browser
+	//$$ 			&& browser.handlePreviewMouseDragged(click.x(), click.y(), click.input(), dragX, dragY);
+	//$$ }
+	//#elseif MC < 1.21.10
+	//$$ public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+	//$$ 	return this.listmore$getListWidget() instanceof com.listmore.schematic.browser.ListMoreSchematicBrowser browser
+	//$$ 			&& browser.handlePreviewMouseDragged(mouseX, mouseY, button, dragX, dragY);
+	//$$ }
+	//#endif
+
+	private WidgetSchematicBrowser listmore$getListWidget() {
+		return (WidgetSchematicBrowser) ((GuiListBaseAccessor) this).listmore$getListWidget();
 	}
 }

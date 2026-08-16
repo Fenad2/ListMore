@@ -301,10 +301,18 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 		float yaw = transform.yaw() * Mth.DEG_TO_RAD;
 		float pitch = transform.pitch() * Mth.DEG_TO_RAD;
 		float horizontal = Mth.cos(pitch);
+		float sinYaw = Mth.sin(yaw);
+		float cosYaw = Mth.cos(yaw);
 		Vector3f camera = new Vector3f(
-				model.centerX() - Mth.sin(yaw) * horizontal * distance,
+				model.centerX() - sinYaw * horizontal * distance,
 				model.centerY() - Mth.sin(pitch) * distance,
-				model.centerZ() + Mth.cos(yaw) * horizontal * distance);
+				model.centerZ() + cosYaw * horizontal * distance);
+		float panScale = 2.0F * distance * (float) Math.tan(35.0F * Mth.DEG_TO_RAD);
+		Vector3f screenRight = new Vector3f(cosYaw, 0.0F, sinYaw);
+		Vector3f screenUp = new Vector3f(-sinYaw * Mth.sin(pitch), horizontal,
+				cosYaw * Mth.sin(pitch));
+		camera.add(screenRight.mul(-transform.panX() * panScale))
+				.add(screenUp.mul(transform.panY() * panScale));
 		Matrix4fStack modelView = RenderSystem.getModelViewStack();
 		modelView.pushMatrix();
 		// 与 SchematicPreview 的轨道约定一致：UI 偏航角描述观察方向

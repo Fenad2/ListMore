@@ -1,7 +1,6 @@
 package com.listmore.schematic.browser;
 
 import java.util.Date;
-import com.listmore.schematic.preview.SchematicPreviewDirection;
 import com.listmore.schematic.preview.SchematicPreviewSession;
 import com.listmore.schematic.preview.gui.SchematicPreviewLayout;
 import com.listmore.schematic.preview.gui.SchematicPreviewOverlay;
@@ -33,6 +32,7 @@ public final class ListMoreSchematicBrowser extends WidgetSchematicBrowser {
 	@Nullable private SchematicPreviewLayout previewLayout;
 	private int lastMouseX;
 	private int lastMouseY;
+	private int previewDragButton = -1;
 
 	public ListMoreSchematicBrowser(int x, int y, int width, int height, GuiSchematicBrowserBase parent,
 			@Nullable ISelectionListener<DirectoryEntry> selectionListener) {
@@ -145,44 +145,76 @@ public final class ListMoreSchematicBrowser extends WidgetSchematicBrowser {
 	@Override
 	//#if MC >= 1.21.10
 	//$$ public boolean onMouseClicked(MouseButtonEvent click, boolean doubleClick) {
-	//$$ 		if (click.input() == 0 && this.previewLayout != null) {
-	//$$ 			if (this.previewLayout.zoomOutBounds().contains(click.x(), click.y())) {
-	//$$ 				this.previewSession.transform().zoomOut();
-	//$$ 				return true;
-	//$$ 			}
-	//$$ 			if (this.previewLayout.zoomInBounds().contains(click.x(), click.y())) {
-	//$$ 				this.previewSession.transform().zoomIn();
-	//$$ 				return true;
-	//$$ 			}
-	//$$ 			for (SchematicPreviewDirection direction : SchematicPreviewDirection.values()) {
-	//$$ 				if (this.previewLayout.buttonBounds(direction).contains(click.x(), click.y())) {
-	//$$ 					this.previewSession.transform().applyDirection(direction);
-	//$$ 					return true;
-	//$$ 				}
-	//$$ 			}
+	//$$ 		if (click.input() == 0 && this.previewLayout != null
+	//$$ 				&& this.previewLayout.resetBounds().contains(click.x(), click.y())) {
+	//$$ 			this.previewSession.transform().reset();
+	//$$ 			return true;
+	//$$ 		}
+	//$$ 		if (this.beginPreviewDrag(click.x(), click.y(), click.input())) {
+	//$$ 			return true;
 	//$$ 		}
 	//$$ 		return super.onMouseClicked(click, doubleClick);
 	//$$ }
 	//#else
 	public boolean onMouseClicked(int mouseX, int mouseY, int button) {
-		if (button == 0 && this.previewLayout != null) {
-			if (this.previewLayout.zoomOutBounds().contains(mouseX, mouseY)) {
-				this.previewSession.transform().zoomOut();
-				return true;
-			}
-			if (this.previewLayout.zoomInBounds().contains(mouseX, mouseY)) {
-				this.previewSession.transform().zoomIn();
-				return true;
-			}
-			for (SchematicPreviewDirection direction : SchematicPreviewDirection.values()) {
-				if (this.previewLayout.buttonBounds(direction).contains(mouseX, mouseY)) {
-					this.previewSession.transform().applyDirection(direction);
-					return true;
-				}
-			}
+		if (button == 0 && this.previewLayout != null
+				&& this.previewLayout.resetBounds().contains(mouseX, mouseY)) {
+			this.previewSession.transform().reset();
+			return true;
+		}
+		if (this.beginPreviewDrag(mouseX, mouseY, button)) {
+			return true;
 		}
 		return super.onMouseClicked(mouseX, mouseY, button);
 	}
+	//#endif
+
+	@Override
+	//#if MC >= 1.21.10
+	//$$ public boolean onMouseScrolled(double mouseX, double mouseY, double horizontalAmount,
+	//$$ 		double verticalAmount) {
+	//#else
+	public boolean onMouseScrolled(int mouseX, int mouseY, double horizontalAmount,
+			double verticalAmount) {
+	//#endif
+		if (verticalAmount != 0.0 && this.previewLayout != null
+				&& this.previewLayout.contains(mouseX, mouseY)) {
+			this.previewSession.transform().zoomByScroll(verticalAmount);
+			return true;
+		}
+		return super.onMouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+	}
+
+	//#if MC >= 1.21.11
+	//$$ @Override
+	//$$ public boolean onMouseDragged(MouseButtonEvent click, double dragXAmount, double dragYAmount) {
+	//$$ 	if (this.handlePreviewMouseDragged(click.x(), click.y(), click.input(), dragXAmount, dragYAmount)) {
+	//$$ 		return true;
+	//$$ 	}
+	//$$ 	return super.onMouseDragged(click, dragXAmount, dragYAmount);
+	//$$ }
+
+	//$$ @Override
+	//$$ public boolean onMouseReleased(MouseButtonEvent click) {
+	//$$ 	if (click.input() == this.previewDragButton) {
+	//$$ 		this.previewDragButton = -1;
+	//$$ 	}
+	//$$ 	return super.onMouseReleased(click);
+	//$$ }
+	//#endif
+
+	//#if MC >= 1.21.10 && MC < 1.21.11
+	//$$ @Override
+	//$$ public boolean onMouseReleased(MouseButtonEvent click) {
+	//$$ 	this.handlePreviewMouseReleased(click.input());
+	//$$ 	return super.onMouseReleased(click);
+	//$$ }
+	//#elseif MC < 1.21.10
+	//$$ @Override
+	//$$ public boolean onMouseReleased(int mouseX, int mouseY, int button) {
+	//$$ 	this.handlePreviewMouseReleased(button);
+	//$$ 	return super.onMouseReleased(mouseX, mouseY, button);
+	//$$ }
 	//#endif
 
 	@Override
@@ -193,5 +225,40 @@ public final class ListMoreSchematicBrowser extends WidgetSchematicBrowser {
 
 	private static boolean isLitematic(@Nullable DirectoryEntry entry) {
 		return entry != null && entry.getName().endsWith(LitematicaSchematic.FILE_EXTENSION);
+	}
+
+	private boolean isPreviewControl(double mouseX, double mouseY) {
+		return this.previewLayout.resetBounds().contains(mouseX, mouseY);
+	}
+
+	private boolean beginPreviewDrag(double mouseX, double mouseY, int button) {
+		if ((button == 0 || button == 1) && this.previewLayout != null
+				&& this.previewLayout.contains(mouseX, mouseY)
+				&& !this.isPreviewControl(mouseX, mouseY)) {
+			this.previewDragButton = button;
+			return true;
+		}
+		return false;
+	}
+
+	public boolean handlePreviewMouseDragged(double mouseX, double mouseY, int button,
+			double dragXAmount, double dragYAmount) {
+		if (this.previewDragButton != button || this.previewLayout == null) {
+			return false;
+		}
+		if (button == 0) {
+			this.previewSession.transform().rotateBy((float) dragXAmount,
+					(float) -dragYAmount);
+		} else {
+			this.previewSession.transform().panBy((float) dragXAmount, (float) dragYAmount,
+					this.previewLayout.contentHeight());
+		}
+		return true;
+	}
+
+	public void handlePreviewMouseReleased(int button) {
+		if (this.previewDragButton == button) {
+			this.previewDragButton = -1;
+		}
 	}
 }

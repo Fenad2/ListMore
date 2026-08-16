@@ -6,6 +6,7 @@
 		"MinecraftMixin",
 		"EntityMixin",
 		"EntityRenderDispatcherMixin",
+		"accessor.GuiListBaseAccessor",
 		"litematica.GuiSchematicBrowserBaseMixin"
 	],
 	"mixins": [
