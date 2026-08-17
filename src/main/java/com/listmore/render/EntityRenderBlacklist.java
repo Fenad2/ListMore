@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
+import com.listmore.config.ListEntryToggleConfig;
 import com.listmore.config.ListMoreConfigs;
 
 import net.minecraft.client.Minecraft;
@@ -24,7 +25,8 @@ public final class EntityRenderBlacklist {
 		}
 
 		String entityId = String.valueOf(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()));
-		if (!blockedEntityIds.contains(entityId)) {
+		if (!blockedEntityIds.contains(entityId)
+			|| !ListEntryToggleConfig.isEnabled(ListMoreConfigs.Generic.ENTITY_RENDERING_BLACKLIST_LIST, entityId)) {
 			return false;
 		}
 
