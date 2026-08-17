@@ -37,9 +37,11 @@ public final class SchematicPreviewOverlay {
 		} else if (session.hasFailure()) {
 			drawCentered(context, layout, StringUtils.translate("listmore.schematic_preview.failed"));
 		} else if (session.model() != null) {
-			boolean rendered = session.renderer().render(context, layout, session.transform());
-			if (!rendered) {
-				drawModelPlaceholder(context, layout, session.model().blocks().size());
+			boolean rendered = session.renderer().render(context, layout, session.transform(), session.model());
+			if (session.renderer().hasFailure()) {
+				drawCentered(context, layout, StringUtils.translate("listmore.schematic_preview.failed"));
+			} else if (!rendered) {
+				drawModelPlaceholder(context, layout, session.model().blockCount());
 			}
 		} else {
 			drawCentered(context, layout, StringUtils.translate("listmore.schematic_preview.empty"));

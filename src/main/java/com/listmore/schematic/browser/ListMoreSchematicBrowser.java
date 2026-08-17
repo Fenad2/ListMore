@@ -62,6 +62,7 @@ public final class ListMoreSchematicBrowser extends WidgetSchematicBrowser {
 			@Nullable DirectoryEntry entry) {
 		if (!isLitematic(entry)) {
 			this.previewLayout = null;
+			this.previewSession.clear();
 			super.drawSelectedSchematicInfo(context, entry);
 			return;
 		}
@@ -69,6 +70,7 @@ public final class ListMoreSchematicBrowser extends WidgetSchematicBrowser {
 		Pair<SchematicSchema, SchematicMetadata> metaPair = this.getSchematicVersionAndMetadata(entry);
 		if (metaPair == null || metaPair.getRight() == null) {
 			this.previewLayout = null;
+			this.previewSession.clear();
 			super.drawSelectedSchematicInfo(context, entry);
 			return;
 		}
@@ -139,6 +141,8 @@ public final class ListMoreSchematicBrowser extends WidgetSchematicBrowser {
 			this.previewSession.setFile(entry.getFullPath());
 			this.previewSession.update();
 			SchematicPreviewOverlay.draw(context, this.previewLayout, this.previewSession, this.lastMouseX, this.lastMouseY);
+		} else {
+			this.previewSession.clear();
 		}
 	}
 

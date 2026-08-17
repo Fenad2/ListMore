@@ -1,6 +1,6 @@
 package com.listmore.schematic.preview.render;
 
-import com.listmore.schematic.preview.SchematicPreviewModel;
+import com.listmore.schematic.preview.model.SchematicPreviewModel;
 import com.listmore.schematic.preview.SchematicPreviewTransform;
 import com.listmore.schematic.preview.gui.SchematicPreviewLayout;
 
@@ -11,30 +11,12 @@ import net.minecraft.client.gui.GuiGraphics;
 //#endif
 
 public final class SchematicPreviewRenderManager implements AutoCloseable {
-	private SchematicPreviewModel model;
-	private Object schematic;
 	private long modelRevision;
 	private final SchematicPreviewRenderBackend backend = createBackend();
 
-	// 提交新的原理图快照，模型只会在 GUI 线程调用此方法
-	public void setModel(SchematicPreviewModel model) {
-		if (this.model == model) {
-			return;
-		}
-		this.model = model;
+	// 通知后端模型快照已变化
+	public void modelChanged() {
 		this.modelRevision++;
-	}
-
-	public void setSchematic(Object schematic) {
-		this.schematic = schematic;
-		if (this.backend != null) {
-			this.backend.setSchematic(schematic);
-		}
-	}
-
-	// 返回当前快照的版本号
-	public long modelRevision() {
-		return this.modelRevision;
 	}
 
 	// 将预览模型绘制到右侧信息面板
@@ -45,26 +27,31 @@ public final class SchematicPreviewRenderManager implements AutoCloseable {
 			//#else
 			GuiGraphics context,
 			//#endif
-			SchematicPreviewLayout layout, SchematicPreviewTransform transform) {
-		return this.backend != null && this.backend.render(context, layout, transform, this.model, this.modelRevision);
+			SchematicPreviewLayout layout, SchematicPreviewTransform transform,
+			SchematicPreviewModel model) {
+		return this.backend != null && this.backend.render(context, layout, transform, model, this.modelRevision);
 	}
 
-	public SchematicPreviewModel model() {
-		return this.model;
+	public void clearModel() {
+		if (this.backend != null) {
+			this.backend.clearModel();
+		}
+		this.modelRevision++;
 	}
 
-	// 关闭预览时释放渲染资源
+	public boolean hasFailure() {
+		return this.backend != null && this.backend.hasFailure();
+	}
+
 	@Override
 	public void close() {
 		if (this.backend != null) {
 			this.backend.close();
 		}
-		this.model = null;
-		this.schematic = null;
 		this.modelRevision++;
 	}
 
-	// 通过反射加载版本专属的渲染后端，避免编译时硬依赖
+	// 通过反射加载版本专属的渲染后端
 	// 如果当前版本没有对应的 SchematicPreviewRenderer 类，回退到 null（GUI 占位预览）
 	private static SchematicPreviewRenderBackend createBackend() {
 		try {
