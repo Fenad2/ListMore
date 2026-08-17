@@ -1,14 +1,13 @@
 package com.listmore.schematic.preview.render;
 
 import com.listmore.ListMore;
-import com.listmore.schematic.preview.SchematicPreviewModel;
+import com.listmore.schematic.preview.model.SchematicPreviewModel;
 import com.listmore.schematic.preview.SchematicPreviewTransform;
 import com.listmore.schematic.preview.gui.SchematicPreviewLayout;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -45,7 +44,6 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 //#if MC >= 26.1
 //$$ import fi.dy.masa.litematica.render.schematic.BlockModelRendererSchematic;
 //$$ import fi.dy.masa.litematica.render.schematic.IBlockOutputSchematic;
-//$$ import fi.dy.masa.litematica.schematic.LitematicaSchematic;
 //#else
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
@@ -96,11 +94,19 @@ import org.joml.Vector4f;
 import org.lwjgl.system.MemoryStack;
 
 public final class SchematicPreviewRenderer implements SchematicPreviewRenderBackend {
+	private static final long BUILD_BUDGET_NANOS = 2_000_000L;
+	private static final int MAX_SECTIONS_PER_FRAME = 2;
+	private static final long SMALL_MODEL_BUILD_BUDGET_NANOS = 8_000_000L;
+	private static final int SMALL_MODEL_MAX_SECTIONS_PER_FRAME = 8;
+	private static final int SMALL_MODEL_MAX_BLOCKS = 4_096;
+	private static final int MAX_BUILD_ATTEMPTS = 3;
+	// 每个模型 Section 对应一个独立 GPU 网格
 	private final List<ChunkMesh> meshes = new ArrayList<>();
+	private List<SchematicPreviewModel.Section> pendingSections = List.of();
+	private int nextSection;
+	private long nextBuildAttemptNanos;
+	private int buildFailures;
 	private long builtRevision = Long.MIN_VALUE;
-	//#if MC >= 26.1
-	//$$ private LitematicaSchematic schematic;
-	//#endif
 	private SchematicPreviewWorld world;
 	private TextureTarget target;
 	//#if MC >= 1.21.11
@@ -120,13 +126,6 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 	//#if MC >= 26.1
 	//$$ private final FluidRenderer fluidRenderer = new FluidRenderer(Minecraft.getInstance().getModelManager().getFluidStateModelSet());
 	//#endif
-	@Override
-	public void setSchematic(Object schematic) {
-		//#if MC >= 26.1
-		//$$ this.schematic = schematic instanceof LitematicaSchematic loaded ? loaded : null;
-		//#endif
-	}
-
 	// 将原理图模型渲染到离屏帧缓冲，再将结果贴图绘制到 GUI 面板
 	// 流程：校验模型 -> 确保帧缓冲尺寸 -> 增量重建网格 -> 清空帧缓冲 -> 3D 渲染 -> 贴图到 GUI
 	public boolean render(Object rawContext, SchematicPreviewLayout layout, SchematicPreviewTransform transform,
@@ -136,15 +135,15 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 		//#else
 		GuiGraphics context = (GuiGraphics) rawContext;
 		//#endif
-		if (model == null || model.blocks().isEmpty() || layout.contentWidth() <= 0 || layout.contentHeight() <= 0) {
+		if (model == null || model.isEmpty() || layout.contentWidth() <= 0 || layout.contentHeight() <= 0) {
 			return false;
 		}
 		// 确保离屏帧缓冲尺寸与当前预览区域匹配
 		this.ensureTarget(layout.contentWidth(), layout.contentHeight());
-		// 仅当模型快照版本号变化时才重建网格，避免每帧重建
+		// 模型变化时初始化构建队列，之后每帧只消耗固定时间
 		if (this.builtRevision != revision) {
 			try {
-				this.rebuild(model, revision);
+				this.beginRebuild(model, revision);
 				this.rebuildFailureLogged = false;
 			} catch (Throwable throwable) {
 				if (!this.rebuildFailureLogged) {
@@ -153,6 +152,25 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 				}
 				return false;
 			}
+		}
+		if (this.hasFailure()) {
+			return false;
+		}
+		int previousSection = this.nextSection;
+		try {
+			this.buildPendingSections(model);
+			if (this.nextSection > previousSection) {
+				this.rebuildFailureLogged = false;
+			}
+		} catch (Throwable throwable) {
+			if (!this.rebuildFailureLogged) {
+				ListMore.LOGGER.error("Failed to build schematic preview section", throwable);
+				this.rebuildFailureLogged = true;
+			}
+			this.closeBuiltMeshes();
+			this.nextSection = 0;
+			this.buildFailures++;
+			this.nextBuildAttemptNanos = System.nanoTime() + 250_000_000L;
 		}
 		if (this.meshes.isEmpty()) {
 			return false;
@@ -218,37 +236,78 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 		//#endif
 	}
 
-	// 从原理图模型重建所有网格数据并上传到 GPU
-	// 流程：释放旧网格 -> 创建虚拟世界视图 -> 遍历方块按区块分组 -> 调用原版渲染器生成网格 -> 构建 GPU 缓冲区
-	private void rebuild(SchematicPreviewModel model, long revision) {
+	// 初始化增量构建
+	private void beginRebuild(SchematicPreviewModel model, long revision) {
 		this.closeMeshes();
-		this.builtRevision = revision;
-		//#if MC >= 26.1
-		//$$ if (this.schematic == null) {
-		//$$ 	return;
-		//$$ }
-		//#endif
+		this.nextSection = 0;
+		this.nextBuildAttemptNanos = 0L;
+		this.buildFailures = 0;
 		if (this.world == null) {
 			this.world = new SchematicPreviewWorld(Minecraft.getInstance());
 		}
 		this.world.setModel(model);
+		float centerX = model.size().getX() * 0.5F;
+		float centerY = model.size().getY() * 0.5F;
+		float centerZ = model.size().getZ() * 0.5F;
+		this.pendingSections = new ArrayList<>(model.sections());
+		this.pendingSections.sort(Comparator.comparingDouble(section -> {
+			float dx = section.minX() + 8.0F - centerX;
+			float dy = section.minY() + 8.0F - centerY;
+			float dz = section.minZ() + 8.0F - centerZ;
+			return dx * dx + dy * dy + dz * dz;
+		}));
+		this.builtRevision = revision;
+	}
+
+	private void buildPendingSections(SchematicPreviewModel model) {
+		if (this.nextSection >= this.pendingSections.size()
+				|| System.nanoTime() < this.nextBuildAttemptNanos) {
+			return;
+		}
+		// 小模型优先在一帧完成，大模型受数量和时间预算限制以避免卡住 GUI 绘制
+		boolean buildSmallModelImmediately = model.blockCount() <= SMALL_MODEL_MAX_BLOCKS
+				&& this.pendingSections.size() <= SMALL_MODEL_MAX_SECTIONS_PER_FRAME;
+		long deadline = System.nanoTime() + (buildSmallModelImmediately
+				? SMALL_MODEL_BUILD_BUDGET_NANOS : BUILD_BUDGET_NANOS);
+		int maxSections = buildSmallModelImmediately
+				? SMALL_MODEL_MAX_SECTIONS_PER_FRAME : MAX_SECTIONS_PER_FRAME;
+		int builtThisFrame = 0;
+		do {
+			SchematicPreviewModel.Section section = this.pendingSections.get(this.nextSection);
+			ChunkMesh mesh = this.buildSection(section);
+			if (mesh != null) {
+				this.meshes.add(mesh);
+			}
+			this.nextSection++;
+			builtThisFrame++;
+		} while (this.nextSection < this.pendingSections.size()
+				&& builtThisFrame < maxSections && System.nanoTime() < deadline);
+	}
+
+	// 单个 Section 独立网格化并上传
+	private ChunkMesh buildSection(SchematicPreviewModel.Section section) {
 		SchematicPreviewWorld view = this.world;
 		//#if MC >= 26.1
 		//$$ ModelManager modelManager = Minecraft.getInstance().getModelManager();
 		//#endif
-		// 按区块位置分组构建网格，每个 ChunkPos 对应一个 ChunkMeshBuilder
-		Map<ChunkPos, ChunkMeshBuilder> chunks = new HashMap<>();
+		ChunkMeshBuilder chunk = new ChunkMeshBuilder();
 		//#if MC >= 26.1
 		//$$ BlockModelRendererSchematic renderer = new BlockModelRendererSchematic();
 		//$$ renderer.enableCache();
 		//#endif
 		try {
-			// 遍历所有非空气方块，分别渲染流体和固体模型
-			for (SchematicPreviewModel.Block block : model.blocks()) {
-				BlockState state = block.state();
-				BlockPos position = new BlockPos(block.x(), block.y(), block.z());
-				// >> 4 将方块坐标转为区块坐标，computeIfAbsent 保证每个区块只有一个 Builder
-				ChunkMeshBuilder chunk = chunks.computeIfAbsent(new ChunkPos(block.x() >> 4, block.z() >> 4), ignored -> new ChunkMeshBuilder());
+			for (int index = 0; index < 4096; index++) {
+				BlockState state = section.stateAtIndex(index);
+				if (state == null) {
+					continue;
+				}
+				int localX = index & 15;
+				int localZ = (index >> 4) & 15;
+				int localY = index >> 8;
+				int blockX = section.minX() + localX;
+				int blockY = section.minY() + localY;
+				int blockZ = section.minZ() + localZ;
+				BlockPos position = new BlockPos(blockX, blockY, blockZ);
 				// 先渲染流体（水、岩浆等），再渲染固体方块模型
 				//#if MC >= 26.1
 				//$$ if (!state.getFluidState().isEmpty()) {
@@ -266,30 +325,27 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 				//#if MC >= 26.1
 				//$$ IBlockOutputSchematic output = (x, y, z, quad, instance) -> chunk.builder(quad.materialInfo().layer())
 				//$$ 		.putBlockBakedQuad(x, y, z, quad, instance);
-				//$$ renderer.tessellateBlock(view, state, position, new Vec3(block.x() & 15, block.y(), block.z() & 15),
+				//$$ renderer.tessellateBlock(view, state, position, new Vec3(localX, blockY, localZ),
 				//$$ 		modelManager.getBlockStateModelSet().get(state), state.getSeed(position), output);
 				//#else
 				PoseStack pose = new PoseStack();
 				// & 15 取区块内局部坐标（0-15），模型顶点需要相对区块原点的偏移
-				pose.translate(block.x() & 15, block.y(), block.z() & 15);
+				pose.translate(localX, blockY, localZ);
 				Minecraft.getInstance().getBlockRenderer().renderBatched(state, position, view, pose,
 						chunk.builder(ItemBlockRenderTypes.getChunkRenderType(state)), true,
 						Minecraft.getInstance().getBlockRenderer().getBlockModel(state)
 								.collectParts(RandomSource.create(state.getSeed(position))));
 				//#endif
 			}
+		} catch (Throwable throwable) {
+			chunk.close();
+			throw throwable;
 		} finally {
 			//#if MC >= 26.1
 			//$$ renderer.disableCache();
 			//#endif
 		}
-		// 所有方块遍历完毕后，将每个区块的网格数据上传到 GPU
-		chunks.forEach((position, chunk) -> {
-			ChunkMesh built = chunk.build(position);
-			if (built != null) {
-				this.meshes.add(built);
-			}
-		});
+		return chunk.build(new ChunkPos(section.sectionX(), section.sectionZ()), section.minY() + 8.0F);
 	}
 
 	// 设置相机、投影矩阵和全局 Uniform，然后将所有网格渲染到离屏帧缓冲
@@ -304,9 +360,9 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 		float sinYaw = Mth.sin(yaw);
 		float cosYaw = Mth.cos(yaw);
 		Vector3f camera = new Vector3f(
-				model.centerX() - sinYaw * horizontal * distance,
-				model.centerY() - Mth.sin(pitch) * distance,
-				model.centerZ() + cosYaw * horizontal * distance);
+				model.size().getX() * 0.5F - sinYaw * horizontal * distance,
+				model.size().getY() * 0.5F - Mth.sin(pitch) * distance,
+				model.size().getZ() * 0.5F + cosYaw * horizontal * distance);
 		float panScale = 2.0F * distance * (float) Math.tan(35.0F * Mth.DEG_TO_RAD);
 		Vector3f screenRight = new Vector3f(cosYaw, 0.0F, sinYaw);
 		Vector3f screenUp = new Vector3f(-sinYaw * Mth.sin(pitch), horizontal,
@@ -315,32 +371,35 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 				.add(screenUp.mul(transform.panY() * panScale));
 		Matrix4fStack modelView = RenderSystem.getModelViewStack();
 		modelView.pushMatrix();
-		// 与 SchematicPreview 的轨道约定一致：UI 偏航角描述观察方向
-		// 而地形视图矩阵使用相机偏航角的逆，因此取 -yaw 并共轭
-		Quaternionf rotation = new Quaternionf().rotationYXZ(-yaw, pitch, 0.0F).conjugate();
-		modelView.set(new Matrix4f().rotation(rotation));
-		// 构建透视投影矩阵，近平面 0.05，远平面 4096，FOV 70°
-		//#if MC >= 26.1
-		//$$ this.previewProjection.setupPerspective(0.05F, 4096.0F, 70.0F,
-		//$$ 		this.target.width, this.target.height);
-		//$$ Matrix4f projectionMatrix = this.previewProjection.getMatrix(new Matrix4f());
-		//#else
-		Matrix4f projectionMatrix = new Matrix4f().perspective(70.0F * Mth.DEG_TO_RAD,
-				(float) this.target.width / this.target.height, 0.05F, 4096.0F);
-		//#endif
-		// 备份原版投影矩阵和全局 Uniform，渲染完成后恢复
-		RenderSystem.backupProjectionMatrix();
-		if (this.projection == null) {
-			//#if MC >= 26.1
-			//$$ this.projection = new ProjectionMatrixBuffer("ListMore schematic preview");
-			//#else
-			this.projection = new PerspectiveProjectionMatrixBuffer("ListMore schematic preview");
-			//#endif
-		}
-		RenderSystem.setProjectionMatrix(this.projection.getBuffer(projectionMatrix), ProjectionType.PERSPECTIVE);
-		GpuBuffer previousGlobalUniform = RenderSystem.getGlobalSettingsUniform();
-		this.writeGlobalUniform(camera);
+		boolean projectionBackedUp = false;
+		boolean globalUniformCaptured = false;
+		GpuBuffer previousGlobalUniform = null;
 		try {
+			Quaternionf rotation = new Quaternionf().rotationYXZ(-yaw, pitch, 0.0F).conjugate();
+			modelView.set(new Matrix4f().rotation(rotation));
+			// 构建透视投影矩阵，近平面 0.05，远平面 4096，FOV 70°
+			//#if MC >= 26.1
+			//$$ this.previewProjection.setupPerspective(0.05F, 4096.0F, 70.0F,
+			//$$ 		this.target.width, this.target.height);
+			//$$ Matrix4f projectionMatrix = this.previewProjection.getMatrix(new Matrix4f());
+			//#else
+			Matrix4f projectionMatrix = new Matrix4f().perspective(70.0F * Mth.DEG_TO_RAD,
+					(float) this.target.width / this.target.height, 0.05F, 4096.0F);
+			//#endif
+			// 备份原版投影矩阵和全局 Uniform，渲染完成后恢复
+			RenderSystem.backupProjectionMatrix();
+			projectionBackedUp = true;
+			if (this.projection == null) {
+				//#if MC >= 26.1
+				//$$ this.projection = new ProjectionMatrixBuffer("ListMore schematic preview");
+				//#else
+				this.projection = new PerspectiveProjectionMatrixBuffer("ListMore schematic preview");
+				//#endif
+			}
+			RenderSystem.setProjectionMatrix(this.projection.getBuffer(projectionMatrix), ProjectionType.PERSPECTIVE);
+			previousGlobalUniform = RenderSystem.getGlobalSettingsUniform();
+			globalUniformCaptured = true;
+			this.writeGlobalUniform(camera);
 			//#if MC >= 26.2
 			//$$ Minecraft.getInstance().gameRenderer.lighting().setupFor(Lighting.Entry.LEVEL);
 			//#else
@@ -348,8 +407,12 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 			//#endif
 			this.renderMeshes(camera);
 		} finally {
-			RenderSystem.setGlobalSettingsUniform(previousGlobalUniform);
-			RenderSystem.restoreProjectionMatrix();
+			if (globalUniformCaptured) {
+				RenderSystem.setGlobalSettingsUniform(previousGlobalUniform);
+			}
+			if (projectionBackedUp) {
+				RenderSystem.restoreProjectionMatrix();
+			}
 			modelView.popMatrix();
 		}
 	}
@@ -439,26 +502,25 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 		}
 		GpuBuffer sharedIndex = maxSequentialIndices == 0 ? null : sequential.getBuffer(maxSequentialIndices);
 		IndexType sharedIndexType = maxSequentialIndices == 0 ? null : sequential.type();
-		// 先画不透明层（reverse=false），再画半透明层（reverse=true，从远到近保证混合正确）
+		// 先画不透明层，再按远到近绘制半透明层
 		//#if MC >= 1.21.11
 		//$$ this.renderLayerGroup(orderedMeshes, sectionUniforms, atlas, sharedIndex, sharedIndexType,
-		//$$ 		ChunkSectionLayerGroup.OPAQUE, false);
+		//$$ 		ChunkSectionLayerGroup.OPAQUE);
 		//$$ this.renderLayerGroup(orderedMeshes, sectionUniforms, atlas, sharedIndex, sharedIndexType,
-		//$$ 		ChunkSectionLayerGroup.TRANSLUCENT, true);
+		//$$ 		ChunkSectionLayerGroup.TRANSLUCENT);
 		//#else
 		this.renderLayerGroup(orderedMeshes, transformUniforms, atlas, sharedIndex, sharedIndexType,
-				ChunkSectionLayerGroup.OPAQUE, false);
+				ChunkSectionLayerGroup.OPAQUE);
 		this.renderLayerGroup(orderedMeshes, transformUniforms, atlas, sharedIndex, sharedIndexType,
-				ChunkSectionLayerGroup.TRANSLUCENT, true);
+				ChunkSectionLayerGroup.TRANSLUCENT);
 		//#endif
 	}
 
 	// 为指定的渲染层组（不透明或半透明）创建 RenderPass 并绘制所有网格
 	// 每个 ChunkSectionLayer 对应一种渲染管线（如 solid、cutout、translucent）
-	// reverse 参数控制绘制顺序：半透明层需要从远到近绘制以保证混合正确
 	private void renderLayerGroup(List<ChunkMesh> orderedMeshes, GpuBufferSlice[] meshUniforms,
 			GpuTextureView atlas, GpuBuffer sharedIndex, IndexType sharedIndexType,
-			ChunkSectionLayerGroup group, boolean reverse) {
+			ChunkSectionLayerGroup group) {
 		try (RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
 				() -> "ListMore schematic preview " + group.label(), this.target.getColorTextureView(),
 				//#if MC >= 26.2
@@ -511,8 +573,6 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 					//#endif
 				}
 				if (!draws.isEmpty()) {
-					// 半透明层需要反转绘制顺序（远 -> 近），不透明层保持原序（近 -> 远，利用深度测试）
-					if (reverse) draws = draws.reversed();
 					//#if MC >= 1.21.11
 					//$$ pass.drawMultipleIndexed(draws, sharedIndex, sharedIndexType, List.of("ChunkSection"), meshUniforms);
 					//#else
@@ -524,8 +584,28 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 	}
 
 	private void closeMeshes() {
+		this.closeBuiltMeshes();
+		this.pendingSections = List.of();
+		this.nextSection = 0;
+		this.nextBuildAttemptNanos = 0L;
+		this.buildFailures = 0;
+	}
+
+	private void closeBuiltMeshes() {
 		this.meshes.forEach(ChunkMesh::close);
 		this.meshes.clear();
+	}
+
+	@Override
+	public void clearModel() {
+		// 仅释放与当前快照关联的网格，离屏目标和通用 Uniform 留给下一次预览复用
+		this.closeMeshes();
+		this.builtRevision = Long.MIN_VALUE;
+	}
+
+	@Override
+	public boolean hasFailure() {
+		return this.buildFailures >= MAX_BUILD_ATTEMPTS;
 	}
 
 	// 快照变化时重建 GPU 缓冲区
@@ -557,33 +637,43 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 		}
 
 		// 将 BufferBuilder 中的网格数据上传到 GPU，创建顶点和索引缓冲区
-		// 返回包含所有 GPU 缓冲区和原始 MeshData 的 ChunkMesh
-		private ChunkMesh build(ChunkPos position) {
+		// 返回包含各渲染层 GPU 缓冲区的 ChunkMesh
+		private ChunkMesh build(ChunkPos position, float centerY) {
 			Map<ChunkSectionLayer, SectionBuffers> buffers = new EnumMap<>(ChunkSectionLayer.class);
-			List<MeshData> meshData = new ArrayList<>();
-			this.builders.forEach((layer, builder) -> {
-				// BufferBuilder.build() 将 CPU 端顶点数据打包为 MeshData
-				MeshData mesh = builder.build();
-				if (mesh == null) {
-					return;
+			try {
+				for (Map.Entry<ChunkSectionLayer, BufferBuilder> entry : this.builders.entrySet()) {
+					// MeshData 上传完成后立即关闭
+					// CPU 侧缓冲不跨帧持有
+					try (MeshData mesh = entry.getValue().build()) {
+						if (mesh == null) {
+							continue;
+						}
+						GpuBuffer vertex = RenderSystem.getDevice().createBuffer(
+								() -> "ListMore preview vertex buffer",
+								GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST, mesh.vertexBuffer());
+						GpuBuffer index = null;
+						try {
+							index = mesh.indexBuffer() == null ? null : RenderSystem.getDevice().createBuffer(
+									() -> "ListMore preview index buffer",
+									GpuBuffer.USAGE_INDEX | GpuBuffer.USAGE_COPY_DST, mesh.indexBuffer());
+							buffers.put(entry.getKey(), new SectionBuffers(vertex, index,
+									mesh.drawState().indexCount(), mesh.drawState().indexType()));
+						} catch (Throwable throwable) {
+							vertex.close();
+							if (index != null) {
+								index.close();
+							}
+							throw throwable;
+						}
+					}
 				}
-				meshData.add(mesh);
-				// 将 MeshData 上传到 GPU，创建顶点和索引缓冲区
-				GpuBuffer vertex = RenderSystem.getDevice().createBuffer(() -> "ListMore preview vertex buffer",
-						GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST, mesh.vertexBuffer());
-				// 索引缓冲区可能为空（使用共享顺序索引时）
-				GpuBuffer index = mesh.indexBuffer() == null ? null : RenderSystem.getDevice().createBuffer(
-						() -> "ListMore preview index buffer", GpuBuffer.USAGE_INDEX | GpuBuffer.USAGE_COPY_DST,
-						mesh.indexBuffer());
-				buffers.put(layer, new SectionBuffers(vertex, index, mesh.drawState().indexCount(), mesh.drawState().indexType()));
-			});
-			if (buffers.isEmpty()) {
-				// 所有层都为空时释放资源并返回 null
-				meshData.forEach(MeshData::close);
+				return buffers.isEmpty() ? null : new ChunkMesh(position, centerY, buffers);
+			} catch (Throwable throwable) {
+				buffers.values().forEach(SectionBuffers::close);
+				throw throwable;
+			} finally {
 				this.close();
-				return null;
 			}
-			return new ChunkMesh(position, buffers, meshData, new ArrayList<>(this.allocators.values()));
 		}
 
 		@Override
@@ -593,20 +683,18 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 		}
 	}
 
-	// 一个区块位置的完整网格数据，包含各渲染层的 GPU 缓冲区和原始构建数据
-	private record ChunkMesh(ChunkPos chunk, Map<ChunkSectionLayer, SectionBuffers> buffers,
-			List<MeshData> meshData, List<ByteBufferBuilder> allocators) implements AutoCloseable {
-		// 计算区块中心到相机的距离平方，用于排序（远到近）
+	// 一个 Section 的 GPU 网格数据
+	private record ChunkMesh(ChunkPos chunk, float centerY,
+			Map<ChunkSectionLayer, SectionBuffers> buffers) implements AutoCloseable {
+		// 计算 Section 中心到相机的三维距离平方，用于远到近的排序
 		private double distanceTo(Vector3f camera) {
 			float x = this.chunk.getMinBlockX() + 8.0F;
 			float z = this.chunk.getMinBlockZ() + 8.0F;
-			return Mth.square(x - camera.x) + Mth.square(z - camera.z);
+			return Mth.square(x - camera.x) + Mth.square(this.centerY - camera.y) + Mth.square(z - camera.z);
 		}
 
 		@Override
 		public void close() {
-			this.allocators.forEach(ByteBufferBuilder::close);
-			this.meshData.forEach(MeshData::close);
 			this.buffers.values().forEach(SectionBuffers::close);
 		}
 	}
@@ -615,9 +703,6 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 	public void close() {
 		this.closeMeshes();
 		this.builtRevision = Long.MIN_VALUE;
-		//#if MC >= 26.1
-		//$$ this.schematic = null;
-		//#endif
 		this.world = null;
 		if (this.target != null) { this.target.destroyBuffers(); this.target = null; }
 		//#if MC >= 1.21.11
