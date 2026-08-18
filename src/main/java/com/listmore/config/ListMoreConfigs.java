@@ -8,7 +8,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.listmore.ListMore;
-import com.listmore.render.EntityOutlineRenderer;
 import com.listmore.render.EntityRenderBlacklist;
 
 import fi.dy.masa.malilib.config.ConfigManager;
@@ -38,7 +37,7 @@ public class ListMoreConfigs implements IConfigHandler {
 
 	public static class Generic {
 		public static final ConfigHotkey COPY_TARGET_ID = createCopyTargetId();
-		public static final ConfigBoolean ENTITY_HIGHLIGHT_OUTLINE = createEntityHighlightOutline();
+		public static final ConfigBoolean ENTITY_HIGHLIGHT_OUTLINE_ENABLED = createEntityHighlightOutlineEnabled();
 		public static final ConfigStringList ENTITY_HIGHLIGHT_OUTLINE_LIST = createEntityHighlightOutlineList();
 		public static final ConfigColor ENTITY_HIGHLIGHT_OUTLINE_COLOR = createEntityHighlightOutlineColor();
 		public static final ConfigBoolean ENTITY_RENDERING_BLACKLIST = createEntityRenderingBlacklist();
@@ -53,7 +52,7 @@ public class ListMoreConfigs implements IConfigHandler {
 
 		public static final ImmutableList<IConfigBase> GENERIC_OPTIONS = ImmutableList.of(
 			COPY_TARGET_ID,
-			ENTITY_HIGHLIGHT_OUTLINE,
+			ENTITY_HIGHLIGHT_OUTLINE_ENABLED,
 			ENTITY_HIGHLIGHT_OUTLINE_LIST,
 			ENTITY_HIGHLIGHT_OUTLINE_COLOR,
 			ENTITY_RENDERING_BLACKLIST,
@@ -72,7 +71,7 @@ public class ListMoreConfigs implements IConfigHandler {
 
 		public static final ImmutableList<IConfigBase> OPTIONS = ImmutableList.of(
 			COPY_TARGET_ID,
-			ENTITY_HIGHLIGHT_OUTLINE,
+			ENTITY_HIGHLIGHT_OUTLINE_ENABLED,
 			ENTITY_HIGHLIGHT_OUTLINE_LIST,
 			ENTITY_HIGHLIGHT_OUTLINE_COLOR,
 			ENTITY_RENDERING_BLACKLIST,
@@ -91,15 +90,17 @@ public class ListMoreConfigs implements IConfigHandler {
 		return createConfig(new ConfigHotkey("copyTargetId", ""));
 	}
 
-	private static ConfigBoolean createEntityHighlightOutline() {
-		return createConfig(new ConfigBoolean("entityHighlightOutline", false));
+	private static ConfigBoolean createEntityHighlightOutlineEnabled() {
+		return createConfig(new ConfigBoolean("entityHighlightOutlineEnabled", false));
 	}
 
 	private static ConfigStringList createEntityHighlightOutlineList() {
-		return createConfig(new ConfigStringList("entityHighlightOutlineList", ImmutableList.of()), value -> {
-			EntityOutlineRenderer.refreshSelectedEntityTypes(value.getStrings());
+		ConfigStringList config = createConfig(new ConfigStringList("entityHighlightOutlineList", ImmutableList.of()), value -> {
+			ListEntryToggleConfig.refresh(value);
 			INSTANCE.save();
 		});
+		ListEntryToggleConfig.register(config, "entityHighlightOutline");
+		return config;
 	}
 
 	private static ConfigColor createEntityHighlightOutlineColor() {
@@ -111,10 +112,13 @@ public class ListMoreConfigs implements IConfigHandler {
 	}
 
 	private static ConfigStringList createEntityRenderingBlacklistList() {
-		return createConfig(new ConfigStringList("entityRenderingBlacklistList", ImmutableList.of()), value -> {
+		ConfigStringList config = createConfig(new ConfigStringList("entityRenderingBlacklistList", ImmutableList.of()), value -> {
+			ListEntryToggleConfig.refresh(value);
 			EntityRenderBlacklist.refreshBlockedEntityTypes(value.getStrings());
 			INSTANCE.save();
 		});
+		ListEntryToggleConfig.register(config, "entityRenderingBlacklistStates");
+		return config;
 	}
 
 	private static ConfigInteger createEntityRenderingBlacklistRange() {
@@ -179,6 +183,10 @@ public class ListMoreConfigs implements IConfigHandler {
 		//#endif
 		if (element != null && element.isJsonObject()) {
 			JsonObject root = element.getAsJsonObject();
+			JsonElement genericElement = root.get("Generic");
+			if (genericElement != null && genericElement.isJsonObject()) {
+				ListEntryToggleConfig.read(genericElement.getAsJsonObject());
+			}
 			ConfigUtils.readConfigBase(root, "Generic", Generic.OPTIONS);
 		}
 	}
@@ -214,6 +222,7 @@ public class ListMoreConfigs implements IConfigHandler {
 
 		JsonObject root = new JsonObject();
 		ConfigUtils.writeConfigBase(root, "Generic", Generic.OPTIONS);
+		ListEntryToggleConfig.write(root.getAsJsonObject("Generic"));
 		//#if MC>=26.1
 		//$$ JsonUtils.writeJsonToFile(root, dir.resolve(CONFIG_FILE_NAME));
 		//#else
@@ -224,7 +233,7 @@ public class ListMoreConfigs implements IConfigHandler {
 	@Override
 	public void load() {
 		loadFromFile();
-		EntityOutlineRenderer.refreshSelectedEntityTypes();
+		ListEntryToggleConfig.refreshAll();
 		EntityRenderBlacklist.refreshBlockedEntityTypes();
 	}
 

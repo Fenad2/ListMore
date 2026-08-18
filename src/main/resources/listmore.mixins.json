@@ -11,7 +11,8 @@
 	],
 	"mixins": [
 		"WidgetConfigOptionMixin",
-		"WidgetListConfigOptionsMixin"
+		"WidgetListConfigOptionsMixin",
+		"WidgetStringListEditEntryMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
