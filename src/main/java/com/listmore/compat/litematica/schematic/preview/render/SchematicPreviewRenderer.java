@@ -1,9 +1,9 @@
-package com.listmore.schematic.preview.render;
+package com.listmore.compat.litematica.schematic.preview.render;
 
 import com.listmore.ListMore;
-import com.listmore.schematic.preview.model.SchematicPreviewModel;
-import com.listmore.schematic.preview.SchematicPreviewTransform;
-import com.listmore.schematic.preview.gui.SchematicPreviewLayout;
+import com.listmore.compat.litematica.schematic.preview.model.SchematicPreviewModel;
+import com.listmore.compat.litematica.schematic.preview.SchematicPreviewTransform;
+import com.listmore.compat.litematica.schematic.preview.gui.SchematicPreviewLayout;
 
 import java.util.ArrayList;
 import java.util.Comparator;

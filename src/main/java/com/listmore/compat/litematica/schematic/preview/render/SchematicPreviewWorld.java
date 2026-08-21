@@ -1,6 +1,6 @@
-package com.listmore.schematic.preview.render;
+package com.listmore.compat.litematica.schematic.preview.render;
 
-import com.listmore.schematic.preview.model.SchematicPreviewModel;
+import com.listmore.compat.litematica.schematic.preview.model.SchematicPreviewModel;
 import fi.dy.masa.litematica.world.FakeLightingProvider;
 
 //#if MC >= 26.1

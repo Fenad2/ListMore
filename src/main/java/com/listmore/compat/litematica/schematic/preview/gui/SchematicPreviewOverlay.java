@@ -1,6 +1,6 @@
-package com.listmore.schematic.preview.gui;
+package com.listmore.compat.litematica.schematic.preview.gui;
 
-import com.listmore.schematic.preview.SchematicPreviewSession;
+import com.listmore.compat.litematica.schematic.preview.SchematicPreviewSession;
 import fi.dy.masa.malilib.render.RenderUtils;
 import fi.dy.masa.malilib.util.StringUtils;
 

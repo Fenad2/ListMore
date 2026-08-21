@@ -1,6 +1,6 @@
-package com.listmore.schematic.preview;
+package com.listmore.compat.litematica.schematic.preview;
 
-import com.listmore.schematic.preview.model.SchematicPreviewModel;
+import com.listmore.compat.litematica.schematic.preview.model.SchematicPreviewModel;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -8,8 +8,8 @@ import java.nio.file.Path;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.listmore.schematic.preview.SchematicPreviewLoader.LoadRequest;
-import com.listmore.schematic.preview.render.SchematicPreviewRenderManager;
+import com.listmore.compat.litematica.schematic.preview.SchematicPreviewLoader.LoadRequest;
+import com.listmore.compat.litematica.schematic.preview.render.SchematicPreviewRenderManager;
 
 // 单个原理图浏览器的预览状态
 public final class SchematicPreviewSession {

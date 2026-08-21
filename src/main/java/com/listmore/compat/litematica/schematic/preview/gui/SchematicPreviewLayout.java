@@ -1,4 +1,4 @@
-package com.listmore.schematic.preview.gui;
+package com.listmore.compat.litematica.schematic.preview.gui;
 
 // 原理图浏览器右侧预览区域及重置按钮的布局计算
 public final class SchematicPreviewLayout {
