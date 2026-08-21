@@ -1,7 +1,7 @@
-package com.listmore.schematic.preview;
+package com.listmore.compat.litematica.schematic.preview;
 
-import com.listmore.schematic.preview.model.SchematicPreviewModel;
-import com.listmore.schematic.preview.model.SchematicPreviewScanner;
+import com.listmore.compat.litematica.schematic.preview.model.SchematicPreviewModel;
+import com.listmore.compat.litematica.schematic.preview.model.SchematicPreviewScanner;
 
 import java.io.IOException;
 import java.nio.file.Files;

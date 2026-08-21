@@ -1,4 +1,4 @@
-package com.listmore.schematic.preview.model;
+package com.listmore.compat.litematica.schematic.preview.model;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;

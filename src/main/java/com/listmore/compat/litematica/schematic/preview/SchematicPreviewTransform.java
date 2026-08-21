@@ -1,4 +1,4 @@
-package com.listmore.schematic.preview;
+package com.listmore.compat.litematica.schematic.preview;
 
 // 固定预览方向的相机状态
 public final class SchematicPreviewTransform {

@@ -32,7 +32,7 @@ public abstract class GuiSchematicBrowserBaseMixin {
 			return;
 		}
 		try {
-			Class<?> browserClass = Class.forName("com.listmore.schematic.browser.ListMoreSchematicBrowser");
+			Class<?> browserClass = Class.forName("com.listmore.compat.litematica.schematic.browser.ListMoreSchematicBrowser");
 			Object browser = browserClass.getConstructor(int.class, int.class, int.class, int.class,
 					GuiSchematicBrowserBase.class, ISelectionListener.class)
 					.newInstance(listX, listY, 100, 100, (GuiSchematicBrowserBase) (Object) this,
@@ -44,19 +44,19 @@ public abstract class GuiSchematicBrowserBaseMixin {
 
 	//#if MC >= 1.21.11
 	//$$ public boolean onMouseDragged(MouseButtonEvent click, double dragX, double dragY) {
-	//$$ 	return this.listmore$getListWidget() instanceof com.listmore.schematic.browser.ListMoreSchematicBrowser browser
+	//$$ 	return this.listmore$getListWidget() instanceof com.listmore.compat.litematica.schematic.browser.ListMoreSchematicBrowser browser
 	//$$ 			&& browser.handlePreviewMouseDragged(click.x(), click.y(), click.input(), dragX, dragY);
 	//$$ }
 	//#endif
 
 	//#if MC >= 1.21.10 && MC < 1.21.11
 	//$$ public boolean mouseDragged(MouseButtonEvent click, double dragX, double dragY) {
-	//$$ 	return this.listmore$getListWidget() instanceof com.listmore.schematic.browser.ListMoreSchematicBrowser browser
+	//$$ 	return this.listmore$getListWidget() instanceof com.listmore.compat.litematica.schematic.browser.ListMoreSchematicBrowser browser
 	//$$ 			&& browser.handlePreviewMouseDragged(click.x(), click.y(), click.input(), dragX, dragY);
 	//$$ }
 	//#elseif MC < 1.21.10
 	//$$ public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-	//$$ 	return this.listmore$getListWidget() instanceof com.listmore.schematic.browser.ListMoreSchematicBrowser browser
+	//$$ 	return this.listmore$getListWidget() instanceof com.listmore.compat.litematica.schematic.browser.ListMoreSchematicBrowser browser
 	//$$ 			&& browser.handlePreviewMouseDragged(mouseX, mouseY, button, dragX, dragY);
 	//$$ }
 	//#endif
