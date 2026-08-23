@@ -7,7 +7,7 @@ public final class SchematicPreviewTransform {
 	private static final float MAX_PITCH = 89.0F;
 	private static final float SCROLL_ZOOM_SPEED = 0.12F;
 	private static final float MIN_ZOOM = 0.5F;
-	private static final float MAX_ZOOM = 4.0F;
+	private static final float MAX_ZOOM = 8.0F;
 
 	private float yaw = DEFAULT_YAW;
 	private float pitch = DEFAULT_PITCH;
@@ -35,7 +35,7 @@ public final class SchematicPreviewTransform {
 	// 最小距离 4.0 防止模型过小时相机穿透
 	public float distance(float sizeX, float sizeY, float sizeZ) {
 		float radius = (float) Math.sqrt(sizeX * sizeX + sizeY * sizeY + sizeZ * sizeZ) * 0.5F;
-		return Math.max(4.0F, radius * 2.4F) / this.zoom;
+		return Math.max(4.0F, radius * 2.0F) / this.zoom;	//TODO: 此处为缩放因子，但是固定到一个数值在预览过大或者过小的原理图时并不是太好用。之后考虑换成动态的缩放因子
 	}
 
 	public void reset() {
