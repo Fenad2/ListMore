@@ -3,6 +3,7 @@ package com.listmore.compat.litematica.schematic.preview.gui;
 import com.listmore.compat.litematica.schematic.preview.SchematicPreviewSession;
 import fi.dy.masa.malilib.render.RenderUtils;
 import fi.dy.masa.malilib.util.StringUtils;
+import net.minecraft.client.Minecraft;
 
 //#if MC >= 1.21.11
 //$$ import fi.dy.masa.malilib.render.GuiContext;
@@ -104,9 +105,9 @@ public final class SchematicPreviewOverlay {
 			GuiGraphics context,
 			//#endif
 			SchematicPreviewLayout layout, String text) {
-		int x = layout.x() + Math.max(4, (layout.width() - text.length() * 6) / 2);
+		int centerX = layout.x() + layout.width() / 2;
 		int y = layout.y() + Math.max(8, layout.height() / 2 - 4);
-		drawText(context, x, y, 0xFFB9C6D0, text);
+		drawCenteredAt(context, centerX, y, 0xFFB9C6D0, text);
 	}
 
 	private static void drawCenteredAt(
@@ -116,7 +117,7 @@ public final class SchematicPreviewOverlay {
 			GuiGraphics context,
 			//#endif
 			int centerX, int y, int color, String text) {
-		drawText(context, centerX - text.length() * 3, y, color, text);
+		drawText(context, centerX - Minecraft.getInstance().font.width(text) / 2, y, color, text);
 	}
 
 	private static void drawText(

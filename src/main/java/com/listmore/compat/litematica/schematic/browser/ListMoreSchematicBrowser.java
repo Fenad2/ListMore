@@ -214,11 +214,11 @@ public final class ListMoreSchematicBrowser extends WidgetSchematicBrowser {
 	//$$ 	return super.onMouseReleased(click);
 	//$$ }
 	//#elseif MC < 1.21.10
-	//$$ @Override
-	//$$ public boolean onMouseReleased(int mouseX, int mouseY, int button) {
-	//$$ 	this.handlePreviewMouseReleased(button);
-	//$$ 	return super.onMouseReleased(mouseX, mouseY, button);
-	//$$ }
+	@Override
+	public boolean onMouseReleased(int mouseX, int mouseY, int button) {
+		this.handlePreviewMouseReleased(button);
+		return super.onMouseReleased(mouseX, mouseY, button);
+	}
 	//#endif
 
 	@Override
