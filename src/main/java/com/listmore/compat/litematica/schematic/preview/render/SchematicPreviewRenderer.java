@@ -38,6 +38,7 @@ import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 //#if MC < 26.2
 import com.mojang.blaze3d.vertex.VertexFormat;
 //#endif
@@ -311,12 +312,14 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 				// 先渲染流体（水、岩浆等），再渲染固体方块模型
 				//#if MC >= 26.1
 				//$$ if (!state.getFluidState().isEmpty()) {
-				//$$ 	this.fluidRenderer.tesselate(view, position, chunk::builder, state, state.getFluidState());
+				//$$ 	FluidRenderer.Output output = layer -> offsetVertexConsumer(chunk.builder(layer), section.minY());
+				//$$ 	this.fluidRenderer.tesselate(view, position, output, state, state.getFluidState());
 				//$$ }
 				//#else
 				if (!state.getFluidState().isEmpty()) {
 					Minecraft.getInstance().getBlockRenderer().renderLiquid(position, view,
-							chunk.builder(ItemBlockRenderTypes.getRenderLayer(state.getFluidState())), state, state.getFluidState());
+							offsetVertexConsumer(chunk.builder(ItemBlockRenderTypes.getRenderLayer(state.getFluidState())), section.minY()),
+							state, state.getFluidState());
 				}
 				//#endif
 				if (state.getRenderShape() != RenderShape.MODEL) {
@@ -594,6 +597,73 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 	private void closeBuiltMeshes() {
 		this.meshes.forEach(ChunkMesh::close);
 		this.meshes.clear();
+	}
+
+	private static VertexConsumer offsetVertexConsumer(VertexConsumer delegate, float yOffset) {
+		return new YOffsetVertexConsumer(delegate, yOffset);
+	}
+
+	// 流体顶点以当前 Section 的局部 Y 写入，需要在写入网格时恢复模型坐标。
+	private static final class YOffsetVertexConsumer implements VertexConsumer {
+		private final VertexConsumer delegate;
+		private final float yOffset;
+
+		private YOffsetVertexConsumer(VertexConsumer delegate, float yOffset) {
+			this.delegate = delegate;
+			this.yOffset = yOffset;
+		}
+
+		@Override
+		public VertexConsumer addVertex(float x, float y, float z) {
+			this.delegate.addVertex(x, y + this.yOffset, z);
+			return this;
+		}
+
+		@Override
+		public VertexConsumer setColor(int red, int green, int blue, int alpha) {
+			this.delegate.setColor(red, green, blue, alpha);
+			return this;
+		}
+
+		//#if MC >= 1.21.11
+		//$$ @Override
+		//$$ public VertexConsumer setColor(int color) {
+		//$$ 	this.delegate.setColor(color);
+		//$$ 	return this;
+		//$$ }
+		//#endif
+
+		@Override
+		public VertexConsumer setUv(float u, float v) {
+			this.delegate.setUv(u, v);
+			return this;
+		}
+
+		@Override
+		public VertexConsumer setUv1(int u, int v) {
+			this.delegate.setUv1(u, v);
+			return this;
+		}
+
+		@Override
+		public VertexConsumer setUv2(int u, int v) {
+			this.delegate.setUv2(u, v);
+			return this;
+		}
+
+		@Override
+		public VertexConsumer setNormal(float x, float y, float z) {
+			this.delegate.setNormal(x, y, z);
+			return this;
+		}
+
+		//#if MC >= 1.21.11
+		//$$ @Override
+		//$$ public VertexConsumer setLineWidth(float width) {
+		//$$ 	this.delegate.setLineWidth(width);
+		//$$ 	return this;
+		//$$ }
+		//#endif
 	}
 
 	@Override
