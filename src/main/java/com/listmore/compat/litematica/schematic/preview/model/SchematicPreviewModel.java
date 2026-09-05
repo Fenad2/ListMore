@@ -1,6 +1,8 @@
 package com.listmore.compat.litematica.schematic.preview.model;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
@@ -11,10 +13,13 @@ public final class SchematicPreviewModel {
 	// 统一包围盒的全局尺寸；所有 Section 坐标均相对于该包围盒原点
 	private final Vec3i size;
 	private final SchematicPreviewSectionStorage sections;
+	private final Map<BlockPos, String> blockEntityData;
 
-	SchematicPreviewModel(Vec3i size, SchematicPreviewSectionStorage sections) {
+	SchematicPreviewModel(Vec3i size, SchematicPreviewSectionStorage sections,
+			Map<BlockPos, String> blockEntityData) {
 		this.size = size;
 		this.sections = sections;
+		this.blockEntityData = Map.copyOf(new LinkedHashMap<>(blockEntityData));
 	}
 
 	public Vec3i size() {
@@ -30,7 +35,15 @@ public final class SchematicPreviewModel {
 	}
 
 	public boolean isEmpty() {
-		return this.sections.isEmpty();
+		return this.sections.isEmpty() && this.blockEntityData.isEmpty();
+	}
+
+	/**
+	 * Immutable preview-relative block entity snapshots. The NBT remains textual so
+	 * background scanning never creates client-side BlockEntity instances.
+	 */
+	public Map<BlockPos, String> blockEntityData() {
+		return this.blockEntityData;
 	}
 
 	public BlockState blockStateAt(int x, int y, int z) {
@@ -41,7 +54,7 @@ public final class SchematicPreviewModel {
 	}
 
 	static SchematicPreviewModel empty() {
-		return new SchematicPreviewModel(BlockPos.ZERO, SchematicPreviewSectionStorage.empty());
+		return new SchematicPreviewModel(BlockPos.ZERO, SchematicPreviewSectionStorage.empty(), Map.of());
 	}
 
 	public static final class Section {

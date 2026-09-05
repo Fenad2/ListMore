@@ -40,10 +40,13 @@ public final class SchematicPreviewScanner {
 
 		Bounds bounds = findBounds(regions);
 		Map<Long, SectionData> mergedSections = new LinkedHashMap<>();
+		Map<BlockPos, String> blockEntities = new LinkedHashMap<>();
 		for (RegionSource region : regions) {
 			checkCancelled(cancelled);
 			scanRegion(region.relativeTo(bounds.minX(), bounds.minY(), bounds.minZ()), executor,
 					Math.max(1, workerCount), cancelled, mergedSections);
+			collectBlockEntities(region.relativeTo(bounds.minX(), bounds.minY(), bounds.minZ()), blockEntities,
+					cancelled);
 		}
 
 		Map<Long, SchematicPreviewModel.Section> sections = new LinkedHashMap<>(capacityFor(mergedSections.size()));
@@ -51,7 +54,7 @@ public final class SchematicPreviewScanner {
 				new SchematicPreviewModel.Section(data.sectionX(), data.sectionY(), data.sectionZ(), data.states())));
 		Vec3i size = new Vec3i(bounds.maxXExclusive() - bounds.minX(),
 				bounds.maxYExclusive() - bounds.minY(), bounds.maxZExclusive() - bounds.minZ());
-		return new SchematicPreviewModel(size, new SchematicPreviewSectionStorage(sections));
+		return new SchematicPreviewModel(size, new SchematicPreviewSectionStorage(sections), blockEntities);
 	}
 
 	private static List<RegionSource> collectRegions(LitematicaSchematic schematic) {
@@ -64,10 +67,12 @@ public final class SchematicPreviewScanner {
 				continue;
 			}
 			Vec3i size = container.getSize();
+			Map<?, ?> blockEntities = schematic.getBlockEntityMapForRegion(entry.getKey());
 			regions.add(new RegionSource(
 					Math.min(first.getX(), second.getX()), Math.min(first.getY(), second.getY()),
 					Math.min(first.getZ(), second.getZ()), size.getX(), size.getY(), size.getZ(),
-					container.getArray(), readPalette(container.getPalette())));
+					container.getArray(), readPalette(container.getPalette()),
+					blockEntities == null ? Map.of() : blockEntities));
 		}
 		return regions;
 	}
@@ -97,6 +102,27 @@ public final class SchematicPreviewScanner {
 			states[id] = state == null || state.isAir() ? null : state;
 		}
 		return states;
+	}
+
+	private static void collectBlockEntities(RegionSource region, Map<BlockPos, String> blockEntities,
+			BooleanSupplier cancelled) {
+		int checked = 0;
+		for (Map.Entry<?, ?> entry : region.blockEntities().entrySet()) {
+			if ((checked++ & 255) == 0) {
+				checkCancelled(cancelled);
+			}
+			if (!(entry.getKey() instanceof BlockPos position) || entry.getValue() == null) {
+				continue;
+			}
+			if (position.getX() < 0 || position.getY() < 0 || position.getZ() < 0
+					|| position.getX() >= region.sizeX() || position.getY() >= region.sizeY()
+					|| position.getZ() >= region.sizeZ()) {
+				continue;
+			}
+			BlockPos previewPosition = position.offset(region.originX(), region.originY(), region.originZ());
+			// NBT's SNBT output is an immutable cross-thread snapshot across all supported mappings.
+			blockEntities.putIfAbsent(previewPosition.immutable(), entry.getValue().toString());
+		}
 	}
 
 	private static void scanRegion(RegionSource region, ExecutorService executor, int workerCount,
@@ -284,14 +310,14 @@ public final class SchematicPreviewScanner {
 	}
 
 	private record RegionSource(int originX, int originY, int originZ, int sizeX, int sizeY, int sizeZ,
-			LitematicaBitArray storage, BlockState[] palette) {
+			LitematicaBitArray storage, BlockState[] palette, Map<?, ?> blockEntities) {
 		private long volume() {
 			return (long) this.sizeX * this.sizeY * this.sizeZ;
 		}
 
 		private RegionSource relativeTo(int minX, int minY, int minZ) {
 			return new RegionSource(this.originX - minX, this.originY - minY, this.originZ - minZ,
-					this.sizeX, this.sizeY, this.sizeZ, this.storage, this.palette);
+					this.sizeX, this.sizeY, this.sizeZ, this.storage, this.palette, this.blockEntities);
 		}
 	}
 
