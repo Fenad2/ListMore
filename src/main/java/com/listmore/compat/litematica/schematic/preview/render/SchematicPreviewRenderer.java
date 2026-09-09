@@ -38,6 +38,7 @@ import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 //#if MC < 26.2
 import com.mojang.blaze3d.vertex.VertexFormat;
@@ -46,7 +47,6 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 //$$ import fi.dy.masa.litematica.render.schematic.BlockModelRendererSchematic;
 //$$ import fi.dy.masa.litematica.render.schematic.IBlockOutputSchematic;
 //#else
-import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.util.RandomSource;
 //#endif
@@ -56,9 +56,27 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.client.gui.GuiGraphics;
 //#endif
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.Camera;
 import net.minecraft.client.gui.render.TextureSetup;
 import net.minecraft.client.renderer.DynamicUniforms;
 import net.minecraft.client.renderer.GlobalSettingsUniform;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
+//#if MC >= 1.21.10
+//$$ import net.minecraft.client.renderer.SubmitNodeStorage;
+//$$ import net.minecraft.client.renderer.RenderBuffers;
+//$$ import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
+//$$ import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
+//#if MC >= 26.1
+//$$ import net.minecraft.client.renderer.state.GameRenderState;
+//#endif
+//#if MC >= 26.1
+//$$ import net.minecraft.client.renderer.state.level.CameraRenderState;
+//#else
+//$$ import net.minecraft.client.renderer.state.CameraRenderState;
+//#endif
+//#else
+import net.minecraft.client.renderer.MultiBufferSource;
+//#endif
 //#if MC >= 26.1
 //$$ import net.minecraft.client.renderer.Projection;
 //#endif
@@ -77,15 +95,14 @@ import net.minecraft.client.renderer.chunk.ChunkSectionLayerGroup;
 import net.minecraft.client.gui.render.state.BlitRenderState;
 //#endif
 import net.minecraft.client.renderer.texture.TextureAtlas;
-//#if MC >= 26.1
-//$$ import net.minecraft.world.phys.Vec3;
-//#endif
 import net.minecraft.client.resources.model.ModelManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fStack;
 import org.joml.Matrix3x2f;
@@ -124,6 +141,14 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 	private GpuBuffer globalUniform;
 	private boolean rebuildFailureLogged;
 	private boolean renderFailureLogged;
+	//#if MC >= 1.21.10
+	//$$ private SubmitNodeStorage blockEntitySubmitNodes;
+	//$$ private RenderBuffers blockEntityRenderBuffers;
+	//$$ private FeatureRenderDispatcher blockEntityFeatureDispatcher;
+	//#if MC >= 26.1
+	//$$ private GameRenderState blockEntityGameRenderState;
+	//#endif
+	//#endif
 	//#if MC >= 26.1
 	//$$ private final FluidRenderer fluidRenderer = new FluidRenderer(Minecraft.getInstance().getModelManager().getFluidStateModelSet());
 	//#endif
@@ -173,7 +198,7 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 			this.buildFailures++;
 			this.nextBuildAttemptNanos = System.nanoTime() + 250_000_000L;
 		}
-		if (this.meshes.isEmpty()) {
+		if (this.meshes.isEmpty() && !this.world.hasBlockEntityData()) {
 			return false;
 		}
 
@@ -409,6 +434,7 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 			Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.LEVEL);
 			//#endif
 			this.renderMeshes(camera);
+			this.renderBlockEntities(camera, transform.yaw(), transform.pitch());
 		} finally {
 			if (globalUniformCaptured) {
 				RenderSystem.setGlobalSettingsUniform(previousGlobalUniform);
@@ -599,6 +625,164 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 		this.meshes.clear();
 	}
 
+	// Block entities must remain outside the section meshes: their renderers are dynamic.
+	private void renderBlockEntities(Vector3f cameraPosition, float cameraYaw, float cameraPitch) {
+		if (this.world == null || !this.world.hasBlockEntityData()) {
+			return;
+		}
+		GpuTextureView previousColor = RenderSystem.outputColorTextureOverride;
+		GpuTextureView previousDepth = RenderSystem.outputDepthTextureOverride;
+		RenderSystem.outputColorTextureOverride = this.target.getColorTextureView();
+		RenderSystem.outputDepthTextureOverride = this.target.getDepthTextureView();
+		try {
+			Minecraft minecraft = Minecraft.getInstance();
+			BlockEntityRenderDispatcher dispatcher = minecraft.getBlockEntityRenderDispatcher();
+			PoseStack pose = new PoseStack();
+			//#if MC < 1.21.10
+			PreviewCamera camera = new PreviewCamera();
+			camera.setPreviewPose(cameraPosition, cameraYaw, cameraPitch);
+			dispatcher.prepare(minecraft.level, camera, minecraft.hitResult);
+			MultiBufferSource.BufferSource buffers = minecraft.renderBuffers().bufferSource();
+			for (BlockEntity blockEntity : this.world.blockEntities()) {
+				BlockPos position = blockEntity.getBlockPos();
+				pose.pushPose();
+				pose.translate(position.getX() - cameraPosition.x, position.getY() - cameraPosition.y,
+						position.getZ() - cameraPosition.z);
+				dispatcher.render(blockEntity, 0.0F, pose, buffers);
+				pose.popPose();
+			}
+			buffers.endBatch();
+			//#elseif MC < 26.1
+			//$$ this.ensureBlockEntityRendererResources(minecraft);
+			//$$ PreviewCamera camera = new PreviewCamera();
+			//$$ camera.setPreviewPose(cameraPosition, cameraYaw, cameraPitch);
+			//$$ dispatcher.prepare(camera);
+			//$$ for (BlockEntity blockEntity : this.world.blockEntities()) {
+			//$$ 	BlockEntityRenderState state = dispatcher.tryExtractRenderState(blockEntity, 0.0F, null);
+			//$$ 	if (state == null) {
+			//$$ 		continue;
+			//$$ 	}
+			//$$ 	BlockPos position = blockEntity.getBlockPos();
+			//$$ 	pose.pushPose();
+			//$$ 	pose.translate(position.getX() - cameraPosition.x, position.getY() - cameraPosition.y,
+			//$$ 			position.getZ() - cameraPosition.z);
+			//$$ 	CameraRenderState cameraState = new CameraRenderState();
+			//$$ 	cameraState.initialized = true;
+			//$$ 	cameraState.pos = new Vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z);
+			//$$ 	cameraState.blockPos = BlockPos.containing(cameraState.pos);
+			//$$ 	cameraState.orientation = new Quaternionf().rotationYXZ(-cameraYaw * Mth.DEG_TO_RAD,
+			//$$ 			cameraPitch * Mth.DEG_TO_RAD, 0.0F);
+			//$$ 	cameraState.entityPos = cameraState.pos;
+			//$$ 	dispatcher.submit(state, pose, this.blockEntitySubmitNodes, cameraState);
+			//$$ 	pose.popPose();
+			//$$ }
+			//$$ this.blockEntityFeatureDispatcher.renderAllFeatures();
+			//#elseif MC >= 26.2
+			//$$ this.ensureBlockEntityRendererResources(minecraft);
+			//$$ CameraRenderState cameraState = new CameraRenderState();
+			//$$ cameraState.initialized = true;
+			//$$ cameraState.pos = new Vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z);
+			//$$ cameraState.blockPos = BlockPos.containing(cameraState.pos);
+			//$$ cameraState.orientation = new Quaternionf().rotationYXZ(-cameraYaw * Mth.DEG_TO_RAD,
+			//$$ 		cameraPitch * Mth.DEG_TO_RAD, 0.0F);
+			//$$ dispatcher.prepare(cameraState.pos);
+			//$$ for (BlockEntity blockEntity : this.world.blockEntities()) {
+			//$$ 	BlockEntityRenderState state = dispatcher.tryExtractRenderState(blockEntity, 0.0F, null, false);
+			//$$ 	if (state == null) {
+			//$$ 		continue;
+			//$$ 	}
+			//$$ 	BlockPos position = blockEntity.getBlockPos();
+			//$$ 	pose.pushPose();
+			//$$ 	pose.translate(position.getX() - cameraPosition.x, position.getY() - cameraPosition.y,
+			//$$ 			position.getZ() - cameraPosition.z);
+			//$$ 	dispatcher.submit(state, pose, this.blockEntitySubmitNodes, cameraState);
+			//$$ 	pose.popPose();
+			//$$ }
+			//$$ try (FeatureRenderDispatcher.PreparedFrame frame = this.blockEntityFeatureDispatcher.prepareFrame(this.blockEntitySubmitNodes)) {
+			//$$ 	frame.executeSolid();
+			//$$ 	frame.executeTranslucent();
+			//$$ 	frame.executeOutline();
+			//$$ 	frame.executeTranslucentAfterTerrain();
+			//$$ 	frame.executeAlwaysOnTop();
+			//$$ }
+			//#else
+			//$$ this.ensureBlockEntityRendererResources(minecraft);
+			//$$ CameraRenderState cameraState = new CameraRenderState();
+			//$$ cameraState.initialized = true;
+			//$$ cameraState.pos = new Vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z);
+			//$$ cameraState.blockPos = BlockPos.containing(cameraState.pos);
+			//$$ cameraState.orientation = new Quaternionf().rotationYXZ(-cameraYaw * Mth.DEG_TO_RAD,
+			//$$ 		cameraPitch * Mth.DEG_TO_RAD, 0.0F);
+			//$$ dispatcher.prepare(cameraState.pos);
+			//$$ for (BlockEntity blockEntity : this.world.blockEntities()) {
+			//$$ 	BlockEntityRenderState state = dispatcher.tryExtractRenderState(blockEntity, 0.0F, null);
+			//$$ 	if (state == null) {
+			//$$ 		continue;
+			//$$ 	}
+			//$$ 	BlockPos position = blockEntity.getBlockPos();
+			//$$ 	pose.pushPose();
+			//$$ 	pose.translate(position.getX() - cameraPosition.x, position.getY() - cameraPosition.y,
+			//$$ 			position.getZ() - cameraPosition.z);
+			//$$ 	dispatcher.submit(state, pose, this.blockEntitySubmitNodes, cameraState);
+			//$$ 	pose.popPose();
+			//$$ }
+			//$$ this.blockEntityFeatureDispatcher.renderAllFeatures();
+			//#endif
+		} finally {
+			//#if MC >= 1.21.10 && MC < 26.2
+			//$$ if (this.blockEntityFeatureDispatcher != null) {
+			//$$ 	this.blockEntityFeatureDispatcher.endFrame();
+			//$$ }
+			//#elseif MC >= 26.2
+			//$$ if (this.blockEntityRenderBuffers != null) {
+			//$$ 	this.blockEntityRenderBuffers.endFrame();
+			//$$ }
+			//#endif
+			RenderSystem.outputColorTextureOverride = previousColor;
+			RenderSystem.outputDepthTextureOverride = previousDepth;
+		}
+	}
+
+	//#if MC >= 26.2
+	// Keep block-entity submits and their buffers independent from Minecraft's world renderer.
+	//$$ private void ensureBlockEntityRendererResources(Minecraft minecraft) {
+	//$$ 	if (this.blockEntityFeatureDispatcher != null) {
+	//$$ 		return;
+	//$$ 	}
+	//$$ 	this.blockEntitySubmitNodes = new SubmitNodeStorage();
+	//$$ 	this.blockEntityRenderBuffers = new RenderBuffers(1);
+	//$$ 	this.blockEntityGameRenderState = new GameRenderState();
+	//$$ 	this.blockEntityFeatureDispatcher = new FeatureRenderDispatcher(this.blockEntityRenderBuffers,
+	//$$ 			minecraft.getModelManager(), minecraft.getAtlasManager(), minecraft.font, this.blockEntityGameRenderState);
+	//$$ }
+	//#elseif MC >= 26.1
+	// Keep block-entity submits and their buffers independent from Minecraft's world renderer.
+	//$$ private void ensureBlockEntityRendererResources(Minecraft minecraft) {
+	//$$ 	if (this.blockEntityFeatureDispatcher != null) {
+	//$$ 		return;
+	//$$ 	}
+	//$$ 	this.blockEntitySubmitNodes = new SubmitNodeStorage();
+	//$$ 	this.blockEntityRenderBuffers = new RenderBuffers(1);
+	//$$ 	this.blockEntityGameRenderState = new GameRenderState();
+	//$$ 	this.blockEntityFeatureDispatcher = new FeatureRenderDispatcher(this.blockEntitySubmitNodes,
+	//$$ 			minecraft.getModelManager(), this.blockEntityRenderBuffers.bufferSource(), minecraft.getAtlasManager(),
+	//$$ 			this.blockEntityRenderBuffers.outlineBufferSource(), this.blockEntityRenderBuffers.crumblingBufferSource(),
+	//$$ 			minecraft.font, this.blockEntityGameRenderState);
+	//$$ }
+	//#elseif MC >= 1.21.10
+	// Keep block-entity submits and their buffers independent from Minecraft's world renderer.
+	//$$ private void ensureBlockEntityRendererResources(Minecraft minecraft) {
+	//$$ 	if (this.blockEntityFeatureDispatcher != null) {
+	//$$ 		return;
+	//$$ 	}
+	//$$ 	this.blockEntitySubmitNodes = new SubmitNodeStorage();
+	//$$ 	this.blockEntityRenderBuffers = new RenderBuffers(1);
+	//$$ 	this.blockEntityFeatureDispatcher = new FeatureRenderDispatcher(this.blockEntitySubmitNodes,
+	//$$ 			minecraft.getBlockRenderer(), this.blockEntityRenderBuffers.bufferSource(), minecraft.getAtlasManager(),
+	//$$ 			this.blockEntityRenderBuffers.outlineBufferSource(), this.blockEntityRenderBuffers.crumblingBufferSource(),
+	//$$ 			minecraft.font);
+	//$$ }
+	//#endif
 	private static VertexConsumer offsetVertexConsumer(VertexConsumer delegate, float yOffset) {
 		return new YOffsetVertexConsumer(delegate, yOffset);
 	}
@@ -769,11 +953,45 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 		}
 	}
 
+	//#if MC >= 1.21.10 && MC < 26.1
+	//$$ private static final class PreviewCamera extends Camera {
+	//$$ 	private void setPreviewPose(Vector3f position, float yaw, float pitch) {
+	//$$ 		this.setPosition(position.x, position.y, position.z);
+	//$$ 		this.setRotation(yaw, pitch);
+	//$$ 	}
+	//$$ }
+	//#elseif MC < 1.21.10
+	private static final class PreviewCamera extends Camera {
+		private void setPreviewPose(Vector3f position, float yaw, float pitch) {
+			this.setPosition(position.x, position.y, position.z);
+			this.setRotation(yaw, pitch);
+		}
+	}
+	//#endif
+
 	@Override
 	public void close() {
 		this.closeMeshes();
 		this.builtRevision = Long.MIN_VALUE;
 		this.world = null;
+		//#if MC >= 1.21.10
+		//$$ if (this.blockEntityFeatureDispatcher != null) {
+		//$$ 	this.blockEntityFeatureDispatcher.close();
+		//$$ 	this.blockEntityFeatureDispatcher = null;
+		//$$ }
+		//$$ this.blockEntitySubmitNodes = null;
+		//#if MC >= 26.2
+		//$$ if (this.blockEntityRenderBuffers != null) {
+		//$$ 	this.blockEntityRenderBuffers.close();
+		//$$ 	this.blockEntityRenderBuffers = null;
+		//$$ }
+		//#else
+		//$$ this.blockEntityRenderBuffers = null;
+		//#endif
+		//#if MC >= 26.1
+		//$$ this.blockEntityGameRenderState = null;
+		//#endif
+		//#endif
 		if (this.target != null) { this.target.destroyBuffers(); this.target = null; }
 		//#if MC >= 1.21.11
 		//$$ if (this.sampler != null) { this.sampler.close(); this.sampler = null; }

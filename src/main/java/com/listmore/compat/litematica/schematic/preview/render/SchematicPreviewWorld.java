@@ -1,6 +1,9 @@
 package com.listmore.compat.litematica.schematic.preview.render;
 
 import com.listmore.compat.litematica.schematic.preview.model.SchematicPreviewModel;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import fi.dy.masa.litematica.world.FakeLightingProvider;
 
 //#if MC >= 26.1
@@ -10,6 +13,8 @@ import net.minecraft.world.level.BlockAndTintGetter;
 //#endif
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.TagParser;
 //#if MC >= 26.1
 //$$ import net.minecraft.world.level.CardinalLighting;
 //#else
@@ -27,6 +32,8 @@ import org.jetbrains.annotations.Nullable;
 final class SchematicPreviewWorld implements BlockAndTintGetter {
 	private final Minecraft minecraft;
 	private final LevelLightEngine lightEngine;
+	private final Map<BlockPos, String> blockEntityData = new LinkedHashMap<>();
+	private final Map<BlockPos, BlockEntity> blockEntities = new LinkedHashMap<>();
 	private SchematicPreviewModel model;
 
 	SchematicPreviewWorld(Minecraft minecraft) {
@@ -36,6 +43,11 @@ final class SchematicPreviewWorld implements BlockAndTintGetter {
 
 	public void setModel(SchematicPreviewModel model) {
 		this.model = model;
+		this.blockEntities.clear();
+		this.blockEntityData.clear();
+		if (model != null) {
+			this.blockEntityData.putAll(model.blockEntityData());
+		}
 	}
 
 	@Override
@@ -54,7 +66,50 @@ final class SchematicPreviewWorld implements BlockAndTintGetter {
 	@Nullable
 	@Override
 	public BlockEntity getBlockEntity(BlockPos pos) {
-		return null;
+		BlockEntity existing = this.blockEntities.get(pos);
+		if (existing != null || !this.blockEntityData.containsKey(pos)) {
+			return existing;
+		}
+		BlockEntity created = this.createBlockEntity(pos, this.blockEntityData.get(pos));
+		if (created != null) {
+			this.blockEntities.put(pos.immutable(), created);
+		}
+		return created;
+	}
+
+	public Collection<BlockEntity> blockEntities() {
+		for (BlockPos position : this.blockEntityData.keySet()) {
+			this.getBlockEntity(position);
+		}
+		return this.blockEntities.values();
+	}
+
+	public boolean hasBlockEntityData() {
+		return !this.blockEntityData.isEmpty();
+	}
+
+	@Nullable
+	private BlockEntity createBlockEntity(BlockPos position, String serializedNbt) {
+		if (this.minecraft.level == null) {
+			return null;
+		}
+		try {
+			// 所有受支持的 MC 版本 TagParser 都只提供 parseCompoundFully(String)
+			CompoundTag nbt = TagParser.parseCompoundFully(serializedNbt);
+			nbt.putInt("x", position.getX());
+			nbt.putInt("y", position.getY());
+			nbt.putInt("z", position.getZ());
+			BlockEntity blockEntity = BlockEntity.loadStatic(position, this.getBlockState(position), nbt,
+					this.minecraft.level.registryAccess());
+			if (blockEntity != null) {
+				// Renderers need a real client Level for registries, models and component lookups.
+				blockEntity.setLevel(this.minecraft.level);
+				blockEntity.clearRemoved();
+			}
+			return blockEntity;
+		} catch (Exception ignored) {
+			return null;
+		}
 	}
 
 	@Override

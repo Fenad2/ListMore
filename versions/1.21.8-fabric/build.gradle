@@ -118,6 +118,8 @@ tasks.withType(JavaCompile).configureEach {
 	it.javaCompiler = javaToolchains.compilerFor {
 		languageVersion = JavaLanguageVersion.of(project.java_version as int)
 	}
+	it.options.fork = true
+	it.options.forkOptions.memoryMaximumSize = '2g'
 }
 
 java {
