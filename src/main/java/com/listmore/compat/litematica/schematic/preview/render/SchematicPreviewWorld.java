@@ -94,7 +94,8 @@ final class SchematicPreviewWorld implements BlockAndTintGetter {
 			return null;
 		}
 		try {
-			CompoundTag nbt = TagParser.parseTag(serializedNbt);
+			// 所有受支持的 MC 版本 TagParser 都只提供 parseCompoundFully(String)
+			CompoundTag nbt = TagParser.parseCompoundFully(serializedNbt);
 			nbt.putInt("x", position.getX());
 			nbt.putInt("y", position.getY());
 			nbt.putInt("z", position.getZ());

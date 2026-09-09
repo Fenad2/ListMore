@@ -652,7 +652,32 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 				pose.popPose();
 			}
 			buffers.endBatch();
-			//#else
+			//#elseif MC < 26.1
+			//$$ this.ensureBlockEntityRendererResources(minecraft);
+			//$$ PreviewCamera camera = new PreviewCamera();
+			//$$ camera.setPreviewPose(cameraPosition, cameraYaw, cameraPitch);
+			//$$ dispatcher.prepare(camera);
+			//$$ for (BlockEntity blockEntity : this.world.blockEntities()) {
+			//$$ 	BlockEntityRenderState state = dispatcher.tryExtractRenderState(blockEntity, 0.0F, null);
+			//$$ 	if (state == null) {
+			//$$ 		continue;
+			//$$ 	}
+			//$$ 	BlockPos position = blockEntity.getBlockPos();
+			//$$ 	pose.pushPose();
+			//$$ 	pose.translate(position.getX() - cameraPosition.x, position.getY() - cameraPosition.y,
+			//$$ 			position.getZ() - cameraPosition.z);
+			//$$ 	CameraRenderState cameraState = new CameraRenderState();
+			//$$ 	cameraState.initialized = true;
+			//$$ 	cameraState.pos = new Vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z);
+			//$$ 	cameraState.blockPos = BlockPos.containing(cameraState.pos);
+			//$$ 	cameraState.orientation = new Quaternionf().rotationYXZ(-cameraYaw * Mth.DEG_TO_RAD,
+			//$$ 			cameraPitch * Mth.DEG_TO_RAD, 0.0F);
+			//$$ 	cameraState.entityPos = cameraState.pos;
+			//$$ 	dispatcher.submit(state, pose, this.blockEntitySubmitNodes, cameraState);
+			//$$ 	pose.popPose();
+			//$$ }
+			//$$ this.blockEntityFeatureDispatcher.renderAllFeatures();
+			//#elseif MC >= 26.2
 			//$$ this.ensureBlockEntityRendererResources(minecraft);
 			//$$ CameraRenderState cameraState = new CameraRenderState();
 			//$$ cameraState.initialized = true;
@@ -660,20 +685,9 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 			//$$ cameraState.blockPos = BlockPos.containing(cameraState.pos);
 			//$$ cameraState.orientation = new Quaternionf().rotationYXZ(-cameraYaw * Mth.DEG_TO_RAD,
 			//$$ 		cameraPitch * Mth.DEG_TO_RAD, 0.0F);
-			//$$ //#if MC < 26.1
-			//$$ cameraState.entityPos = cameraState.pos;
-			//$$ PreviewCamera camera = new PreviewCamera();
-			//$$ camera.setPreviewPose(cameraPosition, cameraYaw, cameraPitch);
-			//$$ dispatcher.prepare(camera);
-			//$$ //#else
 			//$$ dispatcher.prepare(cameraState.pos);
-			//$$ //#endif
 			//$$ for (BlockEntity blockEntity : this.world.blockEntities()) {
-			//$$ 	BlockEntityRenderState state = dispatcher.tryExtractRenderState(blockEntity, 0.0F, null
-			//$$ 		//#if MC >= 26.2
-			//$$ 		, false
-			//$$ 		//#endif
-			//$$ 	);
+			//$$ 	BlockEntityRenderState state = dispatcher.tryExtractRenderState(blockEntity, 0.0F, null, false);
 			//$$ 	if (state == null) {
 			//$$ 		continue;
 			//$$ 	}
@@ -684,7 +698,6 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 			//$$ 	dispatcher.submit(state, pose, this.blockEntitySubmitNodes, cameraState);
 			//$$ 	pose.popPose();
 			//$$ }
-			//$$ //#if MC >= 26.2
 			//$$ try (FeatureRenderDispatcher.PreparedFrame frame = this.blockEntityFeatureDispatcher.prepareFrame(this.blockEntitySubmitNodes)) {
 			//$$ 	frame.executeSolid();
 			//$$ 	frame.executeTranslucent();
@@ -692,14 +705,33 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 			//$$ 	frame.executeTranslucentAfterTerrain();
 			//$$ 	frame.executeAlwaysOnTop();
 			//$$ }
-			//$$ //#else
+			//#else
+			//$$ this.ensureBlockEntityRendererResources(minecraft);
+			//$$ CameraRenderState cameraState = new CameraRenderState();
+			//$$ cameraState.initialized = true;
+			//$$ cameraState.pos = new Vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z);
+			//$$ cameraState.blockPos = BlockPos.containing(cameraState.pos);
+			//$$ cameraState.orientation = new Quaternionf().rotationYXZ(-cameraYaw * Mth.DEG_TO_RAD,
+			//$$ 		cameraPitch * Mth.DEG_TO_RAD, 0.0F);
+			//$$ dispatcher.prepare(cameraState.pos);
+			//$$ for (BlockEntity blockEntity : this.world.blockEntities()) {
+			//$$ 	BlockEntityRenderState state = dispatcher.tryExtractRenderState(blockEntity, 0.0F, null);
+			//$$ 	if (state == null) {
+			//$$ 		continue;
+			//$$ 	}
+			//$$ 	BlockPos position = blockEntity.getBlockPos();
+			//$$ 	pose.pushPose();
+			//$$ 	pose.translate(position.getX() - cameraPosition.x, position.getY() - cameraPosition.y,
+			//$$ 			position.getZ() - cameraPosition.z);
+			//$$ 	dispatcher.submit(state, pose, this.blockEntitySubmitNodes, cameraState);
+			//$$ 	pose.popPose();
+			//$$ }
 			//$$ this.blockEntityFeatureDispatcher.renderAllFeatures();
-			//$$ //#endif
 			//#endif
 		} finally {
 			//#if MC >= 1.21.10 && MC < 26.2
-			//$$ if (this.blockEntitySubmitNodes != null) {
-			//$$ 	this.blockEntitySubmitNodes.clear();
+			//$$ if (this.blockEntityFeatureDispatcher != null) {
+			//$$ 	this.blockEntityFeatureDispatcher.endFrame();
 			//$$ }
 			//#elseif MC >= 26.2
 			//$$ if (this.blockEntityRenderBuffers != null) {
@@ -711,7 +743,7 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 		}
 	}
 
-	//#if MC >= 1.21.10
+	//#if MC >= 26.2
 	// Keep block-entity submits and their buffers independent from Minecraft's world renderer.
 	//$$ private void ensureBlockEntityRendererResources(Minecraft minecraft) {
 	//$$ 	if (this.blockEntityFeatureDispatcher != null) {
@@ -719,25 +751,38 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 	//$$ 	}
 	//$$ 	this.blockEntitySubmitNodes = new SubmitNodeStorage();
 	//$$ 	this.blockEntityRenderBuffers = new RenderBuffers(1);
-	//$$ //#if MC >= 26.2
 	//$$ 	this.blockEntityGameRenderState = new GameRenderState();
 	//$$ 	this.blockEntityFeatureDispatcher = new FeatureRenderDispatcher(this.blockEntityRenderBuffers,
 	//$$ 			minecraft.getModelManager(), minecraft.getAtlasManager(), minecraft.font, this.blockEntityGameRenderState);
-	//$$ //#elseif MC >= 26.1
+	//$$ }
+	//#elseif MC >= 26.1
+	// Keep block-entity submits and their buffers independent from Minecraft's world renderer.
+	//$$ private void ensureBlockEntityRendererResources(Minecraft minecraft) {
+	//$$ 	if (this.blockEntityFeatureDispatcher != null) {
+	//$$ 		return;
+	//$$ 	}
+	//$$ 	this.blockEntitySubmitNodes = new SubmitNodeStorage();
+	//$$ 	this.blockEntityRenderBuffers = new RenderBuffers(1);
 	//$$ 	this.blockEntityGameRenderState = new GameRenderState();
 	//$$ 	this.blockEntityFeatureDispatcher = new FeatureRenderDispatcher(this.blockEntitySubmitNodes,
 	//$$ 			minecraft.getModelManager(), this.blockEntityRenderBuffers.bufferSource(), minecraft.getAtlasManager(),
 	//$$ 			this.blockEntityRenderBuffers.outlineBufferSource(), this.blockEntityRenderBuffers.crumblingBufferSource(),
 	//$$ 			minecraft.font, this.blockEntityGameRenderState);
-	//$$ //#else
+	//$$ }
+	//#elseif MC >= 1.21.10
+	// Keep block-entity submits and their buffers independent from Minecraft's world renderer.
+	//$$ private void ensureBlockEntityRendererResources(Minecraft minecraft) {
+	//$$ 	if (this.blockEntityFeatureDispatcher != null) {
+	//$$ 		return;
+	//$$ 	}
+	//$$ 	this.blockEntitySubmitNodes = new SubmitNodeStorage();
+	//$$ 	this.blockEntityRenderBuffers = new RenderBuffers(1);
 	//$$ 	this.blockEntityFeatureDispatcher = new FeatureRenderDispatcher(this.blockEntitySubmitNodes,
 	//$$ 			minecraft.getBlockRenderer(), this.blockEntityRenderBuffers.bufferSource(), minecraft.getAtlasManager(),
 	//$$ 			this.blockEntityRenderBuffers.outlineBufferSource(), this.blockEntityRenderBuffers.crumblingBufferSource(),
 	//$$ 			minecraft.font);
-	//$$ //#endif
 	//$$ }
 	//#endif
-
 	private static VertexConsumer offsetVertexConsumer(VertexConsumer delegate, float yOffset) {
 		return new YOffsetVertexConsumer(delegate, yOffset);
 	}
@@ -908,7 +953,14 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 		}
 	}
 
-	//#if MC < 26.1
+	//#if MC >= 1.21.10 && MC < 26.1
+	//$$ private static final class PreviewCamera extends Camera {
+	//$$ 	private void setPreviewPose(Vector3f position, float yaw, float pitch) {
+	//$$ 		this.setPosition(position.x, position.y, position.z);
+	//$$ 		this.setRotation(yaw, pitch);
+	//$$ 	}
+	//$$ }
+	//#elseif MC < 1.21.10
 	private static final class PreviewCamera extends Camera {
 		private void setPreviewPose(Vector3f position, float yaw, float pitch) {
 			this.setPosition(position.x, position.y, position.z);

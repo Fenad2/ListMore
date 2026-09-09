@@ -19,6 +19,17 @@ public class ListMoreConfigGui extends GuiConfigsBase {
 	}
 
 	@Override
+	public String getTitleString() {
+		return super.getTitleString() + " v" + getModVersion();
+	}
+
+	private static String getModVersion() {
+		return FabricLoader.getInstance().getModContainer(ListMore.MOD_ID)
+				.map(container -> container.getMetadata().getVersion().getFriendlyString())
+				.orElse("?");
+	}
+
+	@Override
 	public void initGui() {
 		super.initGui();
 		this.clearOptions();
