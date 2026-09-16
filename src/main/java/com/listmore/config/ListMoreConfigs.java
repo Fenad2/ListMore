@@ -49,6 +49,7 @@ public class ListMoreConfigs implements IConfigHandler {
 		public static final ConfigOptionList TNT_EXPLOSION_PREVIEW_MODE = createTntExplosionPreviewMode();
 		public static final ConfigBoolean PROJECTILE_LANDING_PREDICTION = createProjectileLandingPrediction();
 		public static final ConfigBoolean SCHEMATIC_DYNAMIC_PREVIEW = createSchematicDynamicPreview();
+		public static final ConfigBoolean SINGLE_BLOCK_MINING = createSingleBlockMining();
 
 		public static final ImmutableList<IConfigBase> GENERIC_OPTIONS = ImmutableList.of(
 			COPY_TARGET_ID,
@@ -62,7 +63,8 @@ public class ListMoreConfigs implements IConfigHandler {
 			INVALID_FURNACE_INPUT_HIGHLIGHTER_RANGE,
 			TNT_EXPLOSION_PREVIEW,
 			TNT_EXPLOSION_PREVIEW_MODE,
-			PROJECTILE_LANDING_PREDICTION
+			PROJECTILE_LANDING_PREDICTION,
+			SINGLE_BLOCK_MINING
 		);
 
 		public static final ImmutableList<IConfigBase> LITEMATICA_OPTIONS = ImmutableList.of(
@@ -82,7 +84,8 @@ public class ListMoreConfigs implements IConfigHandler {
 			TNT_EXPLOSION_PREVIEW,
 			TNT_EXPLOSION_PREVIEW_MODE,
 			PROJECTILE_LANDING_PREDICTION,
-			SCHEMATIC_DYNAMIC_PREVIEW
+			SCHEMATIC_DYNAMIC_PREVIEW,
+			SINGLE_BLOCK_MINING
 		);
 	}
 
@@ -147,6 +150,10 @@ public class ListMoreConfigs implements IConfigHandler {
 
 	private static ConfigBoolean createSchematicDynamicPreview() {
 		return createConfig(new ConfigBoolean("schematicDynamicPreview", false));
+	}
+
+	private static ConfigBoolean createSingleBlockMining() {
+		return createConfig(new ConfigBoolean("singleBlockMining", false));
 	}
 
 	private static <T extends ConfigBase<T>> T createConfig(T config) {
