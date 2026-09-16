@@ -52,5 +52,8 @@
   "listmore.schematic_preview.failed": "预览加载失败",
   "listmore.schematic_preview.empty": "请选择一个 litematic 文件",
   "listmore.schematic_preview.building": "正在构建模型...",
-  "listmore.schematic_preview.blocks": "%d 个方块"
+  "listmore.schematic_preview.blocks": "%d 个方块",
+  "listmore.config.generic.name.singleBlockMining": "单方块挖掘",
+  "listmore.config.generic.prettyName.singleBlockMining": "单方块挖掘",
+  "listmore.config.generic.comment.singleBlockMining": "每次按住左键最多挖掘一个方块，完成后必须重新点击/按住"
 }

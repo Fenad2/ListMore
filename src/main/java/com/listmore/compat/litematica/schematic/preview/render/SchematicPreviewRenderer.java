@@ -102,6 +102,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fStack;
@@ -127,6 +128,8 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 	private long builtRevision = Long.MIN_VALUE;
 	private SchematicPreviewWorld world;
 	private TextureTarget target;
+	private final Map<ChunkSectionLayer, ByteBufferBuilder> sectionAllocators =
+			new EnumMap<>(ChunkSectionLayer.class);
 	//#if MC >= 1.21.11
 	//$$ private GpuSampler sampler;
 	//#endif
@@ -151,6 +154,7 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 	//#endif
 	//#if MC >= 26.1
 	//$$ private final FluidRenderer fluidRenderer = new FluidRenderer(Minecraft.getInstance().getModelManager().getFluidStateModelSet());
+	//$$ private BlockModelRendererSchematic blockModelRenderer;
 	//#endif
 	// 将原理图模型渲染到离屏帧缓冲，再将结果贴图绘制到 GUI 面板
 	// 流程：校验模型 -> 确保帧缓冲尺寸 -> 增量重建网格 -> 清空帧缓冲 -> 3D 渲染 -> 贴图到 GUI
@@ -314,13 +318,30 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 	private ChunkMesh buildSection(SchematicPreviewModel.Section section) {
 		SchematicPreviewWorld view = this.world;
 		//#if MC >= 26.1
-		//$$ ModelManager modelManager = Minecraft.getInstance().getModelManager();
-		//#endif
-		ChunkMeshBuilder chunk = new ChunkMeshBuilder();
-		//#if MC >= 26.1
-		//$$ BlockModelRendererSchematic renderer = new BlockModelRendererSchematic();
+		//$$ BlockModelRendererSchematic renderer = this.blockModelRenderer;
+		//$$ if (renderer == null) {
+		//$$ 	renderer = new BlockModelRendererSchematic();
+		//$$ 	this.blockModelRenderer = renderer;
+		//$$ }
 		//$$ renderer.enableCache();
 		//#endif
+		//#if MC >= 26.1
+		//$$ ModelManager modelManager = Minecraft.getInstance().getModelManager();
+		//#endif
+		ChunkMeshBuilder chunk = new ChunkMeshBuilder(this.sectionAllocators);
+		BlockPos.MutableBlockPos position = new BlockPos.MutableBlockPos();
+		//#if MC < 26.1
+		PoseStack pose = new PoseStack();
+		RandomSource random = RandomSource.create();
+		//#endif
+		//#if MC >= 26.1
+		//$$ FluidRenderer.Output fluidOutput = layer -> offsetVertexConsumer(chunk.builder(layer), section.minY());
+		//$$ IBlockOutputSchematic blockOutput = (x, y, z, quad, instance) -> chunk.builder(quad.materialInfo().layer())
+		//$$ 		.putBlockBakedQuad(x, y, z, quad, instance);
+		//#endif
+		int sectionMinX = section.minX();
+		int sectionMinY = section.minY();
+		int sectionMinZ = section.minZ();
 		try {
 			for (int index = 0; index < 4096; index++) {
 				BlockState state = section.stateAtIndex(index);
@@ -330,43 +351,43 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 				int localX = index & 15;
 				int localZ = (index >> 4) & 15;
 				int localY = index >> 8;
-				int blockX = section.minX() + localX;
-				int blockY = section.minY() + localY;
-				int blockZ = section.minZ() + localZ;
-				BlockPos position = new BlockPos(blockX, blockY, blockZ);
+				int blockX = sectionMinX + localX;
+				int blockY = sectionMinY + localY;
+				int blockZ = sectionMinZ + localZ;
+				position.set(blockX, blockY, blockZ);
 				// 先渲染流体（水、岩浆等），再渲染固体方块模型
 				//#if MC >= 26.1
-				//$$ if (!state.getFluidState().isEmpty()) {
-				//$$ 	FluidRenderer.Output output = layer -> offsetVertexConsumer(chunk.builder(layer), section.minY());
-				//$$ 	this.fluidRenderer.tesselate(view, position, output, state, state.getFluidState());
+				//$$ FluidState fluidState = state.getFluidState();
+				//$$ if (!fluidState.isEmpty()) {
+				//$$ 	this.fluidRenderer.tesselate(view, position, fluidOutput, state, fluidState);
 				//$$ }
 				//#else
-				if (!state.getFluidState().isEmpty()) {
+				FluidState fluidState = state.getFluidState();
+				if (!fluidState.isEmpty()) {
 					Minecraft.getInstance().getBlockRenderer().renderLiquid(position, view,
-							offsetVertexConsumer(chunk.builder(ItemBlockRenderTypes.getRenderLayer(state.getFluidState())), section.minY()),
-							state, state.getFluidState());
+							offsetVertexConsumer(chunk.builder(ItemBlockRenderTypes.getRenderLayer(fluidState)), section.minY()),
+							state, fluidState);
 				}
 				//#endif
 				if (state.getRenderShape() != RenderShape.MODEL) {
 					continue;
 				}
 				//#if MC >= 26.1
-				//$$ IBlockOutputSchematic output = (x, y, z, quad, instance) -> chunk.builder(quad.materialInfo().layer())
-				//$$ 		.putBlockBakedQuad(x, y, z, quad, instance);
 				//$$ renderer.tessellateBlock(view, state, position, new Vec3(localX, blockY, localZ),
-				//$$ 		modelManager.getBlockStateModelSet().get(state), state.getSeed(position), output);
+				//$$ 		modelManager.getBlockStateModelSet().get(state), state.getSeed(position), blockOutput);
 				//#else
-				PoseStack pose = new PoseStack();
 				// & 15 取区块内局部坐标（0-15），模型顶点需要相对区块原点的偏移
+				pose.setIdentity();
 				pose.translate(localX, blockY, localZ);
+				random.setSeed(state.getSeed(position));
 				Minecraft.getInstance().getBlockRenderer().renderBatched(state, position, view, pose,
 						chunk.builder(ItemBlockRenderTypes.getChunkRenderType(state)), true,
 						Minecraft.getInstance().getBlockRenderer().getBlockModel(state)
-								.collectParts(RandomSource.create(state.getSeed(position))));
+								.collectParts(random));
 				//#endif
 			}
 		} catch (Throwable throwable) {
-			chunk.close();
+			chunk.discard();
 			throw throwable;
 		} finally {
 			//#if MC >= 26.1
@@ -875,9 +896,13 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 	}
 
 	// 每个区块的网格构建器，按 ChunkSectionLayer 分组管理 BufferBuilder
-	private static final class ChunkMeshBuilder implements AutoCloseable {
-		private final Map<ChunkSectionLayer, ByteBufferBuilder> allocators = new EnumMap<>(ChunkSectionLayer.class);
+	private static final class ChunkMeshBuilder {
+		private final Map<ChunkSectionLayer, ByteBufferBuilder> allocators;
 		private final Map<ChunkSectionLayer, BufferBuilder> builders = new EnumMap<>(ChunkSectionLayer.class);
+
+		private ChunkMeshBuilder(Map<ChunkSectionLayer, ByteBufferBuilder> allocators) {
+			this.allocators = allocators;
+		}
 
 		private BufferBuilder builder(ChunkSectionLayer layer) {
 			return this.builders.computeIfAbsent(layer, ignored -> new BufferBuilder(
@@ -926,15 +951,18 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 				buffers.values().forEach(SectionBuffers::close);
 				throw throwable;
 			} finally {
-				this.close();
+				this.discard();
 			}
 		}
 
-		@Override
-		public void close() {
-			this.allocators.values().forEach(ByteBufferBuilder::close);
-			this.allocators.clear();
+		private void discard() {
+			try {
+				this.allocators.values().forEach(ByteBufferBuilder::discard);
+			} finally {
+				this.builders.clear();
+			}
 		}
+
 	}
 
 	// 一个 Section 的 GPU 网格数据
@@ -998,5 +1026,7 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 		//#endif
 		if (this.projection != null) { this.projection.close(); this.projection = null; }
 		if (this.globalUniform != null) { this.globalUniform.close(); this.globalUniform = null; }
+		this.sectionAllocators.values().forEach(ByteBufferBuilder::close);
+		this.sectionAllocators.clear();
 	}
 }

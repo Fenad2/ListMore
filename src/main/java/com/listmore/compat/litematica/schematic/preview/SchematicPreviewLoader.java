@@ -23,8 +23,8 @@ import fi.dy.masa.litematica.schematic.LitematicaSchematic;
 // 后台读取 litematic 文件并提取预览模型
 // 文件解析和 Section 扫描使用不同线程池
 public final class SchematicPreviewLoader {
-	//TODO:目前来看4已经够用了，但真的够吗？ --> 6
-	private static final int MAX_CACHE_ENTRIES = 4;
+	// TODO: --> 10。之后换成全部都缓存
+	private static final int MAX_CACHE_ENTRIES = 10;
 	private static final int SCAN_WORKERS = Math.max(1,
 			Math.min(6, Runtime.getRuntime().availableProcessors() - 2));
 	private static final ExecutorService FILE_EXECUTOR = Executors.newFixedThreadPool(2,
