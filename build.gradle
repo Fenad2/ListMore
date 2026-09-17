@@ -12,6 +12,11 @@ subprojects {
 		base {
 			archivesName = rootProject.archives_base_name
 		}
+
+		tasks.withType(Jar).configureEach {
+			def minecraftSeries = project.name.replaceFirst(/-fabric$/, '')
+			archiveVersion = "${project.version}-mc${minecraftSeries}"
+		}
 	}
 }
 

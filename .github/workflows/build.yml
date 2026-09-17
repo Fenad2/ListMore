@@ -48,15 +48,12 @@ jobs:
             minecraft_version="$(basename "$version_dir" -fabric)"
             for file in "$version_dir"/build/libs/*.jar; do
               file_name="$(basename "$file")"
-              if [[ "$file_name" == *-sources.jar ]]; then
-                stem="${file_name%-sources.jar}"
-                suffix="-sources"
-              else
-                stem="${file_name%.jar}"
-                suffix=""
+              if [[ "$file_name" != *"-mc${minecraft_version}.jar" && "$file_name" != *"-mc${minecraft_version}-sources.jar" ]]; then
+                echo "Unexpected artifact name: $file" >&2
+                exit 1
               fi
 
-              cp "$file" "artifacts/${stem}-mc${minecraft_version}${suffix}.jar"
+              cp "$file" artifacts/
               artifact_count=$((artifact_count + 1))
             done
           done
