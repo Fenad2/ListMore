@@ -56,7 +56,11 @@ jobs:
                 suffix=""
               fi
 
-              cp "$file" "artifacts/${stem}-mc${minecraft_version}${suffix}.jar"
+              if [[ "$stem" != *"-mc${minecraft_version}" ]]; then
+                stem="${stem}-mc${minecraft_version}"
+              fi
+
+              cp "$file" "artifacts/${stem}${suffix}.jar"
               artifact_count=$((artifact_count + 1))
             done
           done

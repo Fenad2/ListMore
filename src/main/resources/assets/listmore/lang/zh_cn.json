@@ -55,5 +55,5 @@
   "listmore.schematic_preview.blocks": "%d 个方块",
   "listmore.config.generic.name.singleBlockMining": "单方块挖掘",
   "listmore.config.generic.prettyName.singleBlockMining": "单方块挖掘",
-  "listmore.config.generic.comment.singleBlockMining": "每次按住左键最多挖掘一个方块，完成后必须重新点击/按住"
+  "listmore.config.generic.comment.singleBlockMining": "每次按住左键最多挖掘一个方块，完成后必须重新点击/按住才可进行下一次挖掘"
 }

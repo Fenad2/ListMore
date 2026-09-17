@@ -4,13 +4,18 @@ plugins {
 	id 'com.replaymod.preprocess' version "${preprocessor_version}"
 }
 
-subprojects {
-	version = rootProject.mod_version
-	group = rootProject.maven_group
+subprojects { subproject ->
+	subproject.version = rootProject.mod_version
+	subproject.group = rootProject.maven_group
 
-	plugins.withId('java') {
-		base {
+	subproject.plugins.withId('java') {
+		subproject.base {
 			archivesName = rootProject.archives_base_name
+		}
+
+		subproject.tasks.withType(Jar).configureEach {
+			def minecraftSeries = subproject.name.replaceFirst(/-fabric$/, '')
+			archiveVersion = "${subproject.version}-mc${minecraftSeries}"
 		}
 	}
 }
