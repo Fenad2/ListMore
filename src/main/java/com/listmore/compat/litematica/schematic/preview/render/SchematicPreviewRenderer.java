@@ -4,6 +4,10 @@ import com.listmore.ListMore;
 import com.listmore.compat.litematica.schematic.preview.model.SchematicPreviewModel;
 import com.listmore.compat.litematica.schematic.preview.SchematicPreviewTransform;
 import com.listmore.compat.litematica.schematic.preview.gui.SchematicPreviewLayout;
+//#if MC < 1.21.11
+import com.listmore.mixin.accessor.GuiGraphicsAccessor;
+import com.listmore.mixin.accessor.GuiGraphicsScissorStackAccessor;
+//#endif
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -227,6 +231,9 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 			return false;
 		}
 		// 将离屏帧缓冲的纹理贴图到 GUI 面板的指定区域
+		//#if MC < 1.21.11
+		GuiGraphicsAccessor graphics = (GuiGraphicsAccessor) context;
+		//#endif
 		BlitRenderState blit = new BlitRenderState(
 				RenderPipelines.GUI_TEXTURED,
 				//#if MC >= 1.21.11
@@ -237,11 +244,16 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 				new Matrix3x2f(context.pose()),
 				layout.contentX(), layout.contentY(),
 				layout.contentX() + layout.contentWidth(), layout.contentY() + layout.contentHeight(),
-				0.0F, 1.0F, 1.0F, 0.0F, 0xFFFFFFFF, context.scissorStack.peek());
+				0.0F, 1.0F, 1.0F, 0.0F, 0xFFFFFFFF,
+				//#if MC >= 1.21.11
+				//$$ context.peekLastScissor());
+				//#else
+				((GuiGraphicsScissorStackAccessor) graphics.listmore$getScissorStack()).listmore$peek());
+				//#endif
 		//#if MC >= 1.21.11
 		//$$ context.addSimpleElement(blit);
 		//#else
-		context.guiRenderState.submitBlitToCurrentLayer(blit);
+		graphics.listmore$getGuiRenderState().submitBlitToCurrentLayer(blit);
 		//#endif
 		return true;
 	}

@@ -55,5 +55,8 @@
   "listmore.schematic_preview.blocks": "%d blocks",
   "listmore.config.generic.name.singleBlockMining": "Single Block Mining",
   "listmore.config.generic.prettyName.singleBlockMining": "Single Block Mining",
-  "listmore.config.generic.comment.singleBlockMining": "Mine at most one block per attack press; release and press again to mine another"
+  "listmore.config.generic.comment.singleBlockMining": "Mine at most one block per attack press; release and press again to mine another",
+  "listmore.config.generic.name.singleBlockPlacement": "Single Block Placement",
+  "listmore.config.generic.prettyName.singleBlockPlacement": "Single Block Placement",
+  "listmore.config.generic.comment.singleBlockPlacement": "Place at most one block per use press; release and press again to place another"
 }

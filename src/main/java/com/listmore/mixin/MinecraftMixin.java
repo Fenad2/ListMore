@@ -1,9 +1,11 @@
 package com.listmore.mixin;
 
 import com.listmore.feature.SingleBlockMining;
+import com.listmore.feature.SingleBlockPlacement;
 import com.listmore.render.EntityOutlineRenderer;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.Options;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.HitResult;
 
@@ -18,6 +20,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class MinecraftMixin {
 	@Shadow
 	public HitResult hitResult;
+
+	@Shadow
+	public Options options;
 
 	@Inject(method = "startAttack", at = @At("HEAD"))
 	private void listmore$resetSingleBlockMining(CallbackInfoReturnable<Boolean> cir) {
@@ -39,6 +44,11 @@ public class MinecraftMixin {
 			((Minecraft) (Object) this).gameMode.stopDestroyBlock();
 			ci.cancel();
 		}
+	}
+
+	@Inject(method = "handleKeybinds", at = @At("HEAD"))
+	private void listmore$trackSingleBlockPlacement(CallbackInfo ci) {
+		SingleBlockPlacement.updateUseKeyState(this.options.keyUse.isDown());
 	}
 
 	@Inject(method = "shouldEntityAppearGlowing", at = @At("RETURN"), cancellable = true)

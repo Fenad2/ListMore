@@ -98,6 +98,10 @@ processResources {
 	inputs.property 'minecraft_dependency', project.minecraft_dependency
 	inputs.property 'loader_version', project.loader_version
 	inputs.property 'java_version', project.java_version
+	def legacyGuiGraphicsAccessors = project.minecraft_version in ['1.21.8', '1.21.10']
+			? ',\n\t\t"accessor.GuiGraphicsAccessor",\n\t\t"accessor.GuiGraphicsScissorStackAccessor"'
+			: ''
+	inputs.property 'legacy_gui_graphics_accessors', legacyGuiGraphicsAccessors
 
 	filesMatching('fabric.mod.json') {
 		expand(
@@ -109,7 +113,10 @@ processResources {
 	}
 
 	filesMatching('listmore.mixins.json') {
-		expand(java_version: project.java_version)
+		expand(
+			java_version: project.java_version,
+			legacy_gui_graphics_accessors: legacyGuiGraphicsAccessors
+		)
 	}
 }
 
