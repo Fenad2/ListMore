@@ -7,10 +7,12 @@ import java.util.Set;
 
 import com.listmore.config.ListEntryToggleConfig;
 import com.listmore.config.ListMoreConfigs;
+import com.listmore.utils.WorldRenderUtils;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 
 public final class EntityRenderBlacklist {
 	private static Set<String> blockedEntityIds = Set.of();
@@ -36,7 +38,12 @@ public final class EntityRenderBlacklist {
 		}
 
 		Minecraft client = Minecraft.getInstance();
-		return client.player == null || client.player.distanceToSqr(entity) > (double) range * range;
+		if (client.level == null) {
+			return true;
+		}
+
+		Vec3 cameraPosition = WorldRenderUtils.getCameraPosition();
+		return cameraPosition.distanceToSqr(entity.position()) > (double) range * range;
 	}
 
 	public static void refreshBlockedEntityTypes() {

@@ -4,6 +4,24 @@ plugins {
 	id 'com.replaymod.preprocess' version "${preprocessor_version}"
 }
 
+def devBuildEnv = providers.environmentVariable('DEV_BUILD').getOrNull()
+def isDevBuild = devBuildEnv != null && devBuildEnv.toBoolean()
+
+if (devBuildEnv == null) {
+	def gitBranch = ''
+
+	try {
+		gitBranch = providers.exec {
+			commandLine 'git', 'rev-parse', '--abbrev-ref', 'HEAD'
+			ignoreExitValue = true
+		}.standardOutput.asText.get().trim()
+	} catch (Exception ignored) {
+		// Fall back to release naming when the branch cannot be detected.
+	}
+
+	isDevBuild = gitBranch == 'dev'
+}
+
 subprojects { subproject ->
 	subproject.version = rootProject.mod_version
 	subproject.group = rootProject.maven_group
@@ -13,9 +31,9 @@ subprojects { subproject ->
 			archivesName = rootProject.archives_base_name
 		}
 
-		subproject.tasks.withType(Jar).configureEach {
+		subproject.tasks.withType(AbstractArchiveTask).configureEach {
 			def minecraftSeries = subproject.name.replaceFirst(/-fabric$/, '')
-			archiveVersion = "${subproject.version}-mc${minecraftSeries}"
+			archiveVersion = "${subproject.version}-mc${minecraftSeries}${isDevBuild ? '-dev' : ''}"
 		}
 	}
 }

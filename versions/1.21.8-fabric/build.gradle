@@ -77,7 +77,6 @@ dependencies {
 	autoImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 	autoImplementation malilibCoordinate
 	autoCompileOnly(project.litematica_version) {
-		// Litematica 的旧 POM 会传递一个不可用的 malilib 版本，使用项目已配置的版本。
 		exclude group: 'com.github.sakura-ryoko', module: 'malilib'
 	}
 	autoCompileOnly "me.fallenbreath:conditional-mixin-fabric:${project.conditionalmixin_version}"
@@ -98,6 +97,10 @@ processResources {
 	inputs.property 'minecraft_dependency', project.minecraft_dependency
 	inputs.property 'loader_version', project.loader_version
 	inputs.property 'java_version', project.java_version
+	def legacyGuiGraphicsAccessors = project.minecraft_version in ['1.21.8', '1.21.10']
+			? ',\n\t\t"accessor.GuiGraphicsAccessor",\n\t\t"accessor.GuiGraphicsScissorStackAccessor"'
+			: ''
+	inputs.property 'legacy_gui_graphics_accessors', legacyGuiGraphicsAccessors
 
 	filesMatching('fabric.mod.json') {
 		expand(
@@ -109,7 +112,10 @@ processResources {
 	}
 
 	filesMatching('listmore.mixins.json') {
-		expand(java_version: project.java_version)
+		expand(
+			java_version: project.java_version,
+			legacy_gui_graphics_accessors: legacyGuiGraphicsAccessors
+		)
 	}
 }
 

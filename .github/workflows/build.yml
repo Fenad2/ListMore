@@ -34,10 +34,13 @@ jobs:
       - name: Build
         env:
           GRADLE_OPTS: '-Xmx3G -Dorg.gradle.jvmargs=-Xmx3G'
+          DEV_BUILD: ${{ github.head_ref == 'dev' || github.ref_name == 'dev' }}
         run: ./gradlew build --no-daemon --console=plain
 
       - name: Collect Build Artifacts
         shell: bash
+        env:
+          DEV_BUILD: ${{ github.head_ref == 'dev' || github.ref_name == 'dev' }}
         run: |
           set -euo pipefail
           shopt -s nullglob
@@ -58,6 +61,10 @@ jobs:
 
               if [[ "$stem" != *"-mc${minecraft_version}" ]]; then
                 stem="${stem}-mc${minecraft_version}"
+              fi
+
+              if [[ "${DEV_BUILD,,}" == "true" && "$stem" != *-dev ]]; then
+                stem="${stem}-dev"
               fi
 
               cp "$file" "artifacts/${stem}${suffix}.jar"

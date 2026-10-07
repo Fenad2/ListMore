@@ -5,9 +5,10 @@
 	"client": [
 		"MinecraftMixin",
 		"MultiPlayerGameModeMixin",
+		"BlockItemMixin",
 		"EntityMixin",
 		"EntityRenderDispatcherMixin",
-		"accessor.GuiListBaseAccessor",
+		"accessor.GuiListBaseAccessor"${legacy_gui_graphics_accessors},
 		"litematica.GuiSchematicBrowserBaseMixin"
 	],
 	"mixins": [
