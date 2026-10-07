@@ -18,27 +18,45 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 
-//#if MC >= 26.2
+//#if MC >= 26.3
+//$$ import com.mojang.renderpearl.api.GpuFormat;
+//$$ import com.mojang.renderpearl.api.buffers.GpuBuffer;
+//$$ import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
+//$$ import com.mojang.renderpearl.api.commands.RenderPass;
+//$$ import com.mojang.renderpearl.api.pipeline.IndexType;
+//$$ import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
+//$$ import com.mojang.renderpearl.api.textures.AddressMode;
+//$$ import com.mojang.renderpearl.api.textures.FilterMode;
+//$$ import com.mojang.renderpearl.api.textures.GpuSampler;
+//$$ import com.mojang.renderpearl.api.textures.GpuTextureView;
+//#elseif MC >= 26.2
 //$$ import com.mojang.blaze3d.IndexType;
 //$$ import com.mojang.blaze3d.PrimitiveTopology;
 //$$ import com.mojang.blaze3d.GpuFormat;
+//$$ import com.mojang.blaze3d.buffers.GpuBuffer;
+//$$ import com.mojang.blaze3d.buffers.GpuBufferSlice;
+//$$ import com.mojang.blaze3d.systems.RenderPass;
+//$$ import com.mojang.blaze3d.textures.AddressMode;
+//$$ import com.mojang.blaze3d.textures.FilterMode;
+//$$ import com.mojang.blaze3d.textures.GpuSampler;
+//$$ import com.mojang.blaze3d.textures.GpuTextureView;
 //#else
 import com.mojang.blaze3d.vertex.VertexFormat.IndexType;
-//#endif
-import com.mojang.blaze3d.ProjectionType;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.mojang.blaze3d.systems.RenderPass;
+import com.mojang.blaze3d.textures.AddressMode;
+import com.mojang.blaze3d.textures.FilterMode;
+import com.mojang.blaze3d.textures.GpuTextureView;
+//#endif
+import com.mojang.blaze3d.ProjectionType;
 import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.Lighting;
-import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.AddressMode;
-import com.mojang.blaze3d.textures.FilterMode;
-//#if MC >= 1.21.11
+//#if MC >= 1.21.11 && MC < 26.2
 //$$ import com.mojang.blaze3d.textures.GpuSampler;
 //#endif
-import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
@@ -62,7 +80,11 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Camera;
 import net.minecraft.client.gui.render.TextureSetup;
+//#if MC >= 26.3
+//$$ import net.minecraft.client.renderer.DynamicGpuData;
+//#else
 import net.minecraft.client.renderer.DynamicUniforms;
+//#endif
 import net.minecraft.client.renderer.GlobalSettingsUniform;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
 //#if MC >= 1.21.10
@@ -262,7 +284,10 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 		int scaledWidth = Math.max(1, Math.round(width * Minecraft.getInstance().getWindow().getGuiScale()));
 		int scaledHeight = Math.max(1, Math.round(height * Minecraft.getInstance().getWindow().getGuiScale()));
 		if (this.target == null) {
-			//#if MC >= 26.2
+			//#if MC >= 26.3
+			//$$ this.target = new TextureTarget("ListMore schematic preview", scaledWidth, scaledHeight,
+			//$$ 		GpuFormat.RGBA8_UNORM, GpuFormat.D32_FLOAT);
+			//#elseif MC >= 26.2
 			//$$ this.target = new TextureTarget("ListMore schematic preview", scaledWidth, scaledHeight, true, GpuFormat.RGBA8_UNORM);
 			//#else
 			this.target = new TextureTarget("ListMore schematic preview", scaledWidth, scaledHeight, true);
@@ -515,7 +540,16 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 		List<ChunkMesh> orderedMeshes = new ArrayList<>(this.meshes);
 		// 按距离降序排列（远的先画），负号使 Comparator 从大到小
 		orderedMeshes.sort(Comparator.comparingDouble(mesh -> -mesh.distanceTo(camera)));
-		//#if MC >= 1.21.11
+		//#if MC >= 26.3
+		//$$ DynamicGpuData.Transform[] transforms = new DynamicGpuData.Transform[orderedMeshes.size()];
+		//$$ for (int i = 0; i < orderedMeshes.size(); i++) {
+		//$$ 	ChunkMesh mesh = orderedMeshes.get(i);
+		//$$ 	transforms[i] = new DynamicGpuData.Transform(RenderSystem.getModelViewMatrixCopy(), new Vector4f(1.0F),
+		//$$ 			new Vector3f(mesh.chunk().getMinBlockX() - camera.x, -camera.y,
+		//$$ 					mesh.chunk().getMinBlockZ() - camera.z), new Matrix4f());
+		//$$ }
+		//$$ GpuBufferSlice[] transformUniforms = RenderSystem.getDynamicUniforms().writeTransforms(transforms);
+		//#elseif MC >= 1.21.11
 		//$$ DynamicUniforms.ChunkSectionInfo[] infos = new DynamicUniforms.ChunkSectionInfo[orderedMeshes.size()];
 		//$$ for (int i = 0; i < orderedMeshes.size(); i++) {
 		//$$ 	ChunkMesh mesh = orderedMeshes.get(i);
@@ -565,7 +599,12 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 		GpuBuffer sharedIndex = maxSequentialIndices == 0 ? null : sequential.getBuffer(maxSequentialIndices);
 		IndexType sharedIndexType = maxSequentialIndices == 0 ? null : sequential.type();
 		// 先画不透明层，再按远到近绘制半透明层
-		//#if MC >= 1.21.11
+		//#if MC >= 26.3
+		//$$ this.renderLayerGroup(orderedMeshes, transformUniforms, atlas, sharedIndex, sharedIndexType,
+		//$$ 		ChunkSectionLayerGroup.OPAQUE);
+		//$$ this.renderLayerGroup(orderedMeshes, transformUniforms, atlas, sharedIndex, sharedIndexType,
+		//$$ 		ChunkSectionLayerGroup.TRANSLUCENT);
+		//#elseif MC >= 1.21.11
 		//$$ this.renderLayerGroup(orderedMeshes, sectionUniforms, atlas, sharedIndex, sharedIndexType,
 		//$$ 		ChunkSectionLayerGroup.OPAQUE);
 		//$$ this.renderLayerGroup(orderedMeshes, sectionUniforms, atlas, sharedIndex, sharedIndexType,
@@ -593,7 +632,9 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 				this.target.getDepthTextureView(), OptionalDouble.empty())) {
 			RenderSystem.bindDefaultUniforms(pass);
 			// 绑定光照纹理（Sampler2），所有渲染管线都需要
-			//#if MC >= 26.1
+			//#if MC >= 26.3
+			//$$ pass.setUniform("Sampler2", Minecraft.getInstance().gameRenderer.lightmap(), this.sampler);
+			//#elseif MC >= 26.1
 			//$$ pass.bindTexture("Sampler2", Minecraft.getInstance().gameRenderer.lightmap(), this.sampler);
 			//#elseif MC >= 1.21.11
 			//$$ pass.bindTexture("Sampler2", Minecraft.getInstance().gameRenderer.lightTexture().getTextureView(), this.sampler);
@@ -601,9 +642,15 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 			pass.bindSampler("Sampler2", Minecraft.getInstance().gameRenderer.lightTexture().getTextureView());
 			//#endif
 			for (ChunkSectionLayer layer : group.layers()) {
+				//#if MC >= 26.3
+				//$$ pass.setPipeline(RenderSystem.getCompiledPipeline(layer.pipeline(false)));
+				//#else
 				pass.setPipeline(layer.pipeline());
+				//#endif
 				// 绑定方块纹理图集（Sampler0）
-				//#if MC >= 26.1
+				//#if MC >= 26.3
+				//$$ pass.setUniform("Sampler0", atlas, this.sampler);
+				//#elseif MC >= 26.1
 				//$$ pass.bindTexture("Sampler0", atlas, this.sampler);
 				//#elseif MC >= 1.21.11
 				//$$ pass.bindTexture("Sampler0", atlas, this.sampler);
@@ -616,7 +663,11 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 					if (mesh == null || mesh.indexCount() <= 0 || mesh.vertexBuffer().isClosed()) continue;
 					// 捕获 i 到局部变量，lambda 内不能直接引用循环变量
 					int uniformIndex = i;
-					//#if MC >= 26.2
+					//#if MC >= 26.3
+					//$$ draws.add(new RenderPass.Draw<>(0, mesh.vertexBuffer(), mesh.indexBuffer(),
+					//$$ 		mesh.indexBuffer() == null ? null : mesh.indexType(), 0, mesh.indexCount(), 0,
+					//$$ 		(slices, uploader) -> uploader.setUniform("DynamicTransforms", slices[uniformIndex])));
+					//#elseif MC >= 26.2
 					//$$ draws.add(new RenderPass.Draw<>(0, mesh.vertexBuffer(), mesh.indexBuffer(),
 					//$$ 		mesh.indexBuffer() == null ? null : mesh.indexType(), 0, mesh.indexCount(), 0,
 					//$$ 		(slices, uploader) -> uploader.upload("ChunkSection", slices[uniformIndex])));
@@ -635,7 +686,9 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 					//#endif
 				}
 				if (!draws.isEmpty()) {
-					//#if MC >= 1.21.11
+					//#if MC >= 26.3
+					//$$ pass.drawMultipleIndexed(draws, sharedIndex, sharedIndexType, List.of("DynamicTransforms"), meshUniforms);
+					//#elseif MC >= 1.21.11
 					//$$ pass.drawMultipleIndexed(draws, sharedIndex, sharedIndexType, List.of("ChunkSection"), meshUniforms);
 					//#else
 					pass.drawMultipleIndexed(draws, sharedIndex, sharedIndexType, List.of("DynamicTransforms"), meshUniforms);
@@ -663,10 +716,12 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 		if (this.world == null || !this.world.hasBlockEntityData()) {
 			return;
 		}
+		//#if MC < 26.3
 		GpuTextureView previousColor = RenderSystem.outputColorTextureOverride;
 		GpuTextureView previousDepth = RenderSystem.outputDepthTextureOverride;
 		RenderSystem.outputColorTextureOverride = this.target.getColorTextureView();
 		RenderSystem.outputDepthTextureOverride = this.target.getDepthTextureView();
+		//#endif
 		try {
 			Minecraft minecraft = Minecraft.getInstance();
 			BlockEntityRenderDispatcher dispatcher = minecraft.getBlockEntityRenderDispatcher();
@@ -710,6 +765,34 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 			//$$ 	pose.popPose();
 			//$$ }
 			//$$ this.blockEntityFeatureDispatcher.renderAllFeatures();
+			//#elseif MC >= 26.3
+			//$$ this.ensureBlockEntityRendererResources(minecraft);
+			//$$ CameraRenderState cameraState = new CameraRenderState();
+			//$$ cameraState.initialized = true;
+			//$$ cameraState.pos = new Vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z);
+			//$$ cameraState.blockPos = BlockPos.containing(cameraState.pos);
+			//$$ cameraState.orientation = new Quaternionf().rotationYXZ(-cameraYaw * Mth.DEG_TO_RAD,
+			//$$ 		cameraPitch * Mth.DEG_TO_RAD, 0.0F);
+			//$$ dispatcher.prepare(cameraState.pos);
+			//$$ for (BlockEntity blockEntity : this.world.blockEntities()) {
+			//$$ 	BlockEntityRenderState state = dispatcher.tryExtractRenderState(blockEntity, 0.0F, null, false);
+			//$$ 	if (state == null) {
+			//$$ 		continue;
+			//$$ 	}
+			//$$ 	BlockPos position = blockEntity.getBlockPos();
+			//$$ 	pose.pushPose();
+			//$$ 	pose.translate(position.getX() - cameraPosition.x, position.getY() - cameraPosition.y,
+			//$$ 			position.getZ() - cameraPosition.z);
+			//$$ 	dispatcher.submit(state, pose, this.blockEntitySubmitNodes, cameraState);
+			//$$ 	pose.popPose();
+			//$$ }
+			//$$ try (FeatureRenderDispatcher.PreparedFrame frame = this.blockEntityFeatureDispatcher.prepareFrame(this.blockEntitySubmitNodes);
+			//$$ 		RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
+			//$$ 				() -> "ListMore schematic preview block entities", this.target.getColorTextureView(),
+			//$$ 				Optional.empty(), this.target.getDepthTextureView(), OptionalDouble.empty())) {
+			//$$ 	RenderSystem.bindDefaultUniforms(pass);
+			//$$ 	FeatureRenderDispatcher.renderAllFeatures(pass, frame);
+			//$$ }
 			//#elseif MC >= 26.2
 			//$$ this.ensureBlockEntityRendererResources(minecraft);
 			//$$ CameraRenderState cameraState = new CameraRenderState();
@@ -771,8 +854,10 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 			//$$ 	this.blockEntityRenderBuffers.endFrame();
 			//$$ }
 			//#endif
+			//#if MC < 26.3
 			RenderSystem.outputColorTextureOverride = previousColor;
 			RenderSystem.outputDepthTextureOverride = previousDepth;
+			//#endif
 		}
 	}
 
@@ -868,6 +953,14 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 			return this;
 		}
 
+		//#if MC >= 26.3
+		//$$ @Override
+		//$$ public VertexConsumer setUv3(float u, float v) {
+		//$$ 	this.delegate.setUv3(u, v);
+		//$$ 	return this;
+		//$$ }
+		//#endif
+
 		@Override
 		public VertexConsumer setNormal(float x, float y, float z) {
 			this.delegate.setNormal(x, y, z);
@@ -919,7 +1012,9 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 		private BufferBuilder builder(ChunkSectionLayer layer) {
 			return this.builders.computeIfAbsent(layer, ignored -> new BufferBuilder(
 					this.allocators.computeIfAbsent(layer, unused -> new ByteBufferBuilder(4096)),
-					//#if MC >= 26.2
+					//#if MC >= 26.3
+					//$$ layer.pipeline(false).getPrimitiveTopology(), layer.vertexFormat()
+					//#elseif MC >= 26.2
 					//$$ layer.pipeline().getPrimitiveTopology(), layer.vertexFormat()
 					//#else
 					layer.pipeline().getVertexFormatMode(), layer.pipeline().getVertexFormat()

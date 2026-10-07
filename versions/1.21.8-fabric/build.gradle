@@ -14,6 +14,11 @@ loom {
 
 repositories {
 	maven {
+		name = 'BMCLAPI Fabric Mirror'
+		url = 'https://bmclapi2.bangbang93.com/maven/'
+	}
+
+	maven {
 		name = 'Fallen-Breath JitPack Mirror'
 		url = 'https://maven.fallenbreath.me/jitpack'
 		content {

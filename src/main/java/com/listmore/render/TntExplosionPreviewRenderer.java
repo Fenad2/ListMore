@@ -5,7 +5,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-//#if MC >= 26.1
+//#if MC >= 26.3
+//$$ import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
+//#elseif MC >= 26.1
 //$$ import com.mojang.blaze3d.buffers.GpuBufferSlice;
 //#endif
 import com.mojang.blaze3d.pipeline.RenderTarget;
@@ -37,8 +39,10 @@ import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
-//#if MC >= 26.1
+//#if MC >= 26.1 && MC < 26.3
 //$$ import org.joml.Matrix4fc;
+//$$ import org.joml.Vector4f;
+//#elseif MC >= 26.3
 //$$ import org.joml.Vector4f;
 //#else
 import org.joml.Matrix4f;
@@ -88,7 +92,16 @@ public final class TntExplosionPreviewRenderer implements IRenderer {
 	}
 	//#endif
 
-	//#if MC >= 26.1
+	//#if MC >= 26.3
+	//$$ @Override
+	//$$ public void onRenderWorldLast(RenderTarget framebuffer, CameraRenderState cameraState,
+	//$$ 								  Frustum culling, RenderBuffers buffers, GpuBufferSlice terrainFog,
+	//$$ 								  Vector4f fogColor, ProfilerFiller profiler) {
+	//$$ 	if (!this.previewBlocks.isEmpty()) {
+	//$$ 		drawMarkers(this.previewBlocks);
+	//$$ 	}
+	//$$ }
+	//#elseif MC >= 26.1
 	//$$ @Override
 	//$$ public void onRenderWorldLast(RenderTarget framebuffer, Matrix4fc modelViewMatrix, CameraRenderState cameraState,
 	//$$ 								  Frustum culling, RenderBuffers buffers, GpuBufferSlice terrainFog,
