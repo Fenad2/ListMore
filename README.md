@@ -30,7 +30,7 @@
 
 - **投影实时预览**：在原理图文件选择界面显示当前选中原理图的预览窗口，该功能需安装 Litematica 模组才可使用。
 
-- ![](docs/SchematicDynamicPreview.jpg)
+  ![](docs/SchematicDynamicPreview.jpg)
 
 - **单方块挖掘**：一次操作仅能挖掘一个方块。
 
