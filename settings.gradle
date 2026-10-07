@@ -3,6 +3,11 @@ import groovy.json.JsonSlurper
 pluginManagement {
 	repositories {
 		maven {
+			name = 'BMCLAPI Fabric Mirror'
+			url = 'https://bmclapi2.bangbang93.com/maven/'
+		}
+
+		maven {
 			name = 'Fabric'
 			url = 'https://maven.fabricmc.net/'
 		}

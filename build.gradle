@@ -46,9 +46,11 @@ preprocess {
 	def mc12111Fabric = createNode('1.21.11-fabric', 1_21_11, '')
 	def mc2601Fabric = createNode('26.1-fabric', 26_01_02, '')
 	def mc2602Fabric = createNode('26.2-fabric', 26_02_00, '')
+	def mc2603Fabric = createNode('26.3-fabric', 26_03_00, '')
 
 	mc1218Fabric.link(mc12110Fabric, file('versions/mapping-fabric-1.21.8-1.21.10.txt'))
 	mc12110Fabric.link(mc12111Fabric, file('versions/mapping-fabric-1.21.10-1.21.11.txt'))
 	mc12111Fabric.link(mc2601Fabric, file('versions/mapping-fabric-1.21.11-26.1.txt'))
 	mc2601Fabric.link(mc2602Fabric, file('versions/mapping-fabric-26.1-26.2.txt'))
+	mc2602Fabric.link(mc2603Fabric, file('versions/mapping-fabric-26.2-26.3.txt'))
 }
