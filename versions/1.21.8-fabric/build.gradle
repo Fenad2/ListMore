@@ -77,7 +77,6 @@ dependencies {
 	autoImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 	autoImplementation malilibCoordinate
 	autoCompileOnly(project.litematica_version) {
-		// Litematica 的旧 POM 会传递一个不可用的 malilib 版本，使用项目已配置的版本。
 		exclude group: 'com.github.sakura-ryoko', module: 'malilib'
 	}
 	autoCompileOnly "me.fallenbreath:conditional-mixin-fabric:${project.conditionalmixin_version}"
