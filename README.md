@@ -1,5 +1,5 @@
 # ListMore
-**简体中文** · [Englist](README_EN.md)
+**简体中文** · [English](README_EN.md)
 ## 功能
 
 - **复制准星目标 ID**：复制准星所指方块或实体的 ID。
