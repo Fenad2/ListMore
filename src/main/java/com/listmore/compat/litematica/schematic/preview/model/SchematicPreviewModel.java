@@ -38,10 +38,6 @@ public final class SchematicPreviewModel {
 		return this.sections.isEmpty() && this.blockEntityData.isEmpty();
 	}
 
-	/**
-	 * Immutable preview-relative block entity snapshots. The NBT remains textual so
-	 * background scanning never creates client-side BlockEntity instances.
-	 */
 	public Map<BlockPos, String> blockEntityData() {
 		return this.blockEntityData;
 	}
@@ -78,7 +74,7 @@ public final class SchematicPreviewModel {
 			}
 			this.blockCount = count;
 		}
-
+		//TODO: 删了
 		public int sectionX() { return this.sectionX; }
 		public int sectionY() { return this.sectionY; }
 		public int sectionZ() { return this.sectionZ; }
