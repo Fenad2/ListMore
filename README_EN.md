@@ -1,5 +1,9 @@
 # ListMore
+
 **English** · [简体中文](README.md)
+
+[![Modrinth](https://img.shields.io/modrinth/dt/sg4BkpPl?label=Modrinth%20Downloads)](https://modrinth.com/mod/listmore)
+
 ## Features
 
 - **Copy Target ID**: Copy the ID of the block or entity pointed by the cursor.
