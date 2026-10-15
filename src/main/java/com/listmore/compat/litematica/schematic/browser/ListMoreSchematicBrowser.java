@@ -33,6 +33,13 @@ public final class ListMoreSchematicBrowser extends WidgetSchematicBrowser {
 	private int lastMouseX;
 	private int lastMouseY;
 	private int previewDragButton = -1;
+	//#if MC >= 26.3
+	//$$ private static final int PREVIEW_LEFT_BUTTON = 1;
+	//$$ private static final int PREVIEW_RIGHT_BUTTON = 3;
+	//#else
+	private static final int PREVIEW_LEFT_BUTTON = 0;
+	private static final int PREVIEW_RIGHT_BUTTON = 1;
+	//#endif
 
 	public ListMoreSchematicBrowser(int x, int y, int width, int height, GuiSchematicBrowserBase parent,
 			@Nullable ISelectionListener<DirectoryEntry> selectionListener) {
@@ -149,7 +156,7 @@ public final class ListMoreSchematicBrowser extends WidgetSchematicBrowser {
 	@Override
 	//#if MC >= 1.21.10
 	//$$ public boolean onMouseClicked(MouseButtonEvent click, boolean doubleClick) {
-	//$$ 		if (click.input() == 0 && this.previewLayout != null
+	//$$ 		if (click.input() == PREVIEW_LEFT_BUTTON && this.previewLayout != null
 	//$$ 				&& this.previewLayout.resetBounds().contains(click.x(), click.y())) {
 	//$$ 			this.previewSession.transform().reset();
 	//$$ 			return true;
@@ -161,7 +168,7 @@ public final class ListMoreSchematicBrowser extends WidgetSchematicBrowser {
 	//$$ }
 	//#else
 	public boolean onMouseClicked(int mouseX, int mouseY, int button) {
-		if (button == 0 && this.previewLayout != null
+		if (button == PREVIEW_LEFT_BUTTON && this.previewLayout != null
 				&& this.previewLayout.resetBounds().contains(mouseX, mouseY)) {
 			this.previewSession.transform().reset();
 			return true;
@@ -236,7 +243,7 @@ public final class ListMoreSchematicBrowser extends WidgetSchematicBrowser {
 	}
 
 	private boolean beginPreviewDrag(double mouseX, double mouseY, int button) {
-		if ((button == 0 || button == 1) && this.previewLayout != null
+		if ((button == PREVIEW_LEFT_BUTTON || button == PREVIEW_RIGHT_BUTTON) && this.previewLayout != null
 				&& this.previewLayout.contains(mouseX, mouseY)
 				&& !this.isPreviewControl(mouseX, mouseY)) {
 			this.previewDragButton = button;
@@ -250,7 +257,7 @@ public final class ListMoreSchematicBrowser extends WidgetSchematicBrowser {
 		if (this.previewDragButton != button || this.previewLayout == null) {
 			return false;
 		}
-		if (button == 0) {
+		if (button == PREVIEW_LEFT_BUTTON) {
 			this.previewSession.transform().rotateBy((float) dragXAmount,
 					(float) -dragYAmount);
 		} else {

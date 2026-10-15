@@ -19,6 +19,7 @@ import java.util.OptionalDouble;
 import java.util.OptionalInt;
 
 //#if MC >= 26.3
+//$$ import net.minecraft.client.renderer.DynamicGpuData;
 //$$ import com.mojang.renderpearl.api.GpuFormat;
 //$$ import com.mojang.renderpearl.api.buffers.GpuBuffer;
 //$$ import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
@@ -81,7 +82,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.Camera;
 import net.minecraft.client.gui.render.TextureSetup;
 //#if MC >= 26.3
-//$$ import net.minecraft.client.renderer.DynamicGpuData;
 //#else
 import net.minecraft.client.renderer.DynamicUniforms;
 //#endif
@@ -512,7 +512,20 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 					GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, GlobalSettingsUniform.UBO_SIZE);
 		}
 		try (MemoryStack stack = MemoryStack.stackPush()) {
-			//#if MC >= 1.21.11
+			//#if MC >= 26.3
+			//$$ int floorX = Mth.floor(camera.x);
+			//$$ int floorY = Mth.floor(camera.y);
+			//$$ int floorZ = Mth.floor(camera.z);
+			//$$ RenderSystem.getDevice().createCommandEncoder().writeToBuffer(this.globalUniform.slice(),
+			//$$ 		Std140Builder.onStack(stack, GlobalSettingsUniform.UBO_SIZE)
+			//$$ 				.putIVec3(floorX, floorY, floorZ)
+			//$$ 				.putFloat(1.0F)
+			//$$ 				.putVec3(floorX - camera.x, floorY - camera.y, floorZ - camera.z)
+			//$$ 				.putFloat(0.0F)
+			//$$ 				.putVec2(Minecraft.getInstance().getWindow().getWidth(), Minecraft.getInstance().getWindow().getHeight())
+			//$$ 				.putInt(0).putInt(0)
+			//$$ 				.get());
+			//#elseif MC >= 1.21.11
 			//$$ int floorX = Mth.floor(camera.x);
 			//$$ int floorY = Mth.floor(camera.y);
 			//$$ int floorZ = Mth.floor(camera.z);
@@ -541,14 +554,13 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 		// 按距离降序排列（远的先画），负号使 Comparator 从大到小
 		orderedMeshes.sort(Comparator.comparingDouble(mesh -> -mesh.distanceTo(camera)));
 		//#if MC >= 26.3
-		//$$ DynamicGpuData.Transform[] transforms = new DynamicGpuData.Transform[orderedMeshes.size()];
+		//$$ DynamicGpuData.ChunkSectionInfo[] sections = new DynamicGpuData.ChunkSectionInfo[orderedMeshes.size()];
 		//$$ for (int i = 0; i < orderedMeshes.size(); i++) {
 		//$$ 	ChunkMesh mesh = orderedMeshes.get(i);
-		//$$ 	transforms[i] = new DynamicGpuData.Transform(RenderSystem.getModelViewMatrixCopy(), new Vector4f(1.0F),
-		//$$ 			new Vector3f(mesh.chunk().getMinBlockX() - camera.x, -camera.y,
-		//$$ 					mesh.chunk().getMinBlockZ() - camera.z), new Matrix4f());
+		//$$ 	sections[i] = new DynamicGpuData.ChunkSectionInfo(mesh.chunk().getMinBlockX(), 0,
+		//$$ 			mesh.chunk().getMinBlockZ(), 1.0F);
 		//$$ }
-		//$$ GpuBufferSlice[] transformUniforms = RenderSystem.getDynamicUniforms().writeTransforms(transforms);
+		//$$ GpuBufferSlice[] sectionUniforms = RenderSystem.getDynamicUniforms().writeChunkSections(sections);
 		//#elseif MC >= 1.21.11
 		//$$ DynamicUniforms.ChunkSectionInfo[] infos = new DynamicUniforms.ChunkSectionInfo[orderedMeshes.size()];
 		//$$ for (int i = 0; i < orderedMeshes.size(); i++) {
@@ -600,9 +612,9 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 		IndexType sharedIndexType = maxSequentialIndices == 0 ? null : sequential.type();
 		// 先画不透明层，再按远到近绘制半透明层
 		//#if MC >= 26.3
-		//$$ this.renderLayerGroup(orderedMeshes, transformUniforms, atlas, sharedIndex, sharedIndexType,
+		//$$ this.renderLayerGroup(orderedMeshes, sectionUniforms, atlas, sharedIndex, sharedIndexType,
 		//$$ 		ChunkSectionLayerGroup.OPAQUE);
-		//$$ this.renderLayerGroup(orderedMeshes, transformUniforms, atlas, sharedIndex, sharedIndexType,
+		//$$ this.renderLayerGroup(orderedMeshes, sectionUniforms, atlas, sharedIndex, sharedIndexType,
 		//$$ 		ChunkSectionLayerGroup.TRANSLUCENT);
 		//#elseif MC >= 1.21.11
 		//$$ this.renderLayerGroup(orderedMeshes, sectionUniforms, atlas, sharedIndex, sharedIndexType,
@@ -641,6 +653,10 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 			//#else
 			pass.bindSampler("Sampler2", Minecraft.getInstance().gameRenderer.lightTexture().getTextureView());
 			//#endif
+			//#if MC >= 26.3
+			//$$ pass.setUniform("TerrainUniform", RenderSystem.getDynamicUniforms().writeTerrainTransform(
+			//$$ 		RenderSystem.getModelViewMatrixCopy(), atlas.getWidth(0), atlas.getHeight(0)));
+			//#endif
 			for (ChunkSectionLayer layer : group.layers()) {
 				//#if MC >= 26.3
 				//$$ pass.setPipeline(RenderSystem.getCompiledPipeline(layer.pipeline(false)));
@@ -666,7 +682,7 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 					//#if MC >= 26.3
 					//$$ draws.add(new RenderPass.Draw<>(0, mesh.vertexBuffer(), mesh.indexBuffer(),
 					//$$ 		mesh.indexBuffer() == null ? null : mesh.indexType(), 0, mesh.indexCount(), 0,
-					//$$ 		(slices, uploader) -> uploader.setUniform("DynamicTransforms", slices[uniformIndex])));
+					//$$ 		(slices, uploader) -> uploader.setUniform("ChunkSection", slices[uniformIndex])));
 					//#elseif MC >= 26.2
 					//$$ draws.add(new RenderPass.Draw<>(0, mesh.vertexBuffer(), mesh.indexBuffer(),
 					//$$ 		mesh.indexBuffer() == null ? null : mesh.indexType(), 0, mesh.indexCount(), 0,
@@ -687,7 +703,7 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
 				}
 				if (!draws.isEmpty()) {
 					//#if MC >= 26.3
-					//$$ pass.drawMultipleIndexed(draws, sharedIndex, sharedIndexType, List.of("DynamicTransforms"), meshUniforms);
+					//$$ pass.drawMultipleIndexed(draws, sharedIndex, sharedIndexType, List.of("ChunkSection"), meshUniforms);
 					//#elseif MC >= 1.21.11
 					//$$ pass.drawMultipleIndexed(draws, sharedIndex, sharedIndexType, List.of("ChunkSection"), meshUniforms);
 					//#else
