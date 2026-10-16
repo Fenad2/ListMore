@@ -32,7 +32,6 @@ public class MinecraftMixin {
 	@Inject(method = "continueAttack", at = @At("HEAD"), cancellable = true)
 	private void listmore$stopAfterSingleBlockMining(boolean leftClick, CallbackInfo ci) {
 		if (!leftClick) {
-			SingleBlockMining.resetAttackCycle();
 			return;
 		}
 
