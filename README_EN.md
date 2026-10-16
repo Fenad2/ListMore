@@ -63,4 +63,4 @@ Please report issues and suggestions via [GitHub Issues](https://github.com/Fena
 
 ## License
 
-This project is licensed under [LGPL\-3\.0](https://www.doubao.cn).
+This project is licensed under [LGPL\-3\.0].
