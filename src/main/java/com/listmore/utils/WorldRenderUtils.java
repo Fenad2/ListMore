@@ -15,7 +15,8 @@ import net.minecraft.world.phys.Vec3;
 public final class WorldRenderUtils {
 	private WorldRenderUtils() {
 	}
-//TODO 需要真正实现完整化渲染封装，包括但不限于渲染样式、是否深度测试
+//TODO: 应该要再耦合malilib的，太麻烦了。暂时鸽了
+//TODO: 想去做一个轮廓合并的效果
 	public static Vec3 getCameraPosition() {
 		//#if MC >= 26.2
 		//$$ return Minecraft.getInstance().gameRenderer.mainCamera().position();
