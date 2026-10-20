@@ -58,5 +58,14 @@
   "listmore.config.generic.comment.singleBlockMining": "Mine at most one block per attack press; release and press again to mine another",
   "listmore.config.generic.name.singleBlockPlacement": "Single Block Placement",
   "listmore.config.generic.prettyName.singleBlockPlacement": "Single Block Placement",
-  "listmore.config.generic.comment.singleBlockPlacement": "Place at most one block per use press; release and press again to place another"
+  "listmore.config.generic.comment.singleBlockPlacement": "Place at most one block per use press; release and press again to place another",
+  "listmore.config.generic.name.soundSourceHighlightEnabled": "Sound Source Highlight",
+  "listmore.config.generic.prettyName.soundSourceHighlightEnabled": "Sound Source Highlight",
+  "listmore.config.generic.comment.soundSourceHighlightEnabled": "Temporarily highlight known entity and block sound sources",
+  "listmore.config.generic.name.soundSourceHighlightDurationTicks": "Sound Source Highlight Duration",
+  "listmore.config.generic.prettyName.soundSourceHighlightDurationTicks": "Sound Source Highlight Duration",
+  "listmore.config.generic.comment.soundSourceHighlightDurationTicks": "How long a detected sound source stays highlighted, in ticks",
+  "listmore.config.generic.name.soundSourceHighlightBlockColor": "Sound Source Block Outline Color",
+  "listmore.config.generic.prettyName.soundSourceHighlightBlockColor": "Sound Source Block Outline Color",
+  "listmore.config.generic.comment.soundSourceHighlightBlockColor": "Set the outline color for highlighted block sound sources"
 }

@@ -40,6 +40,9 @@ public class ListMoreConfigs implements IConfigHandler {
 		public static final ConfigBoolean ENTITY_HIGHLIGHT_OUTLINE_ENABLED = createEntityHighlightOutlineEnabled();
 		public static final ConfigStringList ENTITY_HIGHLIGHT_OUTLINE_LIST = createEntityHighlightOutlineList();
 		public static final ConfigColor ENTITY_HIGHLIGHT_OUTLINE_COLOR = createEntityHighlightOutlineColor();
+		public static final ConfigBoolean SOUND_SOURCE_HIGHLIGHT_ENABLED = createSoundSourceHighlightEnabled();
+		public static final ConfigInteger SOUND_SOURCE_HIGHLIGHT_DURATION_TICKS = createSoundSourceHighlightDurationTicks();
+		public static final ConfigColor SOUND_SOURCE_HIGHLIGHT_BLOCK_COLOR = createSoundSourceHighlightBlockColor();
 		public static final ConfigBoolean ENTITY_RENDERING_BLACKLIST = createEntityRenderingBlacklist();
 		public static final ConfigStringList ENTITY_RENDERING_BLACKLIST_LIST = createEntityRenderingBlacklistList();
 		public static final ConfigInteger ENTITY_RENDERING_BLACKLIST_RANGE = createEntityRenderingBlacklistRange();
@@ -57,6 +60,9 @@ public class ListMoreConfigs implements IConfigHandler {
 			ENTITY_HIGHLIGHT_OUTLINE_ENABLED,
 			ENTITY_HIGHLIGHT_OUTLINE_LIST,
 			ENTITY_HIGHLIGHT_OUTLINE_COLOR,
+			SOUND_SOURCE_HIGHLIGHT_ENABLED,
+			SOUND_SOURCE_HIGHLIGHT_DURATION_TICKS,
+			SOUND_SOURCE_HIGHLIGHT_BLOCK_COLOR,
 			ENTITY_RENDERING_BLACKLIST,
 			ENTITY_RENDERING_BLACKLIST_LIST,
 			ENTITY_RENDERING_BLACKLIST_RANGE,
@@ -78,6 +84,9 @@ public class ListMoreConfigs implements IConfigHandler {
 			ENTITY_HIGHLIGHT_OUTLINE_ENABLED,
 			ENTITY_HIGHLIGHT_OUTLINE_LIST,
 			ENTITY_HIGHLIGHT_OUTLINE_COLOR,
+			SOUND_SOURCE_HIGHLIGHT_ENABLED,
+			SOUND_SOURCE_HIGHLIGHT_DURATION_TICKS,
+			SOUND_SOURCE_HIGHLIGHT_BLOCK_COLOR,
 			ENTITY_RENDERING_BLACKLIST,
 			ENTITY_RENDERING_BLACKLIST_LIST,
 			ENTITY_RENDERING_BLACKLIST_RANGE,
@@ -111,6 +120,18 @@ public class ListMoreConfigs implements IConfigHandler {
 
 	private static ConfigColor createEntityHighlightOutlineColor() {
 		return createConfig(new ConfigColor("entityHighlightOutlineColor", "#FFFFFFFF"));
+	}
+
+	private static ConfigBoolean createSoundSourceHighlightEnabled() {
+		return createConfig(new ConfigBoolean("soundSourceHighlightEnabled", false));
+	}
+
+	private static ConfigInteger createSoundSourceHighlightDurationTicks() {
+		return createConfig(new ConfigInteger("soundSourceHighlightDurationTicks", 10, 1, 100));
+	}
+
+	private static ConfigColor createSoundSourceHighlightBlockColor() {
+		return createConfig(new ConfigColor("soundSourceHighlightBlockColor", "#FFFFFFFF"));
 	}
 
 	private static ConfigBoolean createEntityRenderingBlacklist() {

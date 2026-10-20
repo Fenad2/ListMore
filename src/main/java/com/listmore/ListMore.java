@@ -2,9 +2,11 @@ package com.listmore;
 
 import com.listmore.config.ListMoreConfigGui;
 import com.listmore.config.ListMoreConfigs;
+import com.listmore.feature.SoundSourceHighlightManager;
 import com.listmore.input.CopyTargetIdInputHandler;
 import com.listmore.render.InvalidFurnaceInputRenderer;
 import com.listmore.render.ProjectileLandingRenderer;
+import com.listmore.render.SoundSourceHighlightRenderer;
 import com.listmore.render.TntExplosionPreviewRenderer;
 
 import fi.dy.masa.malilib.event.InitializationHandler;
@@ -28,11 +30,13 @@ public class ListMore implements ClientModInitializer {
 			@Override
 			public void registerModHandlers() {
 				initializeConfigs();
+				SoundSourceHighlightManager.getInstance().registerSoundListener();
 				CopyTargetIdInputHandler.getInstance().init();
 				InputEventHandler.getKeybindManager().registerKeybindProvider(CopyTargetIdInputHandler.getInstance());
 				RenderEventHandler.getInstance().registerWorldLastRenderer(ProjectileLandingRenderer.getInstance());
 				RenderEventHandler.getInstance().registerWorldLastRenderer(InvalidFurnaceInputRenderer.getInstance());
 				RenderEventHandler.getInstance().registerWorldLastRenderer(TntExplosionPreviewRenderer.getInstance());
+				RenderEventHandler.getInstance().registerWorldLastRenderer(SoundSourceHighlightRenderer.getInstance());
 				Registry.CONFIG_SCREEN.registerConfigScreenFactory(new ModInfo(MOD_ID, "ListMore", ListMoreConfigGui::new));
 			}
 		});

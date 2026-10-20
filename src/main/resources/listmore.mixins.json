@@ -6,9 +6,11 @@
 		"MinecraftMixin",
 		"MultiPlayerGameModeMixin",
 		"BlockItemMixin",
+		"ClientPacketListenerMixin",
 		"EntityMixin",
 		"EntityRenderDispatcherMixin",
 		"accessor.GuiListBaseAccessor"${legacy_gui_graphics_accessors},
+		"accessor.EntityBoundSoundInstanceAccessor",
 		"litematica.GuiSchematicBrowserBaseMixin"
 	],
 	"mixins": [

@@ -58,5 +58,14 @@
   "listmore.config.generic.comment.singleBlockMining": "每次按住左键最多挖掘一个方块，完成后必须重新点击/按住才可进行下一次挖掘",
   "listmore.config.generic.name.singleBlockPlacement": "单方块放置",
   "listmore.config.generic.prettyName.singleBlockPlacement": "单方块放置",
-  "listmore.config.generic.comment.singleBlockPlacement": "每次按住右键最多放置一个方块，完成后必须重新点击/按住才可进行下一次放置"
+  "listmore.config.generic.comment.singleBlockPlacement": "每次按住右键最多放置一个方块，完成后必须重新点击/按住才可进行下一次放置",
+  "listmore.config.generic.name.soundSourceHighlightEnabled": "声音源高亮",
+  "listmore.config.generic.prettyName.soundSourceHighlightEnabled": "声音源高亮",
+  "listmore.config.generic.comment.soundSourceHighlightEnabled": "临时高亮能够确认来源的实体和方块声音",
+  "listmore.config.generic.name.soundSourceHighlightDurationTicks": "声音源高亮-持续时间",
+  "listmore.config.generic.prettyName.soundSourceHighlightDurationTicks": "声音源高亮持续时间",
+  "listmore.config.generic.comment.soundSourceHighlightDurationTicks": "检测到声音源后保持高亮的游戏刻数",
+  "listmore.config.generic.name.soundSourceHighlightBlockColor": "声音源高亮-方块描边颜色",
+  "listmore.config.generic.prettyName.soundSourceHighlightBlockColor": "声音源方块描边颜色",
+  "listmore.config.generic.comment.soundSourceHighlightBlockColor": "设置被高亮方块声音源的描边颜色"
 }
