@@ -87,11 +87,8 @@ public final class SoundSourceHighlightRenderer implements IRenderer {
 		}
 
 		Color4f outlineColor = getBlockOutlineColor();
-		Color4f fillColor = new Color4f(
-			outlineColor.r,
-			outlineColor.g,
-			outlineColor.b,
-			outlineColor.a * 0.3F
+		Color4f fillColor = outlineColor.withAlpha(
+			ListMoreConfigs.Generic.SOUND_SOURCE_HIGHLIGHT_BLOCK_OPACITY.getFloatValue()
 		);
 		Vec3 cameraPosition = WorldRenderUtils.getCameraPosition();
 

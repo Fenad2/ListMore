@@ -67,5 +67,8 @@
   "listmore.config.generic.comment.soundSourceHighlightDurationTicks": "检测到声音源后保持高亮的游戏刻数",
   "listmore.config.generic.name.soundSourceHighlightBlockColor": "声音源高亮-方块描边颜色",
   "listmore.config.generic.prettyName.soundSourceHighlightBlockColor": "声音源方块描边颜色",
-  "listmore.config.generic.comment.soundSourceHighlightBlockColor": "设置被高亮方块声音源的描边颜色"
+  "listmore.config.generic.comment.soundSourceHighlightBlockColor": "设置被高亮方块声音源的描边颜色",
+  "listmore.config.generic.name.soundSourceHighlightBlockOpacity": "声音源高亮-方块填充透明度",
+  "listmore.config.generic.prettyName.soundSourceHighlightBlockOpacity": "声音源方块填充透明度",
+  "listmore.config.generic.comment.soundSourceHighlightBlockOpacity": "设置被高亮方块声音源填充部分的透明度，0 为完全透明"
 }
