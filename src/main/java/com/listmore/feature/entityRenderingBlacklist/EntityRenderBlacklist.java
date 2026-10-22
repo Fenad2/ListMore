@@ -1,4 +1,4 @@
-package com.listmore.render;
+package com.listmore.feature.entityRenderingBlacklist;
 
 import java.util.HashSet;
 import java.util.List;

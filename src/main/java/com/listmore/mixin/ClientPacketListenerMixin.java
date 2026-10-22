@@ -1,6 +1,6 @@
 package com.listmore.mixin;
 
-import com.listmore.feature.SoundSourceHighlightManager;
+import com.listmore.feature.soundSourceHighlight.SoundSourceHighlightManager;
 
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEventPacket;

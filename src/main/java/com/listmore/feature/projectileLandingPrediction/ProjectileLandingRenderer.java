@@ -1,4 +1,4 @@
-package com.listmore.render;
+package com.listmore.feature.projectileLandingPrediction;
 
 import com.listmore.config.ListMoreConfigs;
 import com.listmore.utils.WorldRenderUtils;
@@ -152,7 +152,6 @@ public final class ProjectileLandingRenderer implements IRenderer {
 				return new LandingPoint(current, false);
 			}
 		}
-
 		return new LandingPoint(current, false);
 	}
 

@@ -2,12 +2,12 @@ package com.listmore;
 
 import com.listmore.config.ListMoreConfigGui;
 import com.listmore.config.ListMoreConfigs;
-import com.listmore.feature.SoundSourceHighlightManager;
-import com.listmore.input.CopyTargetIdInputHandler;
-import com.listmore.render.InvalidFurnaceInputRenderer;
-import com.listmore.render.ProjectileLandingRenderer;
-import com.listmore.render.SoundSourceHighlightRenderer;
-import com.listmore.render.TntExplosionPreviewRenderer;
+import com.listmore.feature.copyTargetId.CopyTargetIdInputHandler;
+import com.listmore.feature.invalidFurnaceInput.InvalidFurnaceInputRenderer;
+import com.listmore.feature.projectileLandingPrediction.ProjectileLandingRenderer;
+import com.listmore.feature.soundSourceHighlight.SoundSourceHighlightManager;
+import com.listmore.feature.soundSourceHighlight.SoundSourceHighlightRenderer;
+import com.listmore.feature.tntExplosionPreview.TntExplosionPreviewRenderer;
 
 import fi.dy.masa.malilib.event.InitializationHandler;
 import fi.dy.masa.malilib.event.InputEventHandler;

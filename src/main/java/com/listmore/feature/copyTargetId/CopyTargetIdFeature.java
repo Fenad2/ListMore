@@ -1,4 +1,4 @@
-package com.listmore.feature;
+package com.listmore.feature.copyTargetId;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;

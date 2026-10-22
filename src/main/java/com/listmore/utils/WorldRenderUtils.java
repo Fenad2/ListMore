@@ -13,7 +13,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 
 public final class WorldRenderUtils {
-	private static final float OUTLINE_WIDTH = 2.0F;
+	public static final float OUTLINE_WIDTH = 2.0F;
 
 	private WorldRenderUtils() {
 	}
@@ -51,7 +51,7 @@ public final class WorldRenderUtils {
 		}
 	}
 
-	// 批量绘制完整方块的逐方块描边（旧样式）
+	// 批量绘制完整方块的逐方块描边
 	// id渲染资源标识、positions要绘制的方块世界坐标、cameraPosition当前相机世界坐标、inset方块边界内缩量、outlineColor描边颜色
 	public static void drawBlockOutlines(String id, Iterable<BlockPos> positions, Vec3 cameraPosition,
 			float inset, Color4f outlineColor) {
@@ -74,7 +74,7 @@ public final class WorldRenderUtils {
 		}
 	}
 
-	// 批量绘制完整方块的半透明填充和描边（逐方块，旧样式）
+	// 批量绘制完整方块的半透明填充和描边
 	// id渲染资源标识、positions要绘制的方块世界坐标、cameraPosition当前相机世界坐标、inset方块边界内缩量、fillColor填充颜色、outlineColor描边颜色
 	public static void drawFilledOutlinedBlockBoxes(String id, Iterable<BlockPos> positions, Vec3 cameraPosition,
 			float inset, Color4f fillColor, Color4f outlineColor) {
@@ -99,80 +99,8 @@ public final class WorldRenderUtils {
 		}
 	}
 
-	// 绘制合并后的方块高亮填充，只画体素并集的外表面
-	// id渲染资源标识、geometry缓存的合并轮廓、cameraPosition当前相机世界坐标、color填充颜色
-	public static void drawMergedBlockFill(String id, BlockHighlightGeometry geometry, Vec3 cameraPosition,
-			Color4f color) {
-		if (geometry.faceCount() == 0 || color.a <= 0.0F) {
-			return;
-		}
-
-		RenderContext context = createFillContext(id);
-		try {
-			BufferBuilder builder = context.getBuilder();
-			int[] faces = geometry.faces();
-			int faceCount = geometry.faceCount();
-
-			for (int faceIndex = 0; faceIndex < faceCount; faceIndex++) {
-				int base = faceIndex * 4;
-				int x = faces[base];
-				int y = faces[base + 1];
-				int z = faces[base + 2];
-				int face = faces[base + 3];
-				int cornerBase = face * 4;
-
-				for (int corner = 0; corner < 4; corner++) {
-					int cornerIndex = cornerBase + corner;
-					addQuadVertex(builder,
-						(float) (x + BlockHighlightGeometry.FACE_CORNER_X[cornerIndex] - cameraPosition.x),
-						(float) (y + BlockHighlightGeometry.FACE_CORNER_Y[cornerIndex] - cameraPosition.y),
-						(float) (z + BlockHighlightGeometry.FACE_CORNER_Z[cornerIndex] - cameraPosition.z),
-						color);
-				}
-			}
-			draw(context, builder.build());
-		} finally {
-			closeQuietly(context);
-		}
-	}
-
-	// 绘制合并后的方块高亮轮廓，只画体素并集的硬边
-	// id渲染资源标识、geometry缓存的合并轮廓、cameraPosition当前相机世界坐标、color描边颜色
-	public static void drawMergedBlockOutline(String id, BlockHighlightGeometry geometry, Vec3 cameraPosition,
-			Color4f color) {
-		if (geometry.edgeCount() == 0 || color.a <= 0.0F) {
-			return;
-		}
-
-		RenderContext context = createOutlineContext(id);
-		try {
-			BufferBuilder builder = context.getBuilder();
-			int[] edges = geometry.edges();
-			int edgeCount = geometry.edgeCount();
-
-			for (int edgeIndex = 0; edgeIndex < edgeCount; edgeIndex++) {
-				int base = edgeIndex * 4;
-				int x = edges[base];
-				int y = edges[base + 1];
-				int z = edges[base + 2];
-				int axis = edges[base + 3];
-				int endX = axis == 0 ? x + 1 : x;
-				int endY = axis == 1 ? y + 1 : y;
-				int endZ = axis == 2 ? z + 1 : z;
-
-				drawLine(builder,
-					(float) (x - cameraPosition.x), (float) (y - cameraPosition.y), (float) (z - cameraPosition.z),
-					(float) (endX - cameraPosition.x), (float) (endY - cameraPosition.y), (float) (endZ - cameraPosition.z),
-					color);
-			}
-			draw(context, builder.build());
-		} finally {
-			closeQuietly(context);
-		}
-	}
-
-	// 填充
-	private static RenderContext createFillContext(String id) {
+	// 创建填充渲染上下文
+	public static RenderContext createFillContext(String id) {
 		return new RenderContext(
 			() -> id,
 			MaLiLibPipelines.POSITION_COLOR_MASA_NO_DEPTH_NO_CULL
@@ -183,7 +111,7 @@ public final class WorldRenderUtils {
 	}
 
 	// 旧版本线宽由RenderContext设置，新版本在线段绘制调用中指定
-	private static RenderContext createOutlineContext(String id) {
+	public static RenderContext createOutlineContext(String id) {
 		RenderContext context = new RenderContext(
 			() -> id,
 			MaLiLibPipelines.DEBUG_LINES_MASA_SIMPLE_NO_DEPTH_NO_CULL
@@ -207,26 +135,7 @@ public final class WorldRenderUtils {
 			, builder);
 	}
 
-	// 绘制一条线段，统一各版本的顶点与线宽参数差异
-	private static void drawLine(BufferBuilder builder, float minX, float minY, float minZ,
-			float maxX, float maxY, float maxZ, Color4f color) {
-		addLineVertex(builder, minX, minY, minZ, color);
-		addLineVertex(builder, maxX, maxY, maxZ, color);
-	}
-
-	private static void addLineVertex(BufferBuilder builder, float x, float y, float z, Color4f color) {
-		//#if MC >= 1.21.11
-		//$$ builder.addVertex(x, y, z).setColor(color.r, color.g, color.b, color.a).setLineWidth(OUTLINE_WIDTH);
-		//#else
-		builder.addVertex(x, y, z).setColor(color.r, color.g, color.b, color.a);
-		//#endif
-	}
-
-	private static void addQuadVertex(BufferBuilder builder, float x, float y, float z, Color4f color) {
-		builder.addVertex(x, y, z).setColor(color.r, color.g, color.b, color.a);
-	}
-
-	private static void draw(RenderContext context, MeshData mesh) {
+	public static void draw(RenderContext context, MeshData mesh) {
 		if (mesh == null) {
 			return;
 		}
@@ -237,7 +146,7 @@ public final class WorldRenderUtils {
 		}
 	}
 
-	private static void closeQuietly(RenderContext context) {
+	public static void closeQuietly(RenderContext context) {
 		try {
 			context.close();
 		} catch (Exception ignored) {

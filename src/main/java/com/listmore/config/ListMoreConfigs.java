@@ -8,7 +8,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.listmore.ListMore;
-import com.listmore.render.EntityRenderBlacklist;
+import com.listmore.feature.entityRenderingBlacklist.EntityRenderBlacklist;
 
 import fi.dy.masa.malilib.config.ConfigManager;
 import fi.dy.masa.malilib.config.ConfigUtils;

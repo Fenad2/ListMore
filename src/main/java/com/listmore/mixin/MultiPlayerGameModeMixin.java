@@ -1,7 +1,7 @@
 package com.listmore.mixin;
 
-import com.listmore.feature.SingleBlockMining;
-import com.listmore.feature.SingleBlockPlacement;
+import com.listmore.feature.singleBlockInteraction.SingleBlockMining;
+import com.listmore.feature.singleBlockInteraction.SingleBlockPlacement;
 
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
