@@ -1,4 +1,4 @@
-package com.listmore.feature;
+package com.listmore.feature.soundSourceHighlight;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -26,12 +26,10 @@ import net.minecraft.world.phys.AABB;
 
 public final class SoundSourceHighlightManager implements SoundEventListener {
 	private static final SoundSourceHighlightManager INSTANCE = new SoundSourceHighlightManager();
-
 	private final Map<Integer, Long> highlightedEntityIds = new HashMap<>();
 	private final Map<BlockPos, Long> highlightedBlockPositions = new HashMap<>();
 	private ClientLevel trackedLevel;
 	private boolean soundListenerRegistered;
-
 	private SoundSourceHighlightManager() {
 	}
 

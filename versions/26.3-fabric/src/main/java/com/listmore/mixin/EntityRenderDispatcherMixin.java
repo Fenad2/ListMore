@@ -1,6 +1,6 @@
 package com.listmore.mixin;
 
-import com.listmore.render.EntityRenderBlacklist;
+import com.listmore.feature.entityRenderingBlacklist.EntityRenderBlacklist;
 
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;

@@ -13,10 +13,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 
 public final class WorldRenderUtils {
+	public static final float OUTLINE_WIDTH = 2.0F;
+
 	private WorldRenderUtils() {
 	}
 //TODO: 应该要再耦合malilib的，太麻烦了。暂时鸽了
-//TODO: 想去做一个轮廓合并的效果
 	public static Vec3 getCameraPosition() {
 		//#if MC >= 26.2
 		//$$ return Minecraft.getInstance().gameRenderer.mainCamera().position();
@@ -27,15 +28,13 @@ public final class WorldRenderUtils {
 		//#endif
 	}
 
-	// 批量绘制完整方块的半透明填充和描边
-	// id渲染资源标识、positions要绘制的方块世界坐标、cameraPosition当前相机世界坐标、inset方块边界内缩量、fillColor填充颜色、outlineColor描边颜色
-	public static void drawFilledOutlinedBlockBoxes(String id, Iterable<BlockPos> positions, Vec3 cameraPosition,
-			float inset, Color4f fillColor, Color4f outlineColor) {
-		RenderContext fillContext = createFillContext(id + "_fill");
-		RenderContext outlineContext = createOutlineContext(id + "_outline");
+	// 批量绘制完整方块的半透明填充
+	// id渲染资源标识、positions要绘制的方块世界坐标、cameraPosition当前相机世界坐标、inset方块边界内缩量、fillColor填充颜色
+	public static void drawBlockFills(String id, Iterable<BlockPos> positions, Vec3 cameraPosition,
+			float inset, Color4f fillColor) {
+		RenderContext context = createFillContext(id);
 		try {
-			BufferBuilder fillBuilder = fillContext.getBuilder();
-			BufferBuilder outlineBuilder = outlineContext.getBuilder();
+			BufferBuilder builder = context.getBuilder();
 			for (BlockPos position : positions) {
 				float minX = (float) (position.getX() + inset - cameraPosition.x);
 				float minY = (float) (position.getY() + inset - cameraPosition.y);
@@ -44,15 +43,43 @@ public final class WorldRenderUtils {
 				float maxY = minY + 1.0F - inset * 2.0F;
 				float maxZ = minZ + 1.0F - inset * 2.0F;
 
-				RenderUtils.drawBoxAllSidesBatchedQuads(minX, minY, minZ, maxX, maxY, maxZ, fillColor, fillBuilder);
-				drawBoxOutline(minX, minY, minZ, maxX, maxY, maxZ, outlineColor, outlineBuilder);
+				RenderUtils.drawBoxAllSidesBatchedQuads(minX, minY, minZ, maxX, maxY, maxZ, fillColor, builder);
 			}
-			draw(fillContext, fillBuilder.build());
-			draw(outlineContext, outlineBuilder.build());
+			draw(context, builder.build());
 		} finally {
-			closeQuietly(fillContext);
-			closeQuietly(outlineContext);
+			closeQuietly(context);
 		}
+	}
+
+	// 批量绘制完整方块的逐方块描边
+	// id渲染资源标识、positions要绘制的方块世界坐标、cameraPosition当前相机世界坐标、inset方块边界内缩量、outlineColor描边颜色
+	public static void drawBlockOutlines(String id, Iterable<BlockPos> positions, Vec3 cameraPosition,
+			float inset, Color4f outlineColor) {
+		RenderContext context = createOutlineContext(id);
+		try {
+			BufferBuilder builder = context.getBuilder();
+			for (BlockPos position : positions) {
+				float minX = (float) (position.getX() + inset - cameraPosition.x);
+				float minY = (float) (position.getY() + inset - cameraPosition.y);
+				float minZ = (float) (position.getZ() + inset - cameraPosition.z);
+				float maxX = minX + 1.0F - inset * 2.0F;
+				float maxY = minY + 1.0F - inset * 2.0F;
+				float maxZ = minZ + 1.0F - inset * 2.0F;
+
+				drawBoxOutline(minX, minY, minZ, maxX, maxY, maxZ, outlineColor, builder);
+			}
+			draw(context, builder.build());
+		} finally {
+			closeQuietly(context);
+		}
+	}
+
+	// 批量绘制完整方块的半透明填充和描边
+	// id渲染资源标识、positions要绘制的方块世界坐标、cameraPosition当前相机世界坐标、inset方块边界内缩量、fillColor填充颜色、outlineColor描边颜色
+	public static void drawFilledOutlinedBlockBoxes(String id, Iterable<BlockPos> positions, Vec3 cameraPosition,
+			float inset, Color4f fillColor, Color4f outlineColor) {
+		drawBlockFills(id + "_fill", positions, cameraPosition, inset, fillColor);
+		drawBlockOutlines(id + "_outline", positions, cameraPosition, inset, outlineColor);
 	}
 
 	// 绘制一个只有描边的立方体
@@ -72,8 +99,8 @@ public final class WorldRenderUtils {
 		}
 	}
 
-	// 填充
-	private static RenderContext createFillContext(String id) {
+	// 创建填充渲染上下文
+	public static RenderContext createFillContext(String id) {
 		return new RenderContext(
 			() -> id,
 			MaLiLibPipelines.POSITION_COLOR_MASA_NO_DEPTH_NO_CULL
@@ -84,7 +111,7 @@ public final class WorldRenderUtils {
 	}
 
 	// 旧版本线宽由RenderContext设置，新版本在线段绘制调用中指定
-	private static RenderContext createOutlineContext(String id) {
+	public static RenderContext createOutlineContext(String id) {
 		RenderContext context = new RenderContext(
 			() -> id,
 			MaLiLibPipelines.DEBUG_LINES_MASA_SIMPLE_NO_DEPTH_NO_CULL
@@ -93,7 +120,7 @@ public final class WorldRenderUtils {
 			//#endif
 		);
 		//#if MC < 1.21.11
-		context.lineWidth(2.0F);
+		context.lineWidth(OUTLINE_WIDTH);
 		//#endif
 		return context;
 	}
@@ -103,12 +130,12 @@ public final class WorldRenderUtils {
 			Color4f color, BufferBuilder builder) {
 		RenderUtils.drawBoxAllEdgesBatchedLines(minX, minY, minZ, maxX, maxY, maxZ, color
 			//#if MC >= 1.21.11
-			//$$ , 2.0F
+			//$$ , OUTLINE_WIDTH
 			//#endif
 			, builder);
 	}
 
-	private static void draw(RenderContext context, MeshData mesh) {
+	public static void draw(RenderContext context, MeshData mesh) {
 		if (mesh == null) {
 			return;
 		}
@@ -119,7 +146,7 @@ public final class WorldRenderUtils {
 		}
 	}
 
-	private static void closeQuietly(RenderContext context) {
+	public static void closeQuietly(RenderContext context) {
 		try {
 			context.close();
 		} catch (Exception ignored) {

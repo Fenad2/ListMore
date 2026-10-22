@@ -1,8 +1,8 @@
-package com.listmore.render;
+package com.listmore.feature.entityHighlightOutline;
 
 import com.listmore.config.ListEntryToggleConfig;
 import com.listmore.config.ListMoreConfigs;
-import com.listmore.feature.SoundSourceHighlightManager;
+import com.listmore.feature.soundSourceHighlight.SoundSourceHighlightManager;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;

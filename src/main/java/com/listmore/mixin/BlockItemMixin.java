@@ -1,6 +1,6 @@
 package com.listmore.mixin;
 
-import com.listmore.feature.SingleBlockPlacement;
+import com.listmore.feature.singleBlockInteraction.SingleBlockPlacement;
 
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.BlockItem;

@@ -1,7 +1,7 @@
 package com.listmore.mixin;
 
 import com.listmore.config.ListMoreConfigs;
-import com.listmore.feature.CopyTargetIdFeature;
+import com.listmore.feature.copyTargetId.CopyTargetIdFeature;
 
 import fi.dy.masa.malilib.gui.GuiConfigsBase;
 import fi.dy.masa.malilib.gui.button.ButtonGeneric;
