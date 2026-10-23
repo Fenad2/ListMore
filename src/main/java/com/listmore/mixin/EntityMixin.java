@@ -1,6 +1,6 @@
 package com.listmore.mixin;
 
-import com.listmore.render.EntityOutlineRenderer;
+import com.listmore.feature.entityHighlightOutline.EntityOutlineRenderer;
 
 import net.minecraft.world.entity.Entity;
 

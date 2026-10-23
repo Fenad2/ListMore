@@ -1,4 +1,4 @@
-package com.listmore.feature;
+package com.listmore.feature.singleBlockInteraction;
 
 import com.listmore.config.ListMoreConfigs;
 

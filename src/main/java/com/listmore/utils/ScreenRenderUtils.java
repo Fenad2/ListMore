@@ -12,7 +12,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 
-/** TODO:该类暂时没有具体用处，只是抽离出来的一个工具类。 (-玩家追踪线)
+/** TODO:该类暂时没有具体用处，只是抽离出来的一个工具类。 (-玩家追踪线)，不如删了得了
  * 屏幕渲染相关的通用工具。
  * projectWorldPoint() 用于将任意世界坐标投影到 GUI 坐标。
  * projectBoundingBoxTopCenter() 用于将实体碰撞箱顶部中心投影到 GUI 坐标。

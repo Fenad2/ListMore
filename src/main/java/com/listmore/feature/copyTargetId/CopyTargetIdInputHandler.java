@@ -1,8 +1,7 @@
-package com.listmore.input;
+package com.listmore.feature.copyTargetId;
 
 import com.google.common.collect.ImmutableList;
 import com.listmore.config.ListMoreConfigs;
-import com.listmore.feature.CopyTargetIdFeature;
 
 import fi.dy.masa.malilib.hotkeys.IKeybindManager;
 import fi.dy.masa.malilib.hotkeys.IKeybindProvider;

@@ -1,7 +1,8 @@
-package com.listmore.render;
+package com.listmore.feature.entityHighlightOutline;
 
 import com.listmore.config.ListEntryToggleConfig;
 import com.listmore.config.ListMoreConfigs;
+import com.listmore.feature.soundSourceHighlight.SoundSourceHighlightManager;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -15,12 +16,16 @@ public final class EntityOutlineRenderer {
 		if (entity == null || entity.isRemoved()) {
 			return false;
 		}
-		if (!ListMoreConfigs.Generic.ENTITY_HIGHLIGHT_OUTLINE_ENABLED.getBooleanValue()) {
-			return false;
-		}
 
 		Minecraft client = Minecraft.getInstance();
 		if (client.player == null || client.level == null || entity == client.player) {
+			return false;
+		}
+
+		if (SoundSourceHighlightManager.getInstance().isEntityHighlighted(entity)) {
+			return true;
+		}
+		if (!ListMoreConfigs.Generic.ENTITY_HIGHLIGHT_OUTLINE_ENABLED.getBooleanValue()) {
 			return false;
 		}
 

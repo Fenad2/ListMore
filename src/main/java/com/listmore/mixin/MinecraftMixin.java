@@ -1,8 +1,8 @@
 package com.listmore.mixin;
 
-import com.listmore.feature.SingleBlockMining;
-import com.listmore.feature.SingleBlockPlacement;
-import com.listmore.render.EntityOutlineRenderer;
+import com.listmore.feature.entityHighlightOutline.EntityOutlineRenderer;
+import com.listmore.feature.singleBlockInteraction.SingleBlockMining;
+import com.listmore.feature.singleBlockInteraction.SingleBlockPlacement;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;

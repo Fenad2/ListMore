@@ -58,5 +58,17 @@
   "listmore.config.generic.comment.singleBlockMining": "每次按住左鍵最多挖掘一個方塊，完成後必須重新點擊/按住才能進行下一次挖掘",
   "listmore.config.generic.name.singleBlockPlacement": "單方塊放置",
   "listmore.config.generic.prettyName.singleBlockPlacement": "單方塊放置",
-  "listmore.config.generic.comment.singleBlockPlacement": "每次按住右鍵最多放置一個方塊，完成後必須重新點擊/按住才能進行下一次放置"
+  "listmore.config.generic.comment.singleBlockPlacement": "每次按住右鍵最多放置一個方塊，完成後必須重新點擊/按住才能進行下一次放置",
+  "listmore.config.generic.name.soundSourceHighlightEnabled": "聲音源凸顯",
+  "listmore.config.generic.prettyName.soundSourceHighlightEnabled": "聲音源凸顯",
+  "listmore.config.generic.comment.soundSourceHighlightEnabled": "暫時凸顯可確認來源的實體和方塊聲音",
+  "listmore.config.generic.name.soundSourceHighlightDurationTicks": "聲音源凸顯-持續時間",
+  "listmore.config.generic.prettyName.soundSourceHighlightDurationTicks": "聲音源凸顯持續時間",
+  "listmore.config.generic.comment.soundSourceHighlightDurationTicks": "偵測到聲音源後保持凸顯的遊戲刻數",
+  "listmore.config.generic.name.soundSourceHighlightBlockColor": "聲音源凸顯-方塊邊框顏色",
+  "listmore.config.generic.prettyName.soundSourceHighlightBlockColor": "聲音源方塊邊框顏色",
+  "listmore.config.generic.comment.soundSourceHighlightBlockColor": "設定被凸顯方塊聲音源的邊框顏色",
+  "listmore.config.generic.name.soundSourceHighlightBlockOpacity": "聲音源凸顯-方塊填充透明度",
+  "listmore.config.generic.prettyName.soundSourceHighlightBlockOpacity": "聲音源方塊填充透明度",
+  "listmore.config.generic.comment.soundSourceHighlightBlockOpacity": "設定被凸顯方塊聲音源填充部分的透明度"
 }
