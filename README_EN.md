@@ -40,6 +40,8 @@
 
 - **Single Block Placement**: Place at most one block per use press; release and press again to place another.
 
+- **Sound Source Highlight**: Highlight entities or blocks that are currently emitting sounds.
+
 ## Supported Versions
 
 |Minecraft Version|Mod Loader|Status|
