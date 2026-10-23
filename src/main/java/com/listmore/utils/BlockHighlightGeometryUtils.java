@@ -1,4 +1,4 @@
-package com.listmore.feature.soundSourceHighlight;
+package com.listmore.utils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -9,7 +9,7 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 
 import net.minecraft.core.BlockPos;
 
-public final class BlockHighlightGeometry {
+public final class BlockHighlightGeometryUtils {
 	private static final int FACE_COUNT = 6;
 	private static final int EDGES_PER_FACE = 4;
 	private static final int CORNERS_PER_FACE = 4;
@@ -98,7 +98,7 @@ public final class BlockHighlightGeometry {
 	private int[] faces = new int[INTS_PER_FACE * 16];
 	private int faceCount;
 
-	public BlockHighlightGeometry() {
+	public BlockHighlightGeometryUtils() {
 	}
 
 	public void rebuild(Collection<BlockPos> positions) {
