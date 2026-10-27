@@ -5,6 +5,7 @@ package com.listmore.feature.soundSourceHighlight;
 //#elseif MC >= 26.1
 //$$ import com.mojang.blaze3d.buffers.GpuBufferSlice;
 //#endif
+
 import com.listmore.ListMore;
 import com.listmore.config.ListMoreConfigs;
 import com.listmore.utils.BlockHighlightGeometryUtils;
@@ -41,104 +42,105 @@ import org.joml.Matrix4f;
 import java.util.Set;
 
 public final class SoundSourceHighlightRenderer implements IRenderer {
-	private static final long ERROR_LOG_INTERVAL_MS = 5000L;
-	private static final String BLOCK_FILL_ID = "listmore:sound_source_highlight_fill";
-	private static final String BLOCK_OUTLINE_ID = "listmore:sound_source_highlight_outline";
-	private static final SoundSourceHighlightRenderer INSTANCE = new SoundSourceHighlightRenderer();
-	private static long lastErrorLogTime;
-	private final BlockHighlightGeometryUtils blockGeometry = new BlockHighlightGeometryUtils();
-	private Set<BlockPos> highlightedPositions = Set.of();
-	private ClientLevel trackedLevel;
-	private long lastGeometryTick = Long.MIN_VALUE;
-	private SoundSourceHighlightRenderer() {
-	}
+    private static final long ERROR_LOG_INTERVAL_MS = 5000L;
+    private static final String BLOCK_FILL_ID = "listmore:sound_source_highlight_fill";
+    private static final String BLOCK_OUTLINE_ID = "listmore:sound_source_highlight_outline";
+    private static final SoundSourceHighlightRenderer INSTANCE = new SoundSourceHighlightRenderer();
+    private static long lastErrorLogTime;
+    private final BlockHighlightGeometryUtils blockGeometry = new BlockHighlightGeometryUtils();
+    private Set<BlockPos> highlightedPositions = Set.of();
+    private ClientLevel trackedLevel;
+    private long lastGeometryTick = Long.MIN_VALUE;
 
-	public static SoundSourceHighlightRenderer getInstance() {
-		return INSTANCE;
-	}
+    private SoundSourceHighlightRenderer() {
+    }
 
-	//#if MC >= 26.1
-	//$$ @Override
-	//$$ public void onExtractWorldLast(DeltaTracker deltaTracker, Camera camera, float partialTicks, ProfilerFiller profiler) {
-	//$$ 	SoundSourceHighlightManager.getInstance().tick();
-	//$$ }
-	//#else
-	@Override
-	public void onRenderWorldLastAdvanced(RenderTarget framebuffer, Matrix4f posMatrix, Matrix4f projMatrix,
-										Frustum frustum, Camera camera, RenderBuffers buffers, ProfilerFiller profiler) {
-		drawHighlights();
-	}
-	//#endif
+    public static SoundSourceHighlightRenderer getInstance() {
+        return INSTANCE;
+    }
 
-	//#if MC >= 26.3
-	//$$ @Override
-	//$$ public void onRenderWorldLast(RenderTarget framebuffer, CameraRenderState cameraState,
-	//$$ 								  Frustum culling, RenderBuffers buffers, GpuBufferSlice terrainFog,
-	//$$ 								  Vector4f fogColor, ProfilerFiller profiler) {
-	//$$ 	drawHighlights();
-	//$$ }
-	//#elseif MC >= 26.1
-	//$$ @Override
-	//$$ public void onRenderWorldLast(RenderTarget framebuffer, Matrix4fc modelViewMatrix, CameraRenderState cameraState,
-	//$$ 								  Frustum culling, RenderBuffers buffers, GpuBufferSlice terrainFog,
-	//$$ 								  Vector4f fogColor, ProfilerFiller profiler) {
-	//$$ 	drawHighlights();
-	//$$ }
-	//#endif
+    //#if MC >= 26.1
+    //$$ @Override
+    //$$ public void onExtractWorldLast(DeltaTracker deltaTracker, Camera camera, float partialTicks, ProfilerFiller profiler) {
+    //$$ 	SoundSourceHighlightManager.getInstance().tick();
+    //$$ }
+    //#else
+    @Override
+    public void onRenderWorldLastAdvanced(RenderTarget framebuffer, Matrix4f posMatrix, Matrix4f projMatrix,
+                                          Frustum frustum, Camera camera, RenderBuffers buffers, ProfilerFiller profiler) {
+        drawHighlights();
+    }
+    //#endif
 
-	private void drawHighlights() {
-		Minecraft client = Minecraft.getInstance();
-		ClientLevel level = client.level;
+    //#if MC >= 26.3
+    //$$ @Override
+    //$$ public void onRenderWorldLast(RenderTarget framebuffer, CameraRenderState cameraState,
+    //$$ 								  Frustum culling, RenderBuffers buffers, GpuBufferSlice terrainFog,
+    //$$ 								  Vector4f fogColor, ProfilerFiller profiler) {
+    //$$ 	drawHighlights();
+    //$$ }
+    //#elseif MC >= 26.1
+    //$$ @Override
+    //$$ public void onRenderWorldLast(RenderTarget framebuffer, Matrix4fc modelViewMatrix, CameraRenderState cameraState,
+    //$$ 								  Frustum culling, RenderBuffers buffers, GpuBufferSlice terrainFog,
+    //$$ 								  Vector4f fogColor, ProfilerFiller profiler) {
+    //$$ 	drawHighlights();
+    //$$ }
+    //#endif
 
-		if (level == null) {
-			this.clearGeometry();
-			return;
-		}
+    private void drawHighlights() {
+        Minecraft client = Minecraft.getInstance();
+        ClientLevel level = client.level;
 
-		try {
-			long gameTime = level.getGameTime();
+        if (level == null) {
+            this.clearGeometry();
+            return;
+        }
 
-			if (level != this.trackedLevel || gameTime != this.lastGeometryTick) {
-				this.trackedLevel = level;
-				this.lastGeometryTick = gameTime;
-				Set<BlockPos> positions = SoundSourceHighlightManager.getInstance().getBlockPositions();
+        try {
+            long gameTime = level.getGameTime();
 
-				if (!positions.equals(this.highlightedPositions)) {
-					this.highlightedPositions = positions;
-					this.blockGeometry.rebuild(positions);
-				}
-			}
+            if (level != this.trackedLevel || gameTime != this.lastGeometryTick) {
+                this.trackedLevel = level;
+                this.lastGeometryTick = gameTime;
+                Set<BlockPos> positions = SoundSourceHighlightManager.getInstance().getBlockPositions();
 
-			if (this.highlightedPositions.isEmpty()) {
-				return;
-			}
+                if (!positions.equals(this.highlightedPositions)) {
+                    this.highlightedPositions = positions;
+                    this.blockGeometry.rebuild(positions);
+                }
+            }
 
-			Color4f outlineColor = getBlockOutlineColor();
-			Color4f fillColor = outlineColor.withAlpha(
-				ListMoreConfigs.Generic.SOUND_SOURCE_HIGHLIGHT_BLOCK_OPACITY.getFloatValue()
-			);
-			Vec3 cameraPosition = WorldRenderUtils.getCameraPosition();
+            if (this.highlightedPositions.isEmpty()) {
+                return;
+            }
 
-			BlockHighlightRenderUtils.drawMergedFill(BLOCK_FILL_ID, this.blockGeometry, cameraPosition, fillColor);
-			BlockHighlightRenderUtils.drawMergedOutline(BLOCK_OUTLINE_ID, this.blockGeometry, cameraPosition, outlineColor);
-		} catch (Throwable throwable) {
-			long now = System.currentTimeMillis();
+            Color4f outlineColor = getBlockOutlineColor();
+            Color4f fillColor = outlineColor.withAlpha(
+                    ListMoreConfigs.Generic.SOUND_SOURCE_HIGHLIGHT_BLOCK_OPACITY.getFloatValue()
+            );
+            Vec3 cameraPosition = WorldRenderUtils.getCameraPosition();
 
-			if (now - lastErrorLogTime > ERROR_LOG_INTERVAL_MS) {
-				lastErrorLogTime = now;
-				ListMore.LOGGER.error("Failed to draw sound source highlight boxes", throwable);
-			}
-		}
-	}
+            BlockHighlightRenderUtils.drawMergedFill(BLOCK_FILL_ID, this.blockGeometry, cameraPosition, fillColor);
+            BlockHighlightRenderUtils.drawMergedOutline(BLOCK_OUTLINE_ID, this.blockGeometry, cameraPosition, outlineColor);
+        } catch (Throwable throwable) {
+            long now = System.currentTimeMillis();
 
-	private void clearGeometry() {
-		this.highlightedPositions = Set.of();
-		this.blockGeometry.clear();
-		this.trackedLevel = null;
-		this.lastGeometryTick = Long.MIN_VALUE;
-	}
+            if (now - lastErrorLogTime > ERROR_LOG_INTERVAL_MS) {
+                lastErrorLogTime = now;
+                ListMore.LOGGER.error("Failed to draw sound source highlight boxes", throwable);
+            }
+        }
+    }
 
-	private static Color4f getBlockOutlineColor() {
-		return Color4f.fromColor(ListMoreConfigs.Generic.SOUND_SOURCE_HIGHLIGHT_BLOCK_COLOR.getIntegerValue());
-	}
+    private void clearGeometry() {
+        this.highlightedPositions = Set.of();
+        this.blockGeometry.clear();
+        this.trackedLevel = null;
+        this.lastGeometryTick = Long.MIN_VALUE;
+    }
+
+    private static Color4f getBlockOutlineColor() {
+        return Color4f.fromColor(ListMoreConfigs.Generic.SOUND_SOURCE_HIGHLIGHT_BLOCK_COLOR.getIntegerValue());
+    }
 }

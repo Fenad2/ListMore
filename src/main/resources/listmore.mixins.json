@@ -1,27 +1,31 @@
 {
-	"required": true,
-	"package": "com.listmore.mixin",
-	"compatibilityLevel": "JAVA_${java_version}",
-	"client": [
-		"MinecraftMixin",
-		"MultiPlayerGameModeMixin",
-		"BlockItemMixin",
-		"ClientPacketListenerMixin",
-		"EntityMixin",
-		"EntityRenderDispatcherMixin",
-		"accessor.GuiListBaseAccessor"${legacy_gui_graphics_accessors},
-		"accessor.EntityBoundSoundInstanceAccessor",
-		"litematica.GuiSchematicBrowserBaseMixin"
-	],
-	"mixins": [
-		"WidgetConfigOptionMixin",
-		"WidgetListConfigOptionsMixin",
-		"WidgetStringListEditEntryMixin"
-	],
-	"injectors": {
-		"defaultRequire": 1
-	},
-	"overwrites": {
-		"requireAnnotations": true
-	}
+  "required": true,
+  "package": "com.listmore.mixin",
+  "compatibilityLevel": "JAVA_${java_version}",
+  "client": [
+    "MinecraftMixin",
+    "MultiPlayerGameModeMixin",
+    "BlockItemMixin",
+    "ClientPacketListenerMixin",
+    "EntityMixin",
+    "EntityRenderDispatcherMixin",
+    "accessor.GuiListBaseAccessor"
+    $
+    {
+      legacy_gui_graphics_accessors
+    },
+    "accessor.EntityBoundSoundInstanceAccessor",
+    "litematica.GuiSchematicBrowserBaseMixin"
+  ],
+  "mixins": [
+    "WidgetConfigOptionMixin",
+    "WidgetListConfigOptionsMixin",
+    "WidgetStringListEditEntryMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
 }

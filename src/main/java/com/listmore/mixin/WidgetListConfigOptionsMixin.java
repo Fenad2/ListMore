@@ -18,23 +18,23 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(value = WidgetListConfigOptions.class, remap = false)
 public abstract class WidgetListConfigOptionsMixin extends WidgetListConfigOptionsBase<GuiConfigsBase.ConfigOptionWrapper, WidgetConfigOption> {
-	@Shadow
-	@Final
-	protected GuiConfigsBase parent;
+    @Shadow
+    @Final
+    protected GuiConfigsBase parent;
 
-	public WidgetListConfigOptionsMixin(int x, int y, int width, int height, int configWidth) {
-		super(x, y, width, height, configWidth);
-	}
+    public WidgetListConfigOptionsMixin(int x, int y, int width, int height, int configWidth) {
+        super(x, y, width, height, configWidth);
+    }
 
-	@Inject(method = "getMaxNameLengthWrapped", at = @At("RETURN"), cancellable = true)
-	private void listmore$fixLabelWidth(List<GuiConfigsBase.ConfigOptionWrapper> wrappers, CallbackInfoReturnable<Integer> cir) {
-		if (!(this.parent instanceof ListMoreConfigGui)) {
-			return;
-		}
+    @Inject(method = "getMaxNameLengthWrapped", at = @At("RETURN"), cancellable = true)
+    private void listmore$fixLabelWidth(List<GuiConfigsBase.ConfigOptionWrapper> wrappers, CallbackInfoReturnable<Integer> cir) {
+        if (!(this.parent instanceof ListMoreConfigGui)) {
+            return;
+        }
 
-		int desiredLabelWidth = 150;
-		int availableLabelWidth = Math.max(0, this.browserEntryWidth - this.configWidth - 60);
-		int minimumLabelWidth = Math.min(desiredLabelWidth, availableLabelWidth);
-		cir.setReturnValue(Math.max(cir.getReturnValueI(), minimumLabelWidth));
-	}
+        int desiredLabelWidth = 150;
+        int availableLabelWidth = Math.max(0, this.browserEntryWidth - this.configWidth - 60);
+        int minimumLabelWidth = Math.min(desiredLabelWidth, availableLabelWidth);
+        cir.setReturnValue(Math.max(cir.getReturnValueI(), minimumLabelWidth));
+    }
 }

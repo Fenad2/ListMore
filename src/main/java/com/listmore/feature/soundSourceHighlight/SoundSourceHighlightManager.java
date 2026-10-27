@@ -25,243 +25,245 @@ import net.minecraft.world.level.block.piston.PistonBaseBlock;
 import net.minecraft.world.phys.AABB;
 
 public final class SoundSourceHighlightManager implements SoundEventListener {
-	private static final SoundSourceHighlightManager INSTANCE = new SoundSourceHighlightManager();
-	private final Map<Integer, Long> highlightedEntityIds = new HashMap<>();
-	private final Map<BlockPos, Long> highlightedBlockPositions = new HashMap<>();
-	private ClientLevel trackedLevel;
-	private boolean soundListenerRegistered;
-	private SoundSourceHighlightManager() {
-	}
+    private static final SoundSourceHighlightManager INSTANCE = new SoundSourceHighlightManager();
+    private final Map<Integer, Long> highlightedEntityIds = new HashMap<>();
+    private final Map<BlockPos, Long> highlightedBlockPositions = new HashMap<>();
+    private ClientLevel trackedLevel;
+    private boolean soundListenerRegistered;
 
-	public static SoundSourceHighlightManager getInstance() {
-		return INSTANCE;
-	}
+    private SoundSourceHighlightManager() {
+    }
 
-	public void registerSoundListener() {
-		if (this.soundListenerRegistered) {
-			return;
-		}
+    public static SoundSourceHighlightManager getInstance() {
+        return INSTANCE;
+    }
 
-		Minecraft.getInstance().getSoundManager().addListener(this);
-		this.soundListenerRegistered = true;
-	}
+    public void registerSoundListener() {
+        if (this.soundListenerRegistered) {
+            return;
+        }
 
-	@Override
-	public void onPlaySound(SoundInstance sound, WeighedSoundEvents soundEvent, float range) {
-		// 实体绑定的音源-> 直接高亮实体
-		if (sound instanceof EntityBoundSoundInstance entityBoundSound) {
-			Entity entity = ((EntityBoundSoundInstanceAccessor) entityBoundSound).listmore$getEntity();
-			if (entity != null) {
-				onEntitySound(entity);
-			}
-			return;
-		}
-		// 方块破坏/门的开关/音符盒/矿车等 -> 按声音自带的世界坐标定位
-		onPositionalSound(sound);
-	}
+        Minecraft.getInstance().getSoundManager().addListener(this);
+        this.soundListenerRegistered = true;
+    }
 
-	// 非实体则方块
-	private void onPositionalSound(SoundInstance sound) {
-		SoundSource source = sound.getSource();
-		if (!isHighlightableSource(source)) {
-			return;
-		}
-		if (sound.isRelative() || sound.getVolume() <= 0.0F) {
-			return;
-		}
+    @Override
+    public void onPlaySound(SoundInstance sound, WeighedSoundEvents soundEvent, float range) {
+        // 实体绑定的音源-> 直接高亮实体
+        if (sound instanceof EntityBoundSoundInstance entityBoundSound) {
+            Entity entity = ((EntityBoundSoundInstanceAccessor) entityBoundSound).listmore$getEntity();
+            if (entity != null) {
+                onEntitySound(entity);
+            }
+            return;
+        }
+        // 方块破坏/门的开关/音符盒/矿车等 -> 按声音自带的世界坐标定位
+        onPositionalSound(sound);
+    }
 
-		Minecraft client = Minecraft.getInstance();
+    // 非实体则方块
+    private void onPositionalSound(SoundInstance sound) {
+        SoundSource source = sound.getSource();
+        if (!isHighlightableSource(source)) {
+            return;
+        }
+        if (sound.isRelative() || sound.getVolume() <= 0.0F) {
+            return;
+        }
 
-		// 玩家自己脚下的脚步声/动作音，高亮出来只会一直闪自己脚底
-		if (source == SoundSource.PLAYERS && client.player != null
-			&& client.player.position().distanceToSqr(sound.getX(), sound.getY(), sound.getZ()) < 4.0D) {
-			return;
-		}
-		if (!prepare(client)) {
-			return;
-		}
-		if (source != SoundSource.BLOCKS) {
-			Entity soundEntity = findSoundEntity(client, sound);
+        Minecraft client = Minecraft.getInstance();
 
-			if (soundEntity != null) {
-				this.highlightedEntityIds.put(soundEntity.getId(), expiration(client.level));
-				return;
-			}
-		}
+        // 玩家自己脚下的脚步声/动作音，高亮出来只会一直闪自己脚底
+        if (source == SoundSource.PLAYERS && client.player != null
+                && client.player.position().distanceToSqr(sound.getX(), sound.getY(), sound.getZ()) < 4.0D) {
+            return;
+        }
+        if (!prepare(client)) {
+            return;
+        }
+        if (source != SoundSource.BLOCKS) {
+            Entity soundEntity = findSoundEntity(client, sound);
 
-		BlockPos position = BlockPos.containing(sound.getX(), sound.getY(), sound.getZ());
-		// 方块不存在则return
-		if (client.level.getBlockState(position).isAir()) {
-			return;
-		}
-		this.highlightedBlockPositions.put(position, expiration(client.level));
-	}
+            if (soundEntity != null) {
+                this.highlightedEntityIds.put(soundEntity.getId(), expiration(client.level));
+                return;
+            }
+        }
 
-	// 用音源坐标匹配附近的实体
-	private static Entity findSoundEntity(Minecraft client, SoundInstance sound) {
-		if (client.level == null || client.player == null) {
-			return null;
-		}
-		double x = sound.getX();
-		double y = sound.getY();
-		double z = sound.getZ();
-		AABB searchArea = new AABB(x - 1.0D, y - 1.0D, z - 1.0D, x + 1.0D, y + 1.0D, z + 1.0D);
-		Entity nearest = null;
-		double nearestDistance = Double.MAX_VALUE;
+        BlockPos position = BlockPos.containing(sound.getX(), sound.getY(), sound.getZ());
+        // 方块不存在则return
+        if (client.level.getBlockState(position).isAir()) {
+            return;
+        }
+        this.highlightedBlockPositions.put(position, expiration(client.level));
+    }
 
-		for (Entity candidate : client.level.getEntitiesOfClass(Entity.class, searchArea,
-			entity -> entity != client.player && !entity.isRemoved()
-				&& entity.getBoundingBox().inflate(0.3D).contains(x, y, z))) {
-			double distance = candidate.position().distanceToSqr(x, y, z);
+    // 用音源坐标匹配附近的实体
+    private static Entity findSoundEntity(Minecraft client, SoundInstance sound) {
+        if (client.level == null || client.player == null) {
+            return null;
+        }
+        double x = sound.getX();
+        double y = sound.getY();
+        double z = sound.getZ();
+        AABB searchArea = new AABB(x - 1.0D, y - 1.0D, z - 1.0D, x + 1.0D, y + 1.0D, z + 1.0D);
+        Entity nearest = null;
+        double nearestDistance = Double.MAX_VALUE;
 
-			if (distance < nearestDistance) {
-				nearestDistance = distance;
-				nearest = candidate;
-			}
-		}
-		return nearest;
-	}
+        for (Entity candidate : client.level.getEntitiesOfClass(Entity.class, searchArea,
+                entity -> entity != client.player && !entity.isRemoved()
+                        && entity.getBoundingBox().inflate(0.3D).contains(x, y, z))) {
+            double distance = candidate.position().distanceToSqr(x, y, z);
 
-	// 过滤音乐/界面/环境循环音
-	private static boolean isHighlightableSource(SoundSource source) {
-		return source == SoundSource.BLOCKS || source == SoundSource.HOSTILE
-			|| source == SoundSource.NEUTRAL || source == SoundSource.PLAYERS;
-	}
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearest = candidate;
+            }
+        }
+        return nearest;
+    }
 
-	// 由 ClientboundSoundEntityPacket 触发
-	public void onSoundEntityPacket(int entityId, float volume) {
-		Minecraft client = Minecraft.getInstance();
+    // 过滤音乐/界面/环境循环音
+    private static boolean isHighlightableSource(SoundSource source) {
+        return source == SoundSource.BLOCKS || source == SoundSource.HOSTILE
+                || source == SoundSource.NEUTRAL || source == SoundSource.PLAYERS;
+    }
 
-		if (client.level == null || volume <= 0.0F) {
-			return;
-		}
+    // 由 ClientboundSoundEntityPacket 触发
+    public void onSoundEntityPacket(int entityId, float volume) {
+        Minecraft client = Minecraft.getInstance();
 
-		Entity entity = client.level.getEntity(entityId);
+        if (client.level == null || volume <= 0.0F) {
+            return;
+        }
 
-		if (entity != null) {
-			onEntitySound(entity);
-		}
-	}
+        Entity entity = client.level.getEntity(entityId);
 
-	public void onEntitySound(Entity entity) {
-		if (entity == null || entity.isRemoved()) {
-			return;
-		}
-		Minecraft client = Minecraft.getInstance();
+        if (entity != null) {
+            onEntitySound(entity);
+        }
+    }
 
-		if (!prepare(client)) {
-			return;
-		}
-		this.highlightedEntityIds.put(entity.getId(), expiration(client.level));
-	}
+    public void onEntitySound(Entity entity) {
+        if (entity == null || entity.isRemoved()) {
+            return;
+        }
+        Minecraft client = Minecraft.getInstance();
 
-	public void onBlockEvent(BlockPos pos, Block block, int eventId) {
-		Minecraft client = Minecraft.getInstance();
+        if (!prepare(client)) {
+            return;
+        }
+        this.highlightedEntityIds.put(entity.getId(), expiration(client.level));
+    }
 
-		if (!prepare(client)) {
-			return;
-		}
-		boolean isSoundEvent = block instanceof NoteBlock && eventId == 0
-			|| block instanceof PistonBaseBlock && eventId >= PistonBaseBlock.TRIGGER_EXTEND
-				&& eventId <= 2;
+    public void onBlockEvent(BlockPos pos, Block block, int eventId) {
+        Minecraft client = Minecraft.getInstance();
 
-		if (isSoundEvent) {
-			this.highlightedBlockPositions.put(pos.immutable(), expiration(client.level));
-		}
-	}
+        if (!prepare(client)) {
+            return;
+        }
+        boolean isSoundEvent = block instanceof NoteBlock && eventId == 0
+                || block instanceof PistonBaseBlock && eventId >= PistonBaseBlock.TRIGGER_EXTEND
+                && eventId <= 2;
 
-	public void onLevelEvent(int eventId, BlockPos pos) {
-		Minecraft client = Minecraft.getInstance();
+        if (isSoundEvent) {
+            this.highlightedBlockPositions.put(pos.immutable(), expiration(client.level));
+        }
+    }
 
-		if (!prepare(client)) {
-			return;
-		}
-		boolean isDispenserSound = eventId >= 1000 && eventId <= 1002;
-		BlockPos immutablePos = pos == null ? null : pos.immutable();
+    public void onLevelEvent(int eventId, BlockPos pos) {
+        Minecraft client = Minecraft.getInstance();
 
-		if (isDispenserSound && immutablePos != null
-			&& client.level.getBlockState(immutablePos).getBlock() instanceof DispenserBlock) {
-			this.highlightedBlockPositions.put(immutablePos, expiration(client.level));
-		}
-	}
+        if (!prepare(client)) {
+            return;
+        }
+        boolean isDispenserSound = eventId >= 1000 && eventId <= 1002;
+        BlockPos immutablePos = pos == null ? null : pos.immutable();
 
-	public boolean isEntityHighlighted(Entity entity) {
-		if (entity == null) {
-			return false;
-		}
-		Minecraft client = Minecraft.getInstance();
+        if (isDispenserSound && immutablePos != null
+                && client.level.getBlockState(immutablePos).getBlock() instanceof DispenserBlock) {
+            this.highlightedBlockPositions.put(immutablePos, expiration(client.level));
+        }
+    }
 
-		if (!prepare(client)) {
-			return false;
-		}
-		Long expiration = this.highlightedEntityIds.get(entity.getId());
+    public boolean isEntityHighlighted(Entity entity) {
+        if (entity == null) {
+            return false;
+        }
+        Minecraft client = Minecraft.getInstance();
 
-		if (expiration == null) {
-			return false;
-		}
-		if (expiration <= client.level.getGameTime()) {
-			this.highlightedEntityIds.remove(entity.getId());
-			return false;
-		}
-		return true;
-	}
+        if (!prepare(client)) {
+            return false;
+        }
+        Long expiration = this.highlightedEntityIds.get(entity.getId());
 
-	public Set<BlockPos> getBlockPositions() {
-		Minecraft client = Minecraft.getInstance();
+        if (expiration == null) {
+            return false;
+        }
+        if (expiration <= client.level.getGameTime()) {
+            this.highlightedEntityIds.remove(entity.getId());
+            return false;
+        }
+        return true;
+    }
 
-		if (!prepare(client)) {
-			return Set.of();
-		}
+    public Set<BlockPos> getBlockPositions() {
+        Minecraft client = Minecraft.getInstance();
 
-		return collectBlockPositions(client.level);
-	}
+        if (!prepare(client)) {
+            return Set.of();
+        }
 
-	// 方块被破坏/替换后取消高亮
-	private Set<BlockPos> collectBlockPositions(ClientLevel level) {
-		if (this.highlightedBlockPositions.isEmpty()) {
-			return Set.of();
-		}
+        return collectBlockPositions(client.level);
+    }
 
-		Set<BlockPos> positions = new HashSet<>();
+    // 方块被破坏/替换后取消高亮
+    private Set<BlockPos> collectBlockPositions(ClientLevel level) {
+        if (this.highlightedBlockPositions.isEmpty()) {
+            return Set.of();
+        }
 
-		for (Iterator<Map.Entry<BlockPos, Long>> iterator = this.highlightedBlockPositions.entrySet().iterator(); iterator.hasNext();) {
-			Map.Entry<BlockPos, Long> entry = iterator.next();
+        Set<BlockPos> positions = new HashSet<>();
 
-			if (level.getBlockState(entry.getKey()).isAir()) {
-				iterator.remove();
-				continue;
-			}
-			positions.add(entry.getKey());
-		}
-		return Set.copyOf(positions);
-	}
+        for (Iterator<Map.Entry<BlockPos, Long>> iterator = this.highlightedBlockPositions.entrySet().iterator(); iterator.hasNext(); ) {
+            Map.Entry<BlockPos, Long> entry = iterator.next();
 
-	public void tick() {
-		prepare(Minecraft.getInstance());
-	}
-	private boolean prepare(Minecraft client) {
-		if (!ListMoreConfigs.Generic.SOUND_SOURCE_HIGHLIGHT_ENABLED.getBooleanValue()
-			|| client.player == null || client.level == null) {
-			clear();
-			return false;
-		}
-		if (this.trackedLevel != client.level) {
-			clear();
-			this.trackedLevel = client.level;
-		}
-		long gameTime = client.level.getGameTime();
-		this.highlightedEntityIds.entrySet().removeIf(entry -> entry.getValue() <= gameTime);
-		this.highlightedBlockPositions.entrySet().removeIf(entry -> entry.getValue() <= gameTime);
-		return true;
-	}
+            if (level.getBlockState(entry.getKey()).isAir()) {
+                iterator.remove();
+                continue;
+            }
+            positions.add(entry.getKey());
+        }
+        return Set.copyOf(positions);
+    }
 
-	private long expiration(ClientLevel level) {
-		return level.getGameTime() + ListMoreConfigs.Generic.SOUND_SOURCE_HIGHLIGHT_DURATION_TICKS.getIntegerValue();
-	}
+    public void tick() {
+        prepare(Minecraft.getInstance());
+    }
 
-	private void clear() {
-		this.highlightedEntityIds.clear();
-		this.highlightedBlockPositions.clear();
-		this.trackedLevel = null;
-	}
+    private boolean prepare(Minecraft client) {
+        if (!ListMoreConfigs.Generic.SOUND_SOURCE_HIGHLIGHT_ENABLED.getBooleanValue()
+                || client.player == null || client.level == null) {
+            clear();
+            return false;
+        }
+        if (this.trackedLevel != client.level) {
+            clear();
+            this.trackedLevel = client.level;
+        }
+        long gameTime = client.level.getGameTime();
+        this.highlightedEntityIds.entrySet().removeIf(entry -> entry.getValue() <= gameTime);
+        this.highlightedBlockPositions.entrySet().removeIf(entry -> entry.getValue() <= gameTime);
+        return true;
+    }
+
+    private long expiration(ClientLevel level) {
+        return level.getGameTime() + ListMoreConfigs.Generic.SOUND_SOURCE_HIGHLIGHT_DURATION_TICKS.getIntegerValue();
+    }
+
+    private void clear() {
+        this.highlightedEntityIds.clear();
+        this.highlightedBlockPositions.clear();
+        this.trackedLevel = null;
+    }
 }

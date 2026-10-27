@@ -139,1017 +139,1027 @@ import org.joml.Vector4f;
 import org.lwjgl.system.MemoryStack;
 
 public final class SchematicPreviewRenderer implements SchematicPreviewRenderBackend {
-	private static final long BUILD_BUDGET_NANOS = 2_000_000L;
-	private static final int MAX_SECTIONS_PER_FRAME = 2;
-	private static final long SMALL_MODEL_BUILD_BUDGET_NANOS = 8_000_000L;
-	private static final int SMALL_MODEL_MAX_SECTIONS_PER_FRAME = 8;
-	private static final int SMALL_MODEL_MAX_BLOCKS = 4_096;
-	private static final int MAX_BUILD_ATTEMPTS = 3;
-	// 每个模型 Section 对应一个独立 GPU 网格
-	private final List<ChunkMesh> meshes = new ArrayList<>();
-	private List<SchematicPreviewModel.Section> pendingSections = List.of();
-	private int nextSection;
-	private long nextBuildAttemptNanos;
-	private int buildFailures;
-	private long builtRevision = Long.MIN_VALUE;
-	private SchematicPreviewWorld world;
-	private TextureTarget target;
-	private final Map<ChunkSectionLayer, ByteBufferBuilder> sectionAllocators =
-			new EnumMap<>(ChunkSectionLayer.class);
-	//#if MC >= 1.21.11
-	//$$ private GpuSampler sampler;
-	//#endif
-	//#if MC >= 26.1
-	//$$ private ProjectionMatrixBuffer projection;
-	//#else
-	private PerspectiveProjectionMatrixBuffer projection;
-	//#endif
+    private static final long BUILD_BUDGET_NANOS = 2_000_000L;
+    private static final int MAX_SECTIONS_PER_FRAME = 2;
+    private static final long SMALL_MODEL_BUILD_BUDGET_NANOS = 8_000_000L;
+    private static final int SMALL_MODEL_MAX_SECTIONS_PER_FRAME = 8;
+    private static final int SMALL_MODEL_MAX_BLOCKS = 4_096;
+    private static final int MAX_BUILD_ATTEMPTS = 3;
+    // 每个模型 Section 对应一个独立 GPU 网格
+    private final List<ChunkMesh> meshes = new ArrayList<>();
+    private List<SchematicPreviewModel.Section> pendingSections = List.of();
+    private int nextSection;
+    private long nextBuildAttemptNanos;
+    private int buildFailures;
+    private long builtRevision = Long.MIN_VALUE;
+    private SchematicPreviewWorld world;
+    private TextureTarget target;
+    private final Map<ChunkSectionLayer, ByteBufferBuilder> sectionAllocators =
+            new EnumMap<>(ChunkSectionLayer.class);
+    //#if MC >= 1.21.11
+    //$$ private GpuSampler sampler;
+    //#endif
+    //#if MC >= 26.1
+    //$$ private ProjectionMatrixBuffer projection;
+    //#else
+    private PerspectiveProjectionMatrixBuffer projection;
+    //#endif
 //#if MC >= 26.1
-	//$$ private final Projection previewProjection = new Projection();
+    //$$ private final Projection previewProjection = new Projection();
 //#endif
-	private GpuBuffer globalUniform;
-	private boolean rebuildFailureLogged;
-	private boolean renderFailureLogged;
-	//#if MC >= 1.21.10
-	//$$ private SubmitNodeStorage blockEntitySubmitNodes;
-	//$$ private RenderBuffers blockEntityRenderBuffers;
-	//$$ private FeatureRenderDispatcher blockEntityFeatureDispatcher;
-	//#if MC >= 26.1
-	//$$ private GameRenderState blockEntityGameRenderState;
-	//#endif
-	//#endif
-	//#if MC >= 26.1
-	//$$ private final FluidRenderer fluidRenderer = new FluidRenderer(Minecraft.getInstance().getModelManager().getFluidStateModelSet());
-	//$$ private BlockModelRendererSchematic blockModelRenderer;
-	//#endif
-	// 将原理图模型渲染到离屏帧缓冲，再将结果贴图绘制到 GUI 面板
-	// 流程：校验模型 -> 确保帧缓冲尺寸 -> 增量重建网格 -> 清空帧缓冲 -> 3D 渲染 -> 贴图到 GUI
-	public boolean render(Object rawContext, SchematicPreviewLayout layout, SchematicPreviewTransform transform,
-			SchematicPreviewModel model, long revision) {
-		//#if MC >= 1.21.11
-		//$$ GuiContext context = (GuiContext) rawContext;
-		//#else
-		GuiGraphics context = (GuiGraphics) rawContext;
-		//#endif
-		if (model == null || model.isEmpty() || layout.contentWidth() <= 0 || layout.contentHeight() <= 0) {
-			return false;
-		}
-		// 确保离屏帧缓冲尺寸与当前预览区域匹配
-		this.ensureTarget(layout.contentWidth(), layout.contentHeight());
-		// 模型变化时初始化构建队列，之后每帧只消耗固定时间
-		if (this.builtRevision != revision) {
-			try {
-				this.beginRebuild(model, revision);
-				this.rebuildFailureLogged = false;
-			} catch (Throwable throwable) {
-				if (!this.rebuildFailureLogged) {
-					ListMore.LOGGER.error("Failed to build schematic preview meshes", throwable);
-					this.rebuildFailureLogged = true;
-				}
-				return false;
-			}
-		}
-		if (this.hasFailure()) {
-			return false;
-		}
-		int previousSection = this.nextSection;
-		try {
-			this.buildPendingSections(model);
-			if (this.nextSection > previousSection) {
-				this.rebuildFailureLogged = false;
-			}
-		} catch (Throwable throwable) {
-			if (!this.rebuildFailureLogged) {
-				ListMore.LOGGER.error("Failed to build schematic preview section", throwable);
-				this.rebuildFailureLogged = true;
-			}
-			this.closeBuiltMeshes();
-			this.nextSection = 0;
-			this.buildFailures++;
-			this.nextBuildAttemptNanos = System.nanoTime() + 250_000_000L;
-		}
-		if (this.meshes.isEmpty() && !this.world.hasBlockEntityData()) {
-			return false;
-		}
+    private GpuBuffer globalUniform;
+    private boolean rebuildFailureLogged;
+    private boolean renderFailureLogged;
 
-		// 清空帧缓冲的颜色和深度，背景色为0xFF1B2028
-		//#if MC >= 26.2
-		//$$ RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(
-		//$$ 		this.target.getColorTexture(), new org.joml.Vector4f(0.105F, 0.125F, 0.157F, 1.0F),
-		//$$ 		this.target.getDepthTexture(), 0.0D);
-		//#else
-		RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(
-				this.target.getColorTexture(), 0xFF1B2028, this.target.getDepthTexture(), 1.0D);
-		//#endif
-		try {
-			// 3D渲染阶段：设置相机投影并绘制所有网格到离屏帧缓冲
-			this.renderTarget(model, transform);
-			this.renderFailureLogged = false;
-		} catch (Throwable throwable) {
-			if (!this.renderFailureLogged) {
-				ListMore.LOGGER.error("Failed to render schematic preview", throwable);
-				this.renderFailureLogged = true;
-			}
-			return false;
-		}
-		// 将离屏帧缓冲的纹理贴图到 GUI 面板的指定区域
-		//#if MC < 1.21.11
-		GuiGraphicsAccessor graphics = (GuiGraphicsAccessor) context;
-		//#endif
-		BlitRenderState blit = new BlitRenderState(
-				RenderPipelines.GUI_TEXTURED,
-				//#if MC >= 1.21.11
-				//$$ TextureSetup.singleTexture(this.target.getColorTextureView(), this.sampler),
-				//#else
-				TextureSetup.singleTexture(this.target.getColorTextureView()),
-				//#endif
-				new Matrix3x2f(context.pose()),
-				layout.contentX(), layout.contentY(),
-				layout.contentX() + layout.contentWidth(), layout.contentY() + layout.contentHeight(),
-				0.0F, 1.0F, 1.0F, 0.0F, 0xFFFFFFFF,
-				//#if MC >= 1.21.11
-				//$$ context.peekLastScissor());
-				//#else
-				((GuiGraphicsScissorStackAccessor) graphics.listmore$getScissorStack()).listmore$peek());
-				//#endif
-		//#if MC >= 1.21.11
-		//$$ context.addSimpleElement(blit);
-		//#else
-		graphics.listmore$getGuiRenderState().submitBlitToCurrentLayer(blit);
-		//#endif
-		return true;
-	}
+    //#if MC >= 1.21.10
+    //$$ private SubmitNodeStorage blockEntitySubmitNodes;
+    //$$ private RenderBuffers blockEntityRenderBuffers;
+    //$$ private FeatureRenderDispatcher blockEntityFeatureDispatcher;
+    //#if MC >= 26.1
+    //$$ private GameRenderState blockEntityGameRenderState;
+    //#endif
+    //#endif
+    //#if MC >= 26.1
+    //$$ private final FluidRenderer fluidRenderer = new FluidRenderer(Minecraft.getInstance().getModelManager().getFluidStateModelSet());
+    //$$ private BlockModelRendererSchematic blockModelRenderer;
+    //#endif
+    // 将原理图模型渲染到离屏帧缓冲，再将结果贴图绘制到 GUI 面板
+    // 流程：校验模型 -> 确保帧缓冲尺寸 -> 增量重建网格 -> 清空帧缓冲 -> 3D 渲染 -> 贴图到 GUI
+    public boolean render(Object rawContext, SchematicPreviewLayout layout, SchematicPreviewTransform transform,
+                          SchematicPreviewModel model, long revision) {
+        //#if MC >= 1.21.11
+        //$$ GuiContext context = (GuiContext) rawContext;
+        //#else
+        GuiGraphics context = (GuiGraphics) rawContext;
+        //#endif
+        if (model == null || model.isEmpty() || layout.contentWidth() <= 0 || layout.contentHeight() <= 0) {
+            return false;
+        }
+        // 确保离屏帧缓冲尺寸与当前预览区域匹配
+        this.ensureTarget(layout.contentWidth(), layout.contentHeight());
+        // 模型变化时初始化构建队列，之后每帧只消耗固定时间
+        if (this.builtRevision != revision) {
+            try {
+                this.beginRebuild(model, revision);
+                this.rebuildFailureLogged = false;
+            } catch (Throwable throwable) {
+                if (!this.rebuildFailureLogged) {
+                    ListMore.LOGGER.error("Failed to build schematic preview meshes", throwable);
+                    this.rebuildFailureLogged = true;
+                }
+                return false;
+            }
+        }
+        if (this.hasFailure()) {
+            return false;
+        }
+        int previousSection = this.nextSection;
+        try {
+            this.buildPendingSections(model);
+            if (this.nextSection > previousSection) {
+                this.rebuildFailureLogged = false;
+            }
+        } catch (Throwable throwable) {
+            if (!this.rebuildFailureLogged) {
+                ListMore.LOGGER.error("Failed to build schematic preview section", throwable);
+                this.rebuildFailureLogged = true;
+            }
+            this.closeBuiltMeshes();
+            this.nextSection = 0;
+            this.buildFailures++;
+            this.nextBuildAttemptNanos = System.nanoTime() + 250_000_000L;
+        }
+        if (this.meshes.isEmpty() && !this.world.hasBlockEntityData()) {
+            return false;
+        }
 
-	private void ensureTarget(int width, int height) {
-		int scaledWidth = Math.max(1, Math.round(width * Minecraft.getInstance().getWindow().getGuiScale()));
-		int scaledHeight = Math.max(1, Math.round(height * Minecraft.getInstance().getWindow().getGuiScale()));
-		if (this.target == null) {
-			//#if MC >= 26.3
-			//$$ this.target = new TextureTarget("ListMore schematic preview", scaledWidth, scaledHeight,
-			//$$ 		GpuFormat.RGBA8_UNORM, GpuFormat.D32_FLOAT);
-			//#elseif MC >= 26.2
-			//$$ this.target = new TextureTarget("ListMore schematic preview", scaledWidth, scaledHeight, true, GpuFormat.RGBA8_UNORM);
-			//#else
-			this.target = new TextureTarget("ListMore schematic preview", scaledWidth, scaledHeight, true);
-			//#endif
-		} else if (this.target.width != scaledWidth || this.target.height != scaledHeight) {
-			this.target.resize(scaledWidth, scaledHeight);
-		}
-		//#if MC >= 1.21.11
-		//$$ if (this.sampler == null) {
-		//$$ 	this.sampler = RenderSystem.getDevice().createSampler(AddressMode.CLAMP_TO_EDGE, AddressMode.CLAMP_TO_EDGE,
-		//$$ 			FilterMode.LINEAR, FilterMode.LINEAR, 1, OptionalDouble.empty());
-		//$$ }
-		//#endif
-	}
+        // 清空帧缓冲的颜色和深度，背景色为0xFF1B2028
+        //#if MC >= 26.2
+        //$$ RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(
+        //$$ 		this.target.getColorTexture(), new org.joml.Vector4f(0.105F, 0.125F, 0.157F, 1.0F),
+        //$$ 		this.target.getDepthTexture(), 0.0D);
+        //#else
+        RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(
+                this.target.getColorTexture(), 0xFF1B2028, this.target.getDepthTexture(), 1.0D);
+        //#endif
+        try {
+            // 3D渲染阶段：设置相机投影并绘制所有网格到离屏帧缓冲
+            this.renderTarget(model, transform);
+            this.renderFailureLogged = false;
+        } catch (Throwable throwable) {
+            if (!this.renderFailureLogged) {
+                ListMore.LOGGER.error("Failed to render schematic preview", throwable);
+                this.renderFailureLogged = true;
+            }
+            return false;
+        }
+        // 将离屏帧缓冲的纹理贴图到 GUI 面板的指定区域
+        //#if MC < 1.21.11
+        GuiGraphicsAccessor graphics = (GuiGraphicsAccessor) context;
+        //#endif
+        BlitRenderState blit = new BlitRenderState(
+                RenderPipelines.GUI_TEXTURED,
+                //#if MC >= 1.21.11
+                //$$ TextureSetup.singleTexture(this.target.getColorTextureView(), this.sampler),
+                //#else
+                TextureSetup.singleTexture(this.target.getColorTextureView()),
+                //#endif
+                new Matrix3x2f(context.pose()),
+                layout.contentX(), layout.contentY(),
+                layout.contentX() + layout.contentWidth(), layout.contentY() + layout.contentHeight(),
+                0.0F, 1.0F, 1.0F, 0.0F, 0xFFFFFFFF,
+                //#if MC >= 1.21.11
+                //$$ context.peekLastScissor());
+                //#else
+                ((GuiGraphicsScissorStackAccessor) graphics.listmore$getScissorStack()).listmore$peek());
+        //#endif
+        //#if MC >= 1.21.11
+        //$$ context.addSimpleElement(blit);
+        //#else
+        graphics.listmore$getGuiRenderState().submitBlitToCurrentLayer(blit);
+        //#endif
+        return true;
+    }
 
-	// 初始化增量构建
-	private void beginRebuild(SchematicPreviewModel model, long revision) {
-		this.closeMeshes();
-		this.nextSection = 0;
-		this.nextBuildAttemptNanos = 0L;
-		this.buildFailures = 0;
-		if (this.world == null) {
-			this.world = new SchematicPreviewWorld(Minecraft.getInstance());
-		}
-		this.world.setModel(model);
-		float centerX = model.size().getX() * 0.5F;
-		float centerY = model.size().getY() * 0.5F;
-		float centerZ = model.size().getZ() * 0.5F;
-		this.pendingSections = new ArrayList<>(model.sections());
-		this.pendingSections.sort(Comparator.comparingDouble(section -> {
-			float dx = section.minX() + 8.0F - centerX;
-			float dy = section.minY() + 8.0F - centerY;
-			float dz = section.minZ() + 8.0F - centerZ;
-			return dx * dx + dy * dy + dz * dz;
-		}));
-		this.builtRevision = revision;
-	}
+    private void ensureTarget(int width, int height) {
+        int scaledWidth = Math.max(1, Math.round(width * Minecraft.getInstance().getWindow().getGuiScale()));
+        int scaledHeight = Math.max(1, Math.round(height * Minecraft.getInstance().getWindow().getGuiScale()));
+        if (this.target == null) {
+            //#if MC >= 26.3
+            //$$ this.target = new TextureTarget("ListMore schematic preview", scaledWidth, scaledHeight,
+            //$$ 		GpuFormat.RGBA8_UNORM, GpuFormat.D32_FLOAT);
+            //#elseif MC >= 26.2
+            //$$ this.target = new TextureTarget("ListMore schematic preview", scaledWidth, scaledHeight, true, GpuFormat.RGBA8_UNORM);
+            //#else
+            this.target = new TextureTarget("ListMore schematic preview", scaledWidth, scaledHeight, true);
+            //#endif
+        } else if (this.target.width != scaledWidth || this.target.height != scaledHeight) {
+            this.target.resize(scaledWidth, scaledHeight);
+        }
+        //#if MC >= 1.21.11
+        //$$ if (this.sampler == null) {
+        //$$ 	this.sampler = RenderSystem.getDevice().createSampler(AddressMode.CLAMP_TO_EDGE, AddressMode.CLAMP_TO_EDGE,
+        //$$ 			FilterMode.LINEAR, FilterMode.LINEAR, 1, OptionalDouble.empty());
+        //$$ }
+        //#endif
+    }
 
-	private void buildPendingSections(SchematicPreviewModel model) {
-		if (this.nextSection >= this.pendingSections.size()
-				|| System.nanoTime() < this.nextBuildAttemptNanos) {
-			return;
-		}
-		// 小模型优先在一帧完成，大模型受数量和时间预算限制以避免卡住 GUI 绘制
-		boolean buildSmallModelImmediately = model.blockCount() <= SMALL_MODEL_MAX_BLOCKS
-				&& this.pendingSections.size() <= SMALL_MODEL_MAX_SECTIONS_PER_FRAME;
-		long deadline = System.nanoTime() + (buildSmallModelImmediately
-				? SMALL_MODEL_BUILD_BUDGET_NANOS : BUILD_BUDGET_NANOS);
-		int maxSections = buildSmallModelImmediately
-				? SMALL_MODEL_MAX_SECTIONS_PER_FRAME : MAX_SECTIONS_PER_FRAME;
-		int builtThisFrame = 0;
-		do {
-			SchematicPreviewModel.Section section = this.pendingSections.get(this.nextSection);
-			ChunkMesh mesh = this.buildSection(section);
-			if (mesh != null) {
-				this.meshes.add(mesh);
-			}
-			this.nextSection++;
-			builtThisFrame++;
-		} while (this.nextSection < this.pendingSections.size()
-				&& builtThisFrame < maxSections && System.nanoTime() < deadline);
-	}
+    // 初始化增量构建
+    private void beginRebuild(SchematicPreviewModel model, long revision) {
+        this.closeMeshes();
+        this.nextSection = 0;
+        this.nextBuildAttemptNanos = 0L;
+        this.buildFailures = 0;
+        if (this.world == null) {
+            this.world = new SchematicPreviewWorld(Minecraft.getInstance());
+        }
+        this.world.setModel(model);
+        float centerX = model.size().getX() * 0.5F;
+        float centerY = model.size().getY() * 0.5F;
+        float centerZ = model.size().getZ() * 0.5F;
+        this.pendingSections = new ArrayList<>(model.sections());
+        this.pendingSections.sort(Comparator.comparingDouble(section -> {
+            float dx = section.minX() + 8.0F - centerX;
+            float dy = section.minY() + 8.0F - centerY;
+            float dz = section.minZ() + 8.0F - centerZ;
+            return dx * dx + dy * dy + dz * dz;
+        }));
+        this.builtRevision = revision;
+    }
 
-	// 单个 Section 独立网格化并上传
-	private ChunkMesh buildSection(SchematicPreviewModel.Section section) {
-		SchematicPreviewWorld view = this.world;
-		//#if MC >= 26.1
-		//$$ BlockModelRendererSchematic renderer = this.blockModelRenderer;
-		//$$ if (renderer == null) {
-		//$$ 	renderer = new BlockModelRendererSchematic();
-		//$$ 	this.blockModelRenderer = renderer;
-		//$$ }
-		//$$ renderer.enableCache();
-		//#endif
-		//#if MC >= 26.1
-		//$$ ModelManager modelManager = Minecraft.getInstance().getModelManager();
-		//#endif
-		ChunkMeshBuilder chunk = new ChunkMeshBuilder(this.sectionAllocators);
-		BlockPos.MutableBlockPos position = new BlockPos.MutableBlockPos();
-		//#if MC < 26.1
-		PoseStack pose = new PoseStack();
-		RandomSource random = RandomSource.create();
-		//#endif
-		//#if MC >= 26.1
-		//$$ FluidRenderer.Output fluidOutput = layer -> offsetVertexConsumer(chunk.builder(layer), section.minY());
-		//$$ IBlockOutputSchematic blockOutput = (x, y, z, quad, instance) -> chunk.builder(quad.materialInfo().layer())
-		//$$ 		.putBlockBakedQuad(x, y, z, quad, instance);
-		//#endif
-		int sectionMinX = section.minX();
-		int sectionMinY = section.minY();
-		int sectionMinZ = section.minZ();
-		try {
-			for (int index = 0; index < 4096; index++) {
-				BlockState state = section.stateAtIndex(index);
-				if (state == null) {
-					continue;
-				}
-				int localX = index & 15;
-				int localZ = (index >> 4) & 15;
-				int localY = index >> 8;
-				int blockX = sectionMinX + localX;
-				int blockY = sectionMinY + localY;
-				int blockZ = sectionMinZ + localZ;
-				position.set(blockX, blockY, blockZ);
-				// 先渲染流体（水、岩浆等），再渲染固体方块模型
-				//#if MC >= 26.1
-				//$$ FluidState fluidState = state.getFluidState();
-				//$$ if (!fluidState.isEmpty()) {
-				//$$ 	this.fluidRenderer.tesselate(view, position, fluidOutput, state, fluidState);
-				//$$ }
-				//#else
-				FluidState fluidState = state.getFluidState();
-				if (!fluidState.isEmpty()) {
-					Minecraft.getInstance().getBlockRenderer().renderLiquid(position, view,
-							offsetVertexConsumer(chunk.builder(ItemBlockRenderTypes.getRenderLayer(fluidState)), section.minY()),
-							state, fluidState);
-				}
-				//#endif
-				if (state.getRenderShape() != RenderShape.MODEL) {
-					continue;
-				}
-				//#if MC >= 26.1
-				//$$ renderer.tessellateBlock(view, state, position, new Vec3(localX, blockY, localZ),
-				//$$ 		modelManager.getBlockStateModelSet().get(state), state.getSeed(position), blockOutput);
-				//#else
-				// & 15 取区块内局部坐标（0-15），模型顶点需要相对区块原点的偏移
-				pose.setIdentity();
-				pose.translate(localX, blockY, localZ);
-				random.setSeed(state.getSeed(position));
-				Minecraft.getInstance().getBlockRenderer().renderBatched(state, position, view, pose,
-						chunk.builder(ItemBlockRenderTypes.getChunkRenderType(state)), true,
-						Minecraft.getInstance().getBlockRenderer().getBlockModel(state)
-								.collectParts(random));
-				//#endif
-			}
-		} catch (Throwable throwable) {
-			chunk.discard();
-			throw throwable;
-		} finally {
-			//#if MC >= 26.1
-			//$$ renderer.disableCache();
-			//#endif
-		}
-		return chunk.build(new ChunkPos(section.sectionX(), section.sectionZ()), section.minY() + 8.0F);
-	}
+    private void buildPendingSections(SchematicPreviewModel model) {
+        if (this.nextSection >= this.pendingSections.size()
+                || System.nanoTime() < this.nextBuildAttemptNanos) {
+            return;
+        }
+        // 小模型优先在一帧完成，大模型受数量和时间预算限制以避免卡住 GUI 绘制
+        boolean buildSmallModelImmediately = model.blockCount() <= SMALL_MODEL_MAX_BLOCKS
+                && this.pendingSections.size() <= SMALL_MODEL_MAX_SECTIONS_PER_FRAME;
+        long deadline = System.nanoTime() + (buildSmallModelImmediately
+                ? SMALL_MODEL_BUILD_BUDGET_NANOS : BUILD_BUDGET_NANOS);
+        int maxSections = buildSmallModelImmediately
+                ? SMALL_MODEL_MAX_SECTIONS_PER_FRAME : MAX_SECTIONS_PER_FRAME;
+        int builtThisFrame = 0;
+        do {
+            SchematicPreviewModel.Section section = this.pendingSections.get(this.nextSection);
+            ChunkMesh mesh = this.buildSection(section);
+            if (mesh != null) {
+                this.meshes.add(mesh);
+            }
+            this.nextSection++;
+            builtThisFrame++;
+        } while (this.nextSection < this.pendingSections.size()
+                && builtThisFrame < maxSections && System.nanoTime() < deadline);
+    }
 
-	// 设置相机、投影矩阵和全局 Uniform，然后将所有网格渲染到离屏帧缓冲
-	// 相机位置根据偏航角/俯仰角/缩放计算，围绕模型包围盒的中心旋转
-	private void renderTarget(SchematicPreviewModel model, SchematicPreviewTransform transform) {
-		// 计算相机在模型包围球上的位置
-		// 球坐标 -> 空间坐标：x = centerX - sin(yaw)*cos(pitch)*dist, y = centerY - sin(pitch)*dist, z = centerZ + cos(yaw)*cos(pitch)*dist
-		float distance = transform.distance(model.size().getX(), model.size().getY(), model.size().getZ());
-		float yaw = transform.yaw() * Mth.DEG_TO_RAD;
-		float pitch = transform.pitch() * Mth.DEG_TO_RAD;
-		float horizontal = Mth.cos(pitch);
-		float sinYaw = Mth.sin(yaw);
-		float cosYaw = Mth.cos(yaw);
-		Vector3f camera = new Vector3f(
-				model.size().getX() * 0.5F - sinYaw * horizontal * distance,
-				model.size().getY() * 0.5F - Mth.sin(pitch) * distance,
-				model.size().getZ() * 0.5F + cosYaw * horizontal * distance);
-		float panScale = 2.0F * distance * (float) Math.tan(35.0F * Mth.DEG_TO_RAD);
-		Vector3f screenRight = new Vector3f(cosYaw, 0.0F, sinYaw);
-		Vector3f screenUp = new Vector3f(-sinYaw * Mth.sin(pitch), horizontal,
-				cosYaw * Mth.sin(pitch));
-		camera.add(screenRight.mul(-transform.panX() * panScale))
-				.add(screenUp.mul(transform.panY() * panScale));
-		Matrix4fStack modelView = RenderSystem.getModelViewStack();
-		modelView.pushMatrix();
-		boolean projectionBackedUp = false;
-		boolean globalUniformCaptured = false;
-		GpuBuffer previousGlobalUniform = null;
-		try {
-			Quaternionf rotation = new Quaternionf().rotationYXZ(-yaw, pitch, 0.0F).conjugate();
-			modelView.set(new Matrix4f().rotation(rotation));
-			// 构建透视投影矩阵，近平面 0.05，远平面 4096，FOV 70°
-			//#if MC >= 26.1
-			//$$ this.previewProjection.setupPerspective(0.05F, 4096.0F, 70.0F,
-			//$$ 		this.target.width, this.target.height);
-			//$$ Matrix4f projectionMatrix = this.previewProjection.getMatrix(new Matrix4f());
-			//#else
-			Matrix4f projectionMatrix = new Matrix4f().perspective(70.0F * Mth.DEG_TO_RAD,
-					(float) this.target.width / this.target.height, 0.05F, 4096.0F);
-			//#endif
-			// 备份原版投影矩阵和全局 Uniform，渲染完成后恢复
-			RenderSystem.backupProjectionMatrix();
-			projectionBackedUp = true;
-			if (this.projection == null) {
-				//#if MC >= 26.1
-				//$$ this.projection = new ProjectionMatrixBuffer("ListMore schematic preview");
-				//#else
-				this.projection = new PerspectiveProjectionMatrixBuffer("ListMore schematic preview");
-				//#endif
-			}
-			RenderSystem.setProjectionMatrix(this.projection.getBuffer(projectionMatrix), ProjectionType.PERSPECTIVE);
-			previousGlobalUniform = RenderSystem.getGlobalSettingsUniform();
-			globalUniformCaptured = true;
-			this.writeGlobalUniform(camera);
-			//#if MC >= 26.2
-			//$$ Minecraft.getInstance().gameRenderer.lighting().setupFor(Lighting.Entry.LEVEL);
-			//#else
-			Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.LEVEL);
-			//#endif
-			this.renderMeshes(camera);
-			this.renderBlockEntities(camera, transform.yaw(), transform.pitch());
-		} finally {
-			if (globalUniformCaptured) {
-				RenderSystem.setGlobalSettingsUniform(previousGlobalUniform);
-			}
-			if (projectionBackedUp) {
-				RenderSystem.restoreProjectionMatrix();
-			}
-			modelView.popMatrix();
-		}
-	}
+    // 单个 Section 独立网格化并上传
+    private ChunkMesh buildSection(SchematicPreviewModel.Section section) {
+        SchematicPreviewWorld view = this.world;
+        //#if MC >= 26.1
+        //$$ BlockModelRendererSchematic renderer = this.blockModelRenderer;
+        //$$ if (renderer == null) {
+        //$$ 	renderer = new BlockModelRendererSchematic();
+        //$$ 	this.blockModelRenderer = renderer;
+        //$$ }
+        //$$ renderer.enableCache();
+        //#endif
+        //#if MC >= 26.1
+        //$$ ModelManager modelManager = Minecraft.getInstance().getModelManager();
+        //#endif
+        ChunkMeshBuilder chunk = new ChunkMeshBuilder(this.sectionAllocators);
+        BlockPos.MutableBlockPos position = new BlockPos.MutableBlockPos();
+        //#if MC < 26.1
+        PoseStack pose = new PoseStack();
+        RandomSource random = RandomSource.create();
+        //#endif
+        //#if MC >= 26.1
+        //$$ FluidRenderer.Output fluidOutput = layer -> offsetVertexConsumer(chunk.builder(layer), section.minY());
+        //$$ IBlockOutputSchematic blockOutput = (x, y, z, quad, instance) -> chunk.builder(quad.materialInfo().layer())
+        //$$ 		.putBlockBakedQuad(x, y, z, quad, instance);
+        //#endif
+        int sectionMinX = section.minX();
+        int sectionMinY = section.minY();
+        int sectionMinZ = section.minZ();
+        try {
+            for (int index = 0; index < 4096; index++) {
+                BlockState state = section.stateAtIndex(index);
+                if (state == null) {
+                    continue;
+                }
+                int localX = index & 15;
+                int localZ = (index >> 4) & 15;
+                int localY = index >> 8;
+                int blockX = sectionMinX + localX;
+                int blockY = sectionMinY + localY;
+                int blockZ = sectionMinZ + localZ;
+                position.set(blockX, blockY, blockZ);
+                // 先渲染流体（水、岩浆等），再渲染固体方块模型
+                //#if MC >= 26.1
+                //$$ FluidState fluidState = state.getFluidState();
+                //$$ if (!fluidState.isEmpty()) {
+                //$$ 	this.fluidRenderer.tesselate(view, position, fluidOutput, state, fluidState);
+                //$$ }
+                //#else
+                FluidState fluidState = state.getFluidState();
+                if (!fluidState.isEmpty()) {
+                    Minecraft.getInstance().getBlockRenderer().renderLiquid(position, view,
+                            offsetVertexConsumer(chunk.builder(ItemBlockRenderTypes.getRenderLayer(fluidState)), section.minY()),
+                            state, fluidState);
+                }
+                //#endif
+                if (state.getRenderShape() != RenderShape.MODEL) {
+                    continue;
+                }
+                //#if MC >= 26.1
+                //$$ renderer.tessellateBlock(view, state, position, new Vec3(localX, blockY, localZ),
+                //$$ 		modelManager.getBlockStateModelSet().get(state), state.getSeed(position), blockOutput);
+                //#else
+                // & 15 取区块内局部坐标（0-15），模型顶点需要相对区块原点的偏移
+                pose.setIdentity();
+                pose.translate(localX, blockY, localZ);
+                random.setSeed(state.getSeed(position));
+                Minecraft.getInstance().getBlockRenderer().renderBatched(state, position, view, pose,
+                        chunk.builder(ItemBlockRenderTypes.getChunkRenderType(state)), true,
+                        Minecraft.getInstance().getBlockRenderer().getBlockModel(state)
+                                .collectParts(random));
+                //#endif
+            }
+        } catch (Throwable throwable) {
+            chunk.discard();
+            throw throwable;
+        } finally {
+            //#if MC >= 26.1
+            //$$ renderer.disableCache();
+            //#endif
+        }
+        return chunk.build(new ChunkPos(section.sectionX(), section.sectionZ()), section.minY() + 8.0F);
+    }
 
-	// 向 GPU 写入全局 Uniform 缓冲区，包含相机位置和窗口尺寸
-	// 使用 Std140 布局，与着色器中的 GlobalSettings 结构体对齐
-	private void writeGlobalUniform(Vector3f camera) {
-		if (this.globalUniform == null) {
-			this.globalUniform = RenderSystem.getDevice().createBuffer(() -> "ListMore preview global settings",
-					GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, GlobalSettingsUniform.UBO_SIZE);
-		}
-		try (MemoryStack stack = MemoryStack.stackPush()) {
-			//#if MC >= 26.3
-			//$$ int floorX = Mth.floor(camera.x);
-			//$$ int floorY = Mth.floor(camera.y);
-			//$$ int floorZ = Mth.floor(camera.z);
-			//$$ RenderSystem.getDevice().createCommandEncoder().writeToBuffer(this.globalUniform.slice(),
-			//$$ 		Std140Builder.onStack(stack, GlobalSettingsUniform.UBO_SIZE)
-			//$$ 				.putIVec3(floorX, floorY, floorZ)
-			//$$ 				.putFloat(1.0F)
-			//$$ 				.putVec3(floorX - camera.x, floorY - camera.y, floorZ - camera.z)
-			//$$ 				.putFloat(0.0F)
-			//$$ 				.putVec2(Minecraft.getInstance().getWindow().getWidth(), Minecraft.getInstance().getWindow().getHeight())
-			//$$ 				.putInt(0).putInt(0)
-			//$$ 				.get());
-			//#elseif MC >= 1.21.11
-			//$$ int floorX = Mth.floor(camera.x);
-			//$$ int floorY = Mth.floor(camera.y);
-			//$$ int floorZ = Mth.floor(camera.z);
-			//$$ RenderSystem.getDevice().createCommandEncoder().writeToBuffer(this.globalUniform.slice(),
-			//$$ 		Std140Builder.onStack(stack, GlobalSettingsUniform.UBO_SIZE)
-			//$$ 				.putIVec3(floorX, floorY, floorZ)
-			//$$ 				.putVec3(floorX - camera.x, floorY - camera.y, floorZ - camera.z)
-			//$$ 				.putVec2(Minecraft.getInstance().getWindow().getWidth(), Minecraft.getInstance().getWindow().getHeight())
-			//$$ 				.putFloat(1.0F).putFloat(0.0F).putInt(0).putInt(0)
-			//$$ 				.get());
-			//#else
-			RenderSystem.getDevice().createCommandEncoder().writeToBuffer(this.globalUniform.slice(),
-					Std140Builder.onStack(stack, GlobalSettingsUniform.UBO_SIZE)
-							.putVec2(Minecraft.getInstance().getWindow().getWidth(), Minecraft.getInstance().getWindow().getHeight())
-							.putFloat(1.0F).putFloat(0.0F).putInt(0)
-							.get());
-			//#endif
-		}
-		RenderSystem.setGlobalSettingsUniform(this.globalUniform);
-	}
+    // 设置相机、投影矩阵和全局 Uniform，然后将所有网格渲染到离屏帧缓冲
+    // 相机位置根据偏航角/俯仰角/缩放计算，围绕模型包围盒的中心旋转
+    private void renderTarget(SchematicPreviewModel model, SchematicPreviewTransform transform) {
+        // 计算相机在模型包围球上的位置
+        // 球坐标 -> 空间坐标：x = centerX - sin(yaw)*cos(pitch)*dist, y = centerY - sin(pitch)*dist, z = centerZ + cos(yaw)*cos(pitch)*dist
+        float distance = transform.distance(model.size().getX(), model.size().getY(), model.size().getZ());
+        float yaw = transform.yaw() * Mth.DEG_TO_RAD;
+        float pitch = transform.pitch() * Mth.DEG_TO_RAD;
+        float horizontal = Mth.cos(pitch);
+        float sinYaw = Mth.sin(yaw);
+        float cosYaw = Mth.cos(yaw);
+        Vector3f camera = new Vector3f(
+                model.size().getX() * 0.5F - sinYaw * horizontal * distance,
+                model.size().getY() * 0.5F - Mth.sin(pitch) * distance,
+                model.size().getZ() * 0.5F + cosYaw * horizontal * distance);
+        float panScale = 2.0F * distance * (float) Math.tan(35.0F * Mth.DEG_TO_RAD);
+        Vector3f screenRight = new Vector3f(cosYaw, 0.0F, sinYaw);
+        Vector3f screenUp = new Vector3f(-sinYaw * Mth.sin(pitch), horizontal,
+                cosYaw * Mth.sin(pitch));
+        camera.add(screenRight.mul(-transform.panX() * panScale))
+                .add(screenUp.mul(transform.panY() * panScale));
+        Matrix4fStack modelView = RenderSystem.getModelViewStack();
+        modelView.pushMatrix();
+        boolean projectionBackedUp = false;
+        boolean globalUniformCaptured = false;
+        GpuBuffer previousGlobalUniform = null;
+        try {
+            Quaternionf rotation = new Quaternionf().rotationYXZ(-yaw, pitch, 0.0F).conjugate();
+            modelView.set(new Matrix4f().rotation(rotation));
+            // 构建透视投影矩阵，近平面 0.05，远平面 4096，FOV 70°
+            //#if MC >= 26.1
+            //$$ this.previewProjection.setupPerspective(0.05F, 4096.0F, 70.0F,
+            //$$ 		this.target.width, this.target.height);
+            //$$ Matrix4f projectionMatrix = this.previewProjection.getMatrix(new Matrix4f());
+            //#else
+            Matrix4f projectionMatrix = new Matrix4f().perspective(70.0F * Mth.DEG_TO_RAD,
+                    (float) this.target.width / this.target.height, 0.05F, 4096.0F);
+            //#endif
+            // 备份原版投影矩阵和全局 Uniform，渲染完成后恢复
+            RenderSystem.backupProjectionMatrix();
+            projectionBackedUp = true;
+            if (this.projection == null) {
+                //#if MC >= 26.1
+                //$$ this.projection = new ProjectionMatrixBuffer("ListMore schematic preview");
+                //#else
+                this.projection = new PerspectiveProjectionMatrixBuffer("ListMore schematic preview");
+                //#endif
+            }
+            RenderSystem.setProjectionMatrix(this.projection.getBuffer(projectionMatrix), ProjectionType.PERSPECTIVE);
+            previousGlobalUniform = RenderSystem.getGlobalSettingsUniform();
+            globalUniformCaptured = true;
+            this.writeGlobalUniform(camera);
+            //#if MC >= 26.2
+            //$$ Minecraft.getInstance().gameRenderer.lighting().setupFor(Lighting.Entry.LEVEL);
+            //#else
+            Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.LEVEL);
+            //#endif
+            this.renderMeshes(camera);
+            this.renderBlockEntities(camera, transform.yaw(), transform.pitch());
+        } finally {
+            if (globalUniformCaptured) {
+                RenderSystem.setGlobalSettingsUniform(previousGlobalUniform);
+            }
+            if (projectionBackedUp) {
+                RenderSystem.restoreProjectionMatrix();
+            }
+            modelView.popMatrix();
+        }
+    }
 
-	// 按距离排序所有网格，为每个网格构建 Transform/SectionInfo Uniform，然后分不透明/半透明两层渲染
-	private void renderMeshes(Vector3f camera) {
-		var atlas = Minecraft.getInstance().getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS).getTextureView();
-		List<ChunkMesh> orderedMeshes = new ArrayList<>(this.meshes);
-		// 按距离降序排列（远的先画），负号使 Comparator 从大到小
-		orderedMeshes.sort(Comparator.comparingDouble(mesh -> -mesh.distanceTo(camera)));
-		//#if MC >= 26.3
-		//$$ DynamicGpuData.ChunkSectionInfo[] sections = new DynamicGpuData.ChunkSectionInfo[orderedMeshes.size()];
-		//$$ for (int i = 0; i < orderedMeshes.size(); i++) {
-		//$$ 	ChunkMesh mesh = orderedMeshes.get(i);
-		//$$ 	sections[i] = new DynamicGpuData.ChunkSectionInfo(mesh.chunk().getMinBlockX(), 0,
-		//$$ 			mesh.chunk().getMinBlockZ(), 1.0F);
-		//$$ }
-		//$$ GpuBufferSlice[] sectionUniforms = RenderSystem.getDynamicUniforms().writeChunkSections(sections);
-		//#elseif MC >= 1.21.11
-		//$$ DynamicUniforms.ChunkSectionInfo[] infos = new DynamicUniforms.ChunkSectionInfo[orderedMeshes.size()];
-		//$$ for (int i = 0; i < orderedMeshes.size(); i++) {
-		//$$ 	ChunkMesh mesh = orderedMeshes.get(i);
-		//$$ 	infos[i] = new DynamicUniforms.ChunkSectionInfo(
-			//#if MC >= 26.2
-			//$$ 			RenderSystem.getModelViewMatrixCopy(),
-			//#else
-		//$$ 			new Matrix4f(RenderSystem.getModelViewMatrix()),
-			//#endif
-		//$$ 			mesh.chunk().getMinBlockX(), 0,
-		//$$ 			mesh.chunk().getMinBlockZ(), 1.0F, atlas.getWidth(0), atlas.getHeight(0));
-		//$$ }
-		//$$ GpuBufferSlice[] sectionUniforms = RenderSystem.getDynamicUniforms().writeChunkSections(infos);
-		//#else
-		DynamicUniforms.Transform[] transforms = new DynamicUniforms.Transform[orderedMeshes.size()];
-		for (int i = 0; i < orderedMeshes.size(); i++) {
-			ChunkMesh mesh = orderedMeshes.get(i);
-			//#if MC < 1.21.11
-			transforms[i] = new DynamicUniforms.Transform(new Matrix4f(RenderSystem.getModelViewMatrix()),
-					new Vector4f(1.0F), new Vector3f(mesh.chunk().getMinBlockX() - camera.x, -camera.y,
-					mesh.chunk().getMinBlockZ() - camera.z), new Matrix4f(), 1.0F);
-			//#else
-			//$$ transforms[i] = new DynamicUniforms.Transform(new Matrix4f(RenderSystem.getModelViewMatrix()),
-			//$$ 		new Vector4f(1.0F), new Vector3f(mesh.chunk().getMinBlockX() - camera.x, -camera.y,
-			//$$ 		mesh.chunk().getMinBlockZ() - camera.z), new Matrix4f());
-			//#endif
-		}
-		GpuBufferSlice[] transformUniforms = RenderSystem.getDynamicUniforms().writeTransforms(transforms);
-		//#endif
-		// 获取顺序索引缓冲区，供没有独立索引缓冲的网格共享使用
-		RenderSystem.AutoStorageIndexBuffer sequential = RenderSystem.getSequentialBuffer(
-				//#if MC >= 26.2
-				//$$ PrimitiveTopology.QUADS
-				//#else
-				VertexFormat.Mode.QUADS
-				//#endif
-		);
-		// 找出所有网格中最大的顺序索引需求，确保共享缓冲区足够大
-		int maxSequentialIndices = 0;
-		for (ChunkMesh chunk : orderedMeshes) {
-			for (SectionBuffers mesh : chunk.buffers().values()) {
-				if (mesh.indexBuffer() == null) {
-					maxSequentialIndices = Math.max(maxSequentialIndices, mesh.indexCount());
-				}
-			}
-		}
-		GpuBuffer sharedIndex = maxSequentialIndices == 0 ? null : sequential.getBuffer(maxSequentialIndices);
-		IndexType sharedIndexType = maxSequentialIndices == 0 ? null : sequential.type();
-		// 先画不透明层，再按远到近绘制半透明层
-		//#if MC >= 26.3
-		//$$ this.renderLayerGroup(orderedMeshes, sectionUniforms, atlas, sharedIndex, sharedIndexType,
-		//$$ 		ChunkSectionLayerGroup.OPAQUE);
-		//$$ this.renderLayerGroup(orderedMeshes, sectionUniforms, atlas, sharedIndex, sharedIndexType,
-		//$$ 		ChunkSectionLayerGroup.TRANSLUCENT);
-		//#elseif MC >= 1.21.11
-		//$$ this.renderLayerGroup(orderedMeshes, sectionUniforms, atlas, sharedIndex, sharedIndexType,
-		//$$ 		ChunkSectionLayerGroup.OPAQUE);
-		//$$ this.renderLayerGroup(orderedMeshes, sectionUniforms, atlas, sharedIndex, sharedIndexType,
-		//$$ 		ChunkSectionLayerGroup.TRANSLUCENT);
-		//#else
-		this.renderLayerGroup(orderedMeshes, transformUniforms, atlas, sharedIndex, sharedIndexType,
-				ChunkSectionLayerGroup.OPAQUE);
-		this.renderLayerGroup(orderedMeshes, transformUniforms, atlas, sharedIndex, sharedIndexType,
-				ChunkSectionLayerGroup.TRANSLUCENT);
-		//#endif
-	}
+    // 向 GPU 写入全局 Uniform 缓冲区，包含相机位置和窗口尺寸
+    // 使用 Std140 布局，与着色器中的 GlobalSettings 结构体对齐
+    private void writeGlobalUniform(Vector3f camera) {
+        if (this.globalUniform == null) {
+            this.globalUniform = RenderSystem.getDevice().createBuffer(() -> "ListMore preview global settings",
+                    GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, GlobalSettingsUniform.UBO_SIZE);
+        }
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            //#if MC >= 26.3
+            //$$ int floorX = Mth.floor(camera.x);
+            //$$ int floorY = Mth.floor(camera.y);
+            //$$ int floorZ = Mth.floor(camera.z);
+            //$$ RenderSystem.getDevice().createCommandEncoder().writeToBuffer(this.globalUniform.slice(),
+            //$$ 		Std140Builder.onStack(stack, GlobalSettingsUniform.UBO_SIZE)
+            //$$ 				.putIVec3(floorX, floorY, floorZ)
+            //$$ 				.putFloat(1.0F)
+            //$$ 				.putVec3(floorX - camera.x, floorY - camera.y, floorZ - camera.z)
+            //$$ 				.putFloat(0.0F)
+            //$$ 				.putVec2(Minecraft.getInstance().getWindow().getWidth(), Minecraft.getInstance().getWindow().getHeight())
+            //$$ 				.putInt(0).putInt(0)
+            //$$ 				.get());
+            //#elseif MC >= 1.21.11
+            //$$ int floorX = Mth.floor(camera.x);
+            //$$ int floorY = Mth.floor(camera.y);
+            //$$ int floorZ = Mth.floor(camera.z);
+            //$$ RenderSystem.getDevice().createCommandEncoder().writeToBuffer(this.globalUniform.slice(),
+            //$$ 		Std140Builder.onStack(stack, GlobalSettingsUniform.UBO_SIZE)
+            //$$ 				.putIVec3(floorX, floorY, floorZ)
+            //$$ 				.putVec3(floorX - camera.x, floorY - camera.y, floorZ - camera.z)
+            //$$ 				.putVec2(Minecraft.getInstance().getWindow().getWidth(), Minecraft.getInstance().getWindow().getHeight())
+            //$$ 				.putFloat(1.0F).putFloat(0.0F).putInt(0).putInt(0)
+            //$$ 				.get());
+            //#else
+            RenderSystem.getDevice().createCommandEncoder().writeToBuffer(this.globalUniform.slice(),
+                    Std140Builder.onStack(stack, GlobalSettingsUniform.UBO_SIZE)
+                            .putVec2(Minecraft.getInstance().getWindow().getWidth(), Minecraft.getInstance().getWindow().getHeight())
+                            .putFloat(1.0F).putFloat(0.0F).putInt(0)
+                            .get());
+            //#endif
+        }
+        RenderSystem.setGlobalSettingsUniform(this.globalUniform);
+    }
 
-	// 为指定的渲染层组（不透明或半透明）创建 RenderPass 并绘制所有网格
-	// 每个 ChunkSectionLayer 对应一种渲染管线（如 solid、cutout、translucent）
-	private void renderLayerGroup(List<ChunkMesh> orderedMeshes, GpuBufferSlice[] meshUniforms,
-			GpuTextureView atlas, GpuBuffer sharedIndex, IndexType sharedIndexType,
-			ChunkSectionLayerGroup group) {
-		try (RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
-				() -> "ListMore schematic preview " + group.label(), this.target.getColorTextureView(),
-				//#if MC >= 26.2
-				//$$ Optional.empty(),
-				//#else
-				OptionalInt.empty(),
-				//#endif
-				this.target.getDepthTextureView(), OptionalDouble.empty())) {
-			RenderSystem.bindDefaultUniforms(pass);
-			// 绑定光照纹理（Sampler2），所有渲染管线都需要
-			//#if MC >= 26.3
-			//$$ pass.setUniform("Sampler2", Minecraft.getInstance().gameRenderer.lightmap(), this.sampler);
-			//#elseif MC >= 26.1
-			//$$ pass.bindTexture("Sampler2", Minecraft.getInstance().gameRenderer.lightmap(), this.sampler);
-			//#elseif MC >= 1.21.11
-			//$$ pass.bindTexture("Sampler2", Minecraft.getInstance().gameRenderer.lightTexture().getTextureView(), this.sampler);
-			//#else
-			pass.bindSampler("Sampler2", Minecraft.getInstance().gameRenderer.lightTexture().getTextureView());
-			//#endif
-			//#if MC >= 26.3
-			//$$ pass.setUniform("TerrainUniform", RenderSystem.getDynamicUniforms().writeTerrainTransform(
-			//$$ 		RenderSystem.getModelViewMatrixCopy(), atlas.getWidth(0), atlas.getHeight(0)));
-			//#endif
-			for (ChunkSectionLayer layer : group.layers()) {
-				//#if MC >= 26.3
-				//$$ pass.setPipeline(RenderSystem.getCompiledPipeline(layer.pipeline(false)));
-				//#else
-				pass.setPipeline(layer.pipeline());
-				//#endif
-				// 绑定方块纹理图集（Sampler0）
-				//#if MC >= 26.3
-				//$$ pass.setUniform("Sampler0", atlas, this.sampler);
-				//#elseif MC >= 26.1
-				//$$ pass.bindTexture("Sampler0", atlas, this.sampler);
-				//#elseif MC >= 1.21.11
-				//$$ pass.bindTexture("Sampler0", atlas, this.sampler);
-				//#else
-				pass.bindSampler("Sampler0", atlas);
-				//#endif
-				List<RenderPass.Draw<GpuBufferSlice[]>> draws = new ArrayList<>();
-				for (int i = 0; i < orderedMeshes.size(); i++) {
-					SectionBuffers mesh = orderedMeshes.get(i).buffers().get(layer);
-					if (mesh == null || mesh.indexCount() <= 0 || mesh.vertexBuffer().isClosed()) continue;
-					// 捕获 i 到局部变量，lambda 内不能直接引用循环变量
-					int uniformIndex = i;
-					//#if MC >= 26.3
-					//$$ draws.add(new RenderPass.Draw<>(0, mesh.vertexBuffer(), mesh.indexBuffer(),
-					//$$ 		mesh.indexBuffer() == null ? null : mesh.indexType(), 0, mesh.indexCount(), 0,
-					//$$ 		(slices, uploader) -> uploader.setUniform("ChunkSection", slices[uniformIndex])));
-					//#elseif MC >= 26.2
-					//$$ draws.add(new RenderPass.Draw<>(0, mesh.vertexBuffer(), mesh.indexBuffer(),
-					//$$ 		mesh.indexBuffer() == null ? null : mesh.indexType(), 0, mesh.indexCount(), 0,
-					//$$ 		(slices, uploader) -> uploader.upload("ChunkSection", slices[uniformIndex])));
-					//#elseif MC >= 26.1
-					//$$ draws.add(new RenderPass.Draw<>(0, mesh.vertexBuffer(), mesh.indexBuffer(),
-					//$$ 		mesh.indexBuffer() == null ? null : mesh.indexType(), 0, mesh.indexCount(), 0,
-					//$$ 		(slices, uploader) -> uploader.upload("ChunkSection", slices[uniformIndex])));
-					//#elseif MC >= 1.21.11
-					//$$ draws.add(new RenderPass.Draw<>(0, mesh.vertexBuffer(), mesh.indexBuffer(),
-					//$$ 		mesh.indexBuffer() == null ? null : mesh.indexType(), 0, mesh.indexCount(),
-					//$$ 		(slices, uploader) -> uploader.upload("ChunkSection", slices[uniformIndex])));
-					//#else
-					draws.add(new RenderPass.Draw<>(0, mesh.vertexBuffer(), mesh.indexBuffer(),
-							mesh.indexBuffer() == null ? null : mesh.indexType(), 0, mesh.indexCount(),
-							(slices, uploader) -> uploader.upload("DynamicTransforms", slices[uniformIndex])));
-					//#endif
-				}
-				if (!draws.isEmpty()) {
-					//#if MC >= 26.3
-					//$$ pass.drawMultipleIndexed(draws, sharedIndex, sharedIndexType, List.of("ChunkSection"), meshUniforms);
-					//#elseif MC >= 1.21.11
-					//$$ pass.drawMultipleIndexed(draws, sharedIndex, sharedIndexType, List.of("ChunkSection"), meshUniforms);
-					//#else
-					pass.drawMultipleIndexed(draws, sharedIndex, sharedIndexType, List.of("DynamicTransforms"), meshUniforms);
-					//#endif
-				}
-			}
-		}
-	}
+    // 按距离排序所有网格，为每个网格构建 Transform/SectionInfo Uniform，然后分不透明/半透明两层渲染
+    private void renderMeshes(Vector3f camera) {
+        var atlas = Minecraft.getInstance().getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS).getTextureView();
+        List<ChunkMesh> orderedMeshes = new ArrayList<>(this.meshes);
+        // 按距离降序排列（远的先画），负号使 Comparator 从大到小
+        orderedMeshes.sort(Comparator.comparingDouble(mesh -> -mesh.distanceTo(camera)));
+        //#if MC >= 26.3
+        //$$ DynamicGpuData.ChunkSectionInfo[] sections = new DynamicGpuData.ChunkSectionInfo[orderedMeshes.size()];
+        //$$ for (int i = 0; i < orderedMeshes.size(); i++) {
+        //$$ 	ChunkMesh mesh = orderedMeshes.get(i);
+        //$$ 	sections[i] = new DynamicGpuData.ChunkSectionInfo(mesh.chunk().getMinBlockX(), 0,
+        //$$ 			mesh.chunk().getMinBlockZ(), 1.0F);
+        //$$ }
+        //$$ GpuBufferSlice[] sectionUniforms = RenderSystem.getDynamicUniforms().writeChunkSections(sections);
+        //#elseif MC >= 1.21.11
+        //$$ DynamicUniforms.ChunkSectionInfo[] infos = new DynamicUniforms.ChunkSectionInfo[orderedMeshes.size()];
+        //$$ for (int i = 0; i < orderedMeshes.size(); i++) {
+        //$$ 	ChunkMesh mesh = orderedMeshes.get(i);
+        //$$ 	infos[i] = new DynamicUniforms.ChunkSectionInfo(
+        //#if MC >= 26.2
+        //$$ 			RenderSystem.getModelViewMatrixCopy(),
+        //#else
+        //$$ 			new Matrix4f(RenderSystem.getModelViewMatrix()),
+        //#endif
+        //$$ 			mesh.chunk().getMinBlockX(), 0,
+        //$$ 			mesh.chunk().getMinBlockZ(), 1.0F, atlas.getWidth(0), atlas.getHeight(0));
+        //$$ }
+        //$$ GpuBufferSlice[] sectionUniforms = RenderSystem.getDynamicUniforms().writeChunkSections(infos);
+        //#else
+        DynamicUniforms.Transform[] transforms = new DynamicUniforms.Transform[orderedMeshes.size()];
+        for (int i = 0; i < orderedMeshes.size(); i++) {
+            ChunkMesh mesh = orderedMeshes.get(i);
+            //#if MC < 1.21.11
+            transforms[i] = new DynamicUniforms.Transform(new Matrix4f(RenderSystem.getModelViewMatrix()),
+                    new Vector4f(1.0F), new Vector3f(mesh.chunk().getMinBlockX() - camera.x, -camera.y,
+                    mesh.chunk().getMinBlockZ() - camera.z), new Matrix4f(), 1.0F);
+            //#else
+            //$$ transforms[i] = new DynamicUniforms.Transform(new Matrix4f(RenderSystem.getModelViewMatrix()),
+            //$$ 		new Vector4f(1.0F), new Vector3f(mesh.chunk().getMinBlockX() - camera.x, -camera.y,
+            //$$ 		mesh.chunk().getMinBlockZ() - camera.z), new Matrix4f());
+            //#endif
+        }
+        GpuBufferSlice[] transformUniforms = RenderSystem.getDynamicUniforms().writeTransforms(transforms);
+        //#endif
+        // 获取顺序索引缓冲区，供没有独立索引缓冲的网格共享使用
+        RenderSystem.AutoStorageIndexBuffer sequential = RenderSystem.getSequentialBuffer(
+                //#if MC >= 26.2
+                //$$ PrimitiveTopology.QUADS
+                //#else
+                VertexFormat.Mode.QUADS
+                //#endif
+        );
+        // 找出所有网格中最大的顺序索引需求，确保共享缓冲区足够大
+        int maxSequentialIndices = 0;
+        for (ChunkMesh chunk : orderedMeshes) {
+            for (SectionBuffers mesh : chunk.buffers().values()) {
+                if (mesh.indexBuffer() == null) {
+                    maxSequentialIndices = Math.max(maxSequentialIndices, mesh.indexCount());
+                }
+            }
+        }
+        GpuBuffer sharedIndex = maxSequentialIndices == 0 ? null : sequential.getBuffer(maxSequentialIndices);
+        IndexType sharedIndexType = maxSequentialIndices == 0 ? null : sequential.type();
+        // 先画不透明层，再按远到近绘制半透明层
+        //#if MC >= 26.3
+        //$$ this.renderLayerGroup(orderedMeshes, sectionUniforms, atlas, sharedIndex, sharedIndexType,
+        //$$ 		ChunkSectionLayerGroup.OPAQUE);
+        //$$ this.renderLayerGroup(orderedMeshes, sectionUniforms, atlas, sharedIndex, sharedIndexType,
+        //$$ 		ChunkSectionLayerGroup.TRANSLUCENT);
+        //#elseif MC >= 1.21.11
+        //$$ this.renderLayerGroup(orderedMeshes, sectionUniforms, atlas, sharedIndex, sharedIndexType,
+        //$$ 		ChunkSectionLayerGroup.OPAQUE);
+        //$$ this.renderLayerGroup(orderedMeshes, sectionUniforms, atlas, sharedIndex, sharedIndexType,
+        //$$ 		ChunkSectionLayerGroup.TRANSLUCENT);
+        //#else
+        this.renderLayerGroup(orderedMeshes, transformUniforms, atlas, sharedIndex, sharedIndexType,
+                ChunkSectionLayerGroup.OPAQUE);
+        this.renderLayerGroup(orderedMeshes, transformUniforms, atlas, sharedIndex, sharedIndexType,
+                ChunkSectionLayerGroup.TRANSLUCENT);
+        //#endif
+    }
 
-	private void closeMeshes() {
-		this.closeBuiltMeshes();
-		this.pendingSections = List.of();
-		this.nextSection = 0;
-		this.nextBuildAttemptNanos = 0L;
-		this.buildFailures = 0;
-	}
+    // 为指定的渲染层组（不透明或半透明）创建 RenderPass 并绘制所有网格
+    // 每个 ChunkSectionLayer 对应一种渲染管线（如 solid、cutout、translucent）
+    private void renderLayerGroup(List<ChunkMesh> orderedMeshes, GpuBufferSlice[] meshUniforms,
+                                  GpuTextureView atlas, GpuBuffer sharedIndex, IndexType sharedIndexType,
+                                  ChunkSectionLayerGroup group) {
+        try (RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
+                () -> "ListMore schematic preview " + group.label(), this.target.getColorTextureView(),
+                //#if MC >= 26.2
+                //$$ Optional.empty(),
+                //#else
+                OptionalInt.empty(),
+                //#endif
+                this.target.getDepthTextureView(), OptionalDouble.empty())) {
+            RenderSystem.bindDefaultUniforms(pass);
+            // 绑定光照纹理（Sampler2），所有渲染管线都需要
+            //#if MC >= 26.3
+            //$$ pass.setUniform("Sampler2", Minecraft.getInstance().gameRenderer.lightmap(), this.sampler);
+            //#elseif MC >= 26.1
+            //$$ pass.bindTexture("Sampler2", Minecraft.getInstance().gameRenderer.lightmap(), this.sampler);
+            //#elseif MC >= 1.21.11
+            //$$ pass.bindTexture("Sampler2", Minecraft.getInstance().gameRenderer.lightTexture().getTextureView(), this.sampler);
+            //#else
+            pass.bindSampler("Sampler2", Minecraft.getInstance().gameRenderer.lightTexture().getTextureView());
+            //#endif
+            //#if MC >= 26.3
+            //$$ pass.setUniform("TerrainUniform", RenderSystem.getDynamicUniforms().writeTerrainTransform(
+            //$$ 		RenderSystem.getModelViewMatrixCopy(), atlas.getWidth(0), atlas.getHeight(0)));
+            //#endif
+            for (ChunkSectionLayer layer : group.layers()) {
+                //#if MC >= 26.3
+                //$$ pass.setPipeline(RenderSystem.getCompiledPipeline(layer.pipeline(false)));
+                //#else
+                pass.setPipeline(layer.pipeline());
+                //#endif
+                // 绑定方块纹理图集（Sampler0）
+                //#if MC >= 26.3
+                //$$ pass.setUniform("Sampler0", atlas, this.sampler);
+                //#elseif MC >= 26.1
+                //$$ pass.bindTexture("Sampler0", atlas, this.sampler);
+                //#elseif MC >= 1.21.11
+                //$$ pass.bindTexture("Sampler0", atlas, this.sampler);
+                //#else
+                pass.bindSampler("Sampler0", atlas);
+                //#endif
+                List<RenderPass.Draw<GpuBufferSlice[]>> draws = new ArrayList<>();
+                for (int i = 0; i < orderedMeshes.size(); i++) {
+                    SectionBuffers mesh = orderedMeshes.get(i).buffers().get(layer);
+                    if (mesh == null || mesh.indexCount() <= 0 || mesh.vertexBuffer().isClosed()) continue;
+                    // 捕获 i 到局部变量，lambda 内不能直接引用循环变量
+                    int uniformIndex = i;
+                    //#if MC >= 26.3
+                    //$$ draws.add(new RenderPass.Draw<>(0, mesh.vertexBuffer(), mesh.indexBuffer(),
+                    //$$ 		mesh.indexBuffer() == null ? null : mesh.indexType(), 0, mesh.indexCount(), 0,
+                    //$$ 		(slices, uploader) -> uploader.setUniform("ChunkSection", slices[uniformIndex])));
+                    //#elseif MC >= 26.2
+                    //$$ draws.add(new RenderPass.Draw<>(0, mesh.vertexBuffer(), mesh.indexBuffer(),
+                    //$$ 		mesh.indexBuffer() == null ? null : mesh.indexType(), 0, mesh.indexCount(), 0,
+                    //$$ 		(slices, uploader) -> uploader.upload("ChunkSection", slices[uniformIndex])));
+                    //#elseif MC >= 26.1
+                    //$$ draws.add(new RenderPass.Draw<>(0, mesh.vertexBuffer(), mesh.indexBuffer(),
+                    //$$ 		mesh.indexBuffer() == null ? null : mesh.indexType(), 0, mesh.indexCount(), 0,
+                    //$$ 		(slices, uploader) -> uploader.upload("ChunkSection", slices[uniformIndex])));
+                    //#elseif MC >= 1.21.11
+                    //$$ draws.add(new RenderPass.Draw<>(0, mesh.vertexBuffer(), mesh.indexBuffer(),
+                    //$$ 		mesh.indexBuffer() == null ? null : mesh.indexType(), 0, mesh.indexCount(),
+                    //$$ 		(slices, uploader) -> uploader.upload("ChunkSection", slices[uniformIndex])));
+                    //#else
+                    draws.add(new RenderPass.Draw<>(0, mesh.vertexBuffer(), mesh.indexBuffer(),
+                            mesh.indexBuffer() == null ? null : mesh.indexType(), 0, mesh.indexCount(),
+                            (slices, uploader) -> uploader.upload("DynamicTransforms", slices[uniformIndex])));
+                    //#endif
+                }
+                if (!draws.isEmpty()) {
+                    //#if MC >= 26.3
+                    //$$ pass.drawMultipleIndexed(draws, sharedIndex, sharedIndexType, List.of("ChunkSection"), meshUniforms);
+                    //#elseif MC >= 1.21.11
+                    //$$ pass.drawMultipleIndexed(draws, sharedIndex, sharedIndexType, List.of("ChunkSection"), meshUniforms);
+                    //#else
+                    pass.drawMultipleIndexed(draws, sharedIndex, sharedIndexType, List.of("DynamicTransforms"), meshUniforms);
+                    //#endif
+                }
+            }
+        }
+    }
 
-	private void closeBuiltMeshes() {
-		this.meshes.forEach(ChunkMesh::close);
-		this.meshes.clear();
-	}
+    private void closeMeshes() {
+        this.closeBuiltMeshes();
+        this.pendingSections = List.of();
+        this.nextSection = 0;
+        this.nextBuildAttemptNanos = 0L;
+        this.buildFailures = 0;
+    }
 
-	// Block entities must remain outside the section meshes: their renderers are dynamic.
-	private void renderBlockEntities(Vector3f cameraPosition, float cameraYaw, float cameraPitch) {
-		if (this.world == null || !this.world.hasBlockEntityData()) {
-			return;
-		}
-		//#if MC < 26.3
-		GpuTextureView previousColor = RenderSystem.outputColorTextureOverride;
-		GpuTextureView previousDepth = RenderSystem.outputDepthTextureOverride;
-		RenderSystem.outputColorTextureOverride = this.target.getColorTextureView();
-		RenderSystem.outputDepthTextureOverride = this.target.getDepthTextureView();
-		//#endif
-		try {
-			Minecraft minecraft = Minecraft.getInstance();
-			BlockEntityRenderDispatcher dispatcher = minecraft.getBlockEntityRenderDispatcher();
-			PoseStack pose = new PoseStack();
-			//#if MC < 1.21.10
-			PreviewCamera camera = new PreviewCamera();
-			camera.setPreviewPose(cameraPosition, cameraYaw, cameraPitch);
-			dispatcher.prepare(minecraft.level, camera, minecraft.hitResult);
-			MultiBufferSource.BufferSource buffers = minecraft.renderBuffers().bufferSource();
-			for (BlockEntity blockEntity : this.world.blockEntities()) {
-				BlockPos position = blockEntity.getBlockPos();
-				pose.pushPose();
-				pose.translate(position.getX() - cameraPosition.x, position.getY() - cameraPosition.y,
-						position.getZ() - cameraPosition.z);
-				dispatcher.render(blockEntity, 0.0F, pose, buffers);
-				pose.popPose();
-			}
-			buffers.endBatch();
-			//#elseif MC < 26.1
-			//$$ this.ensureBlockEntityRendererResources(minecraft);
-			//$$ PreviewCamera camera = new PreviewCamera();
-			//$$ camera.setPreviewPose(cameraPosition, cameraYaw, cameraPitch);
-			//$$ dispatcher.prepare(camera);
-			//$$ for (BlockEntity blockEntity : this.world.blockEntities()) {
-			//$$ 	BlockEntityRenderState state = dispatcher.tryExtractRenderState(blockEntity, 0.0F, null);
-			//$$ 	if (state == null) {
-			//$$ 		continue;
-			//$$ 	}
-			//$$ 	BlockPos position = blockEntity.getBlockPos();
-			//$$ 	pose.pushPose();
-			//$$ 	pose.translate(position.getX() - cameraPosition.x, position.getY() - cameraPosition.y,
-			//$$ 			position.getZ() - cameraPosition.z);
-			//$$ 	CameraRenderState cameraState = new CameraRenderState();
-			//$$ 	cameraState.initialized = true;
-			//$$ 	cameraState.pos = new Vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z);
-			//$$ 	cameraState.blockPos = BlockPos.containing(cameraState.pos);
-			//$$ 	cameraState.orientation = new Quaternionf().rotationYXZ(-cameraYaw * Mth.DEG_TO_RAD,
-			//$$ 			cameraPitch * Mth.DEG_TO_RAD, 0.0F);
-			//$$ 	cameraState.entityPos = cameraState.pos;
-			//$$ 	dispatcher.submit(state, pose, this.blockEntitySubmitNodes, cameraState);
-			//$$ 	pose.popPose();
-			//$$ }
-			//$$ this.blockEntityFeatureDispatcher.renderAllFeatures();
-			//#elseif MC >= 26.3
-			//$$ this.ensureBlockEntityRendererResources(minecraft);
-			//$$ CameraRenderState cameraState = new CameraRenderState();
-			//$$ cameraState.initialized = true;
-			//$$ cameraState.pos = new Vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z);
-			//$$ cameraState.blockPos = BlockPos.containing(cameraState.pos);
-			//$$ cameraState.orientation = new Quaternionf().rotationYXZ(-cameraYaw * Mth.DEG_TO_RAD,
-			//$$ 		cameraPitch * Mth.DEG_TO_RAD, 0.0F);
-			//$$ dispatcher.prepare(cameraState.pos);
-			//$$ for (BlockEntity blockEntity : this.world.blockEntities()) {
-			//$$ 	BlockEntityRenderState state = dispatcher.tryExtractRenderState(blockEntity, 0.0F, null, false);
-			//$$ 	if (state == null) {
-			//$$ 		continue;
-			//$$ 	}
-			//$$ 	BlockPos position = blockEntity.getBlockPos();
-			//$$ 	pose.pushPose();
-			//$$ 	pose.translate(position.getX() - cameraPosition.x, position.getY() - cameraPosition.y,
-			//$$ 			position.getZ() - cameraPosition.z);
-			//$$ 	dispatcher.submit(state, pose, this.blockEntitySubmitNodes, cameraState);
-			//$$ 	pose.popPose();
-			//$$ }
-			//$$ try (FeatureRenderDispatcher.PreparedFrame frame = this.blockEntityFeatureDispatcher.prepareFrame(this.blockEntitySubmitNodes);
-			//$$ 		RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
-			//$$ 				() -> "ListMore schematic preview block entities", this.target.getColorTextureView(),
-			//$$ 				Optional.empty(), this.target.getDepthTextureView(), OptionalDouble.empty())) {
-			//$$ 	RenderSystem.bindDefaultUniforms(pass);
-			//$$ 	FeatureRenderDispatcher.renderAllFeatures(pass, frame);
-			//$$ }
-			//#elseif MC >= 26.2
-			//$$ this.ensureBlockEntityRendererResources(minecraft);
-			//$$ CameraRenderState cameraState = new CameraRenderState();
-			//$$ cameraState.initialized = true;
-			//$$ cameraState.pos = new Vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z);
-			//$$ cameraState.blockPos = BlockPos.containing(cameraState.pos);
-			//$$ cameraState.orientation = new Quaternionf().rotationYXZ(-cameraYaw * Mth.DEG_TO_RAD,
-			//$$ 		cameraPitch * Mth.DEG_TO_RAD, 0.0F);
-			//$$ dispatcher.prepare(cameraState.pos);
-			//$$ for (BlockEntity blockEntity : this.world.blockEntities()) {
-			//$$ 	BlockEntityRenderState state = dispatcher.tryExtractRenderState(blockEntity, 0.0F, null, false);
-			//$$ 	if (state == null) {
-			//$$ 		continue;
-			//$$ 	}
-			//$$ 	BlockPos position = blockEntity.getBlockPos();
-			//$$ 	pose.pushPose();
-			//$$ 	pose.translate(position.getX() - cameraPosition.x, position.getY() - cameraPosition.y,
-			//$$ 			position.getZ() - cameraPosition.z);
-			//$$ 	dispatcher.submit(state, pose, this.blockEntitySubmitNodes, cameraState);
-			//$$ 	pose.popPose();
-			//$$ }
-			//$$ try (FeatureRenderDispatcher.PreparedFrame frame = this.blockEntityFeatureDispatcher.prepareFrame(this.blockEntitySubmitNodes)) {
-			//$$ 	frame.executeSolid();
-			//$$ 	frame.executeTranslucent();
-			//$$ 	frame.executeOutline();
-			//$$ 	frame.executeTranslucentAfterTerrain();
-			//$$ 	frame.executeAlwaysOnTop();
-			//$$ }
-			//#else
-			//$$ this.ensureBlockEntityRendererResources(minecraft);
-			//$$ CameraRenderState cameraState = new CameraRenderState();
-			//$$ cameraState.initialized = true;
-			//$$ cameraState.pos = new Vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z);
-			//$$ cameraState.blockPos = BlockPos.containing(cameraState.pos);
-			//$$ cameraState.orientation = new Quaternionf().rotationYXZ(-cameraYaw * Mth.DEG_TO_RAD,
-			//$$ 		cameraPitch * Mth.DEG_TO_RAD, 0.0F);
-			//$$ dispatcher.prepare(cameraState.pos);
-			//$$ for (BlockEntity blockEntity : this.world.blockEntities()) {
-			//$$ 	BlockEntityRenderState state = dispatcher.tryExtractRenderState(blockEntity, 0.0F, null);
-			//$$ 	if (state == null) {
-			//$$ 		continue;
-			//$$ 	}
-			//$$ 	BlockPos position = blockEntity.getBlockPos();
-			//$$ 	pose.pushPose();
-			//$$ 	pose.translate(position.getX() - cameraPosition.x, position.getY() - cameraPosition.y,
-			//$$ 			position.getZ() - cameraPosition.z);
-			//$$ 	dispatcher.submit(state, pose, this.blockEntitySubmitNodes, cameraState);
-			//$$ 	pose.popPose();
-			//$$ }
-			//$$ this.blockEntityFeatureDispatcher.renderAllFeatures();
-			//#endif
-		} finally {
-			//#if MC >= 1.21.10 && MC < 26.2
-			//$$ if (this.blockEntityFeatureDispatcher != null) {
-			//$$ 	this.blockEntityFeatureDispatcher.endFrame();
-			//$$ }
-			//#elseif MC >= 26.2
-			//$$ if (this.blockEntityRenderBuffers != null) {
-			//$$ 	this.blockEntityRenderBuffers.endFrame();
-			//$$ }
-			//#endif
-			//#if MC < 26.3
-			RenderSystem.outputColorTextureOverride = previousColor;
-			RenderSystem.outputDepthTextureOverride = previousDepth;
-			//#endif
-		}
-	}
+    private void closeBuiltMeshes() {
+        this.meshes.forEach(ChunkMesh::close);
+        this.meshes.clear();
+    }
 
-	//#if MC >= 26.2
-	// Keep block-entity submits and their buffers independent from Minecraft's world renderer.
-	//$$ private void ensureBlockEntityRendererResources(Minecraft minecraft) {
-	//$$ 	if (this.blockEntityFeatureDispatcher != null) {
-	//$$ 		return;
-	//$$ 	}
-	//$$ 	this.blockEntitySubmitNodes = new SubmitNodeStorage();
-	//$$ 	this.blockEntityRenderBuffers = new RenderBuffers(1);
-	//$$ 	this.blockEntityGameRenderState = new GameRenderState();
-	//$$ 	this.blockEntityFeatureDispatcher = new FeatureRenderDispatcher(this.blockEntityRenderBuffers,
-	//$$ 			minecraft.getModelManager(), minecraft.getAtlasManager(), minecraft.font, this.blockEntityGameRenderState);
-	//$$ }
-	//#elseif MC >= 26.1
-	// Keep block-entity submits and their buffers independent from Minecraft's world renderer.
-	//$$ private void ensureBlockEntityRendererResources(Minecraft minecraft) {
-	//$$ 	if (this.blockEntityFeatureDispatcher != null) {
-	//$$ 		return;
-	//$$ 	}
-	//$$ 	this.blockEntitySubmitNodes = new SubmitNodeStorage();
-	//$$ 	this.blockEntityRenderBuffers = new RenderBuffers(1);
-	//$$ 	this.blockEntityGameRenderState = new GameRenderState();
-	//$$ 	this.blockEntityFeatureDispatcher = new FeatureRenderDispatcher(this.blockEntitySubmitNodes,
-	//$$ 			minecraft.getModelManager(), this.blockEntityRenderBuffers.bufferSource(), minecraft.getAtlasManager(),
-	//$$ 			this.blockEntityRenderBuffers.outlineBufferSource(), this.blockEntityRenderBuffers.crumblingBufferSource(),
-	//$$ 			minecraft.font, this.blockEntityGameRenderState);
-	//$$ }
-	//#elseif MC >= 1.21.10
-	// Keep block-entity submits and their buffers independent from Minecraft's world renderer.
-	//$$ private void ensureBlockEntityRendererResources(Minecraft minecraft) {
-	//$$ 	if (this.blockEntityFeatureDispatcher != null) {
-	//$$ 		return;
-	//$$ 	}
-	//$$ 	this.blockEntitySubmitNodes = new SubmitNodeStorage();
-	//$$ 	this.blockEntityRenderBuffers = new RenderBuffers(1);
-	//$$ 	this.blockEntityFeatureDispatcher = new FeatureRenderDispatcher(this.blockEntitySubmitNodes,
-	//$$ 			minecraft.getBlockRenderer(), this.blockEntityRenderBuffers.bufferSource(), minecraft.getAtlasManager(),
-	//$$ 			this.blockEntityRenderBuffers.outlineBufferSource(), this.blockEntityRenderBuffers.crumblingBufferSource(),
-	//$$ 			minecraft.font);
-	//$$ }
-	//#endif
-	private static VertexConsumer offsetVertexConsumer(VertexConsumer delegate, float yOffset) {
-		return new YOffsetVertexConsumer(delegate, yOffset);
-	}
+    // Block entities must remain outside the section meshes: their renderers are dynamic.
+    private void renderBlockEntities(Vector3f cameraPosition, float cameraYaw, float cameraPitch) {
+        if (this.world == null || !this.world.hasBlockEntityData()) {
+            return;
+        }
+        //#if MC < 26.3
+        GpuTextureView previousColor = RenderSystem.outputColorTextureOverride;
+        GpuTextureView previousDepth = RenderSystem.outputDepthTextureOverride;
+        RenderSystem.outputColorTextureOverride = this.target.getColorTextureView();
+        RenderSystem.outputDepthTextureOverride = this.target.getDepthTextureView();
+        //#endif
+        try {
+            Minecraft minecraft = Minecraft.getInstance();
+            BlockEntityRenderDispatcher dispatcher = minecraft.getBlockEntityRenderDispatcher();
+            PoseStack pose = new PoseStack();
+            //#if MC < 1.21.10
+            PreviewCamera camera = new PreviewCamera();
+            camera.setPreviewPose(cameraPosition, cameraYaw, cameraPitch);
+            dispatcher.prepare(minecraft.level, camera, minecraft.hitResult);
+            MultiBufferSource.BufferSource buffers = minecraft.renderBuffers().bufferSource();
+            for (BlockEntity blockEntity : this.world.blockEntities()) {
+                BlockPos position = blockEntity.getBlockPos();
+                pose.pushPose();
+                pose.translate(position.getX() - cameraPosition.x, position.getY() - cameraPosition.y,
+                        position.getZ() - cameraPosition.z);
+                dispatcher.render(blockEntity, 0.0F, pose, buffers);
+                pose.popPose();
+            }
+            buffers.endBatch();
+            //#elseif MC < 26.1
+            //$$ this.ensureBlockEntityRendererResources(minecraft);
+            //$$ PreviewCamera camera = new PreviewCamera();
+            //$$ camera.setPreviewPose(cameraPosition, cameraYaw, cameraPitch);
+            //$$ dispatcher.prepare(camera);
+            //$$ for (BlockEntity blockEntity : this.world.blockEntities()) {
+            //$$ 	BlockEntityRenderState state = dispatcher.tryExtractRenderState(blockEntity, 0.0F, null);
+            //$$ 	if (state == null) {
+            //$$ 		continue;
+            //$$ 	}
+            //$$ 	BlockPos position = blockEntity.getBlockPos();
+            //$$ 	pose.pushPose();
+            //$$ 	pose.translate(position.getX() - cameraPosition.x, position.getY() - cameraPosition.y,
+            //$$ 			position.getZ() - cameraPosition.z);
+            //$$ 	CameraRenderState cameraState = new CameraRenderState();
+            //$$ 	cameraState.initialized = true;
+            //$$ 	cameraState.pos = new Vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z);
+            //$$ 	cameraState.blockPos = BlockPos.containing(cameraState.pos);
+            //$$ 	cameraState.orientation = new Quaternionf().rotationYXZ(-cameraYaw * Mth.DEG_TO_RAD,
+            //$$ 			cameraPitch * Mth.DEG_TO_RAD, 0.0F);
+            //$$ 	cameraState.entityPos = cameraState.pos;
+            //$$ 	dispatcher.submit(state, pose, this.blockEntitySubmitNodes, cameraState);
+            //$$ 	pose.popPose();
+            //$$ }
+            //$$ this.blockEntityFeatureDispatcher.renderAllFeatures();
+            //#elseif MC >= 26.3
+            //$$ this.ensureBlockEntityRendererResources(minecraft);
+            //$$ CameraRenderState cameraState = new CameraRenderState();
+            //$$ cameraState.initialized = true;
+            //$$ cameraState.pos = new Vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z);
+            //$$ cameraState.blockPos = BlockPos.containing(cameraState.pos);
+            //$$ cameraState.orientation = new Quaternionf().rotationYXZ(-cameraYaw * Mth.DEG_TO_RAD,
+            //$$ 		cameraPitch * Mth.DEG_TO_RAD, 0.0F);
+            //$$ dispatcher.prepare(cameraState.pos);
+            //$$ for (BlockEntity blockEntity : this.world.blockEntities()) {
+            //$$ 	BlockEntityRenderState state = dispatcher.tryExtractRenderState(blockEntity, 0.0F, null, false);
+            //$$ 	if (state == null) {
+            //$$ 		continue;
+            //$$ 	}
+            //$$ 	BlockPos position = blockEntity.getBlockPos();
+            //$$ 	pose.pushPose();
+            //$$ 	pose.translate(position.getX() - cameraPosition.x, position.getY() - cameraPosition.y,
+            //$$ 			position.getZ() - cameraPosition.z);
+            //$$ 	dispatcher.submit(state, pose, this.blockEntitySubmitNodes, cameraState);
+            //$$ 	pose.popPose();
+            //$$ }
+            //$$ try (FeatureRenderDispatcher.PreparedFrame frame = this.blockEntityFeatureDispatcher.prepareFrame(this.blockEntitySubmitNodes);
+            //$$ 		RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
+            //$$ 				() -> "ListMore schematic preview block entities", this.target.getColorTextureView(),
+            //$$ 				Optional.empty(), this.target.getDepthTextureView(), OptionalDouble.empty())) {
+            //$$ 	RenderSystem.bindDefaultUniforms(pass);
+            //$$ 	FeatureRenderDispatcher.renderAllFeatures(pass, frame);
+            //$$ }
+            //#elseif MC >= 26.2
+            //$$ this.ensureBlockEntityRendererResources(minecraft);
+            //$$ CameraRenderState cameraState = new CameraRenderState();
+            //$$ cameraState.initialized = true;
+            //$$ cameraState.pos = new Vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z);
+            //$$ cameraState.blockPos = BlockPos.containing(cameraState.pos);
+            //$$ cameraState.orientation = new Quaternionf().rotationYXZ(-cameraYaw * Mth.DEG_TO_RAD,
+            //$$ 		cameraPitch * Mth.DEG_TO_RAD, 0.0F);
+            //$$ dispatcher.prepare(cameraState.pos);
+            //$$ for (BlockEntity blockEntity : this.world.blockEntities()) {
+            //$$ 	BlockEntityRenderState state = dispatcher.tryExtractRenderState(blockEntity, 0.0F, null, false);
+            //$$ 	if (state == null) {
+            //$$ 		continue;
+            //$$ 	}
+            //$$ 	BlockPos position = blockEntity.getBlockPos();
+            //$$ 	pose.pushPose();
+            //$$ 	pose.translate(position.getX() - cameraPosition.x, position.getY() - cameraPosition.y,
+            //$$ 			position.getZ() - cameraPosition.z);
+            //$$ 	dispatcher.submit(state, pose, this.blockEntitySubmitNodes, cameraState);
+            //$$ 	pose.popPose();
+            //$$ }
+            //$$ try (FeatureRenderDispatcher.PreparedFrame frame = this.blockEntityFeatureDispatcher.prepareFrame(this.blockEntitySubmitNodes)) {
+            //$$ 	frame.executeSolid();
+            //$$ 	frame.executeTranslucent();
+            //$$ 	frame.executeOutline();
+            //$$ 	frame.executeTranslucentAfterTerrain();
+            //$$ 	frame.executeAlwaysOnTop();
+            //$$ }
+            //#else
+            //$$ this.ensureBlockEntityRendererResources(minecraft);
+            //$$ CameraRenderState cameraState = new CameraRenderState();
+            //$$ cameraState.initialized = true;
+            //$$ cameraState.pos = new Vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z);
+            //$$ cameraState.blockPos = BlockPos.containing(cameraState.pos);
+            //$$ cameraState.orientation = new Quaternionf().rotationYXZ(-cameraYaw * Mth.DEG_TO_RAD,
+            //$$ 		cameraPitch * Mth.DEG_TO_RAD, 0.0F);
+            //$$ dispatcher.prepare(cameraState.pos);
+            //$$ for (BlockEntity blockEntity : this.world.blockEntities()) {
+            //$$ 	BlockEntityRenderState state = dispatcher.tryExtractRenderState(blockEntity, 0.0F, null);
+            //$$ 	if (state == null) {
+            //$$ 		continue;
+            //$$ 	}
+            //$$ 	BlockPos position = blockEntity.getBlockPos();
+            //$$ 	pose.pushPose();
+            //$$ 	pose.translate(position.getX() - cameraPosition.x, position.getY() - cameraPosition.y,
+            //$$ 			position.getZ() - cameraPosition.z);
+            //$$ 	dispatcher.submit(state, pose, this.blockEntitySubmitNodes, cameraState);
+            //$$ 	pose.popPose();
+            //$$ }
+            //$$ this.blockEntityFeatureDispatcher.renderAllFeatures();
+            //#endif
+        } finally {
+            //#if MC >= 1.21.10 && MC < 26.2
+            //$$ if (this.blockEntityFeatureDispatcher != null) {
+            //$$ 	this.blockEntityFeatureDispatcher.endFrame();
+            //$$ }
+            //#elseif MC >= 26.2
+            //$$ if (this.blockEntityRenderBuffers != null) {
+            //$$ 	this.blockEntityRenderBuffers.endFrame();
+            //$$ }
+            //#endif
+            //#if MC < 26.3
+            RenderSystem.outputColorTextureOverride = previousColor;
+            RenderSystem.outputDepthTextureOverride = previousDepth;
+            //#endif
+        }
+    }
 
-	// 流体顶点以当前 Section 的局部 Y 写入，需要在写入网格时恢复模型坐标。
-	private static final class YOffsetVertexConsumer implements VertexConsumer {
-		private final VertexConsumer delegate;
-		private final float yOffset;
+    //#if MC >= 26.2
+    // Keep block-entity submits and their buffers independent from Minecraft's world renderer.
+    //$$ private void ensureBlockEntityRendererResources(Minecraft minecraft) {
+    //$$ 	if (this.blockEntityFeatureDispatcher != null) {
+    //$$ 		return;
+    //$$ 	}
+    //$$ 	this.blockEntitySubmitNodes = new SubmitNodeStorage();
+    //$$ 	this.blockEntityRenderBuffers = new RenderBuffers(1);
+    //$$ 	this.blockEntityGameRenderState = new GameRenderState();
+    //$$ 	this.blockEntityFeatureDispatcher = new FeatureRenderDispatcher(this.blockEntityRenderBuffers,
+    //$$ 			minecraft.getModelManager(), minecraft.getAtlasManager(), minecraft.font, this.blockEntityGameRenderState);
+    //$$ }
+    //#elseif MC >= 26.1
+    // Keep block-entity submits and their buffers independent from Minecraft's world renderer.
+    //$$ private void ensureBlockEntityRendererResources(Minecraft minecraft) {
+    //$$ 	if (this.blockEntityFeatureDispatcher != null) {
+    //$$ 		return;
+    //$$ 	}
+    //$$ 	this.blockEntitySubmitNodes = new SubmitNodeStorage();
+    //$$ 	this.blockEntityRenderBuffers = new RenderBuffers(1);
+    //$$ 	this.blockEntityGameRenderState = new GameRenderState();
+    //$$ 	this.blockEntityFeatureDispatcher = new FeatureRenderDispatcher(this.blockEntitySubmitNodes,
+    //$$ 			minecraft.getModelManager(), this.blockEntityRenderBuffers.bufferSource(), minecraft.getAtlasManager(),
+    //$$ 			this.blockEntityRenderBuffers.outlineBufferSource(), this.blockEntityRenderBuffers.crumblingBufferSource(),
+    //$$ 			minecraft.font, this.blockEntityGameRenderState);
+    //$$ }
+    //#elseif MC >= 1.21.10
+    // Keep block-entity submits and their buffers independent from Minecraft's world renderer.
+    //$$ private void ensureBlockEntityRendererResources(Minecraft minecraft) {
+    //$$ 	if (this.blockEntityFeatureDispatcher != null) {
+    //$$ 		return;
+    //$$ 	}
+    //$$ 	this.blockEntitySubmitNodes = new SubmitNodeStorage();
+    //$$ 	this.blockEntityRenderBuffers = new RenderBuffers(1);
+    //$$ 	this.blockEntityFeatureDispatcher = new FeatureRenderDispatcher(this.blockEntitySubmitNodes,
+    //$$ 			minecraft.getBlockRenderer(), this.blockEntityRenderBuffers.bufferSource(), minecraft.getAtlasManager(),
+    //$$ 			this.blockEntityRenderBuffers.outlineBufferSource(), this.blockEntityRenderBuffers.crumblingBufferSource(),
+    //$$ 			minecraft.font);
+    //$$ }
+    //#endif
+    private static VertexConsumer offsetVertexConsumer(VertexConsumer delegate, float yOffset) {
+        return new YOffsetVertexConsumer(delegate, yOffset);
+    }
 
-		private YOffsetVertexConsumer(VertexConsumer delegate, float yOffset) {
-			this.delegate = delegate;
-			this.yOffset = yOffset;
-		}
+    // 流体顶点以当前 Section 的局部 Y 写入，需要在写入网格时恢复模型坐标。
+    private static final class YOffsetVertexConsumer implements VertexConsumer {
+        private final VertexConsumer delegate;
+        private final float yOffset;
 
-		@Override
-		public VertexConsumer addVertex(float x, float y, float z) {
-			this.delegate.addVertex(x, y + this.yOffset, z);
-			return this;
-		}
+        private YOffsetVertexConsumer(VertexConsumer delegate, float yOffset) {
+            this.delegate = delegate;
+            this.yOffset = yOffset;
+        }
 
-		@Override
-		public VertexConsumer setColor(int red, int green, int blue, int alpha) {
-			this.delegate.setColor(red, green, blue, alpha);
-			return this;
-		}
+        @Override
+        public VertexConsumer addVertex(float x, float y, float z) {
+            this.delegate.addVertex(x, y + this.yOffset, z);
+            return this;
+        }
 
-		//#if MC >= 1.21.11
-		//$$ @Override
-		//$$ public VertexConsumer setColor(int color) {
-		//$$ 	this.delegate.setColor(color);
-		//$$ 	return this;
-		//$$ }
-		//#endif
+        @Override
+        public VertexConsumer setColor(int red, int green, int blue, int alpha) {
+            this.delegate.setColor(red, green, blue, alpha);
+            return this;
+        }
 
-		@Override
-		public VertexConsumer setUv(float u, float v) {
-			this.delegate.setUv(u, v);
-			return this;
-		}
+        //#if MC >= 1.21.11
+        //$$ @Override
+        //$$ public VertexConsumer setColor(int color) {
+        //$$ 	this.delegate.setColor(color);
+        //$$ 	return this;
+        //$$ }
+        //#endif
 
-		@Override
-		public VertexConsumer setUv1(int u, int v) {
-			this.delegate.setUv1(u, v);
-			return this;
-		}
+        @Override
+        public VertexConsumer setUv(float u, float v) {
+            this.delegate.setUv(u, v);
+            return this;
+        }
 
-		@Override
-		public VertexConsumer setUv2(int u, int v) {
-			this.delegate.setUv2(u, v);
-			return this;
-		}
+        @Override
+        public VertexConsumer setUv1(int u, int v) {
+            this.delegate.setUv1(u, v);
+            return this;
+        }
 
-		//#if MC >= 26.3
-		//$$ @Override
-		//$$ public VertexConsumer setUv3(float u, float v) {
-		//$$ 	this.delegate.setUv3(u, v);
-		//$$ 	return this;
-		//$$ }
-		//#endif
+        @Override
+        public VertexConsumer setUv2(int u, int v) {
+            this.delegate.setUv2(u, v);
+            return this;
+        }
 
-		@Override
-		public VertexConsumer setNormal(float x, float y, float z) {
-			this.delegate.setNormal(x, y, z);
-			return this;
-		}
+        //#if MC >= 26.3
+        //$$ @Override
+        //$$ public VertexConsumer setUv3(float u, float v) {
+        //$$ 	this.delegate.setUv3(u, v);
+        //$$ 	return this;
+        //$$ }
+        //#endif
 
-		//#if MC >= 1.21.11
-		//$$ @Override
-		//$$ public VertexConsumer setLineWidth(float width) {
-		//$$ 	this.delegate.setLineWidth(width);
-		//$$ 	return this;
-		//$$ }
-		//#endif
-	}
+        @Override
+        public VertexConsumer setNormal(float x, float y, float z) {
+            this.delegate.setNormal(x, y, z);
+            return this;
+        }
 
-	@Override
-	public void clearModel() {
-		// 仅释放与当前快照关联的网格，离屏目标和通用 Uniform 留给下一次预览复用
-		this.closeMeshes();
-		this.builtRevision = Long.MIN_VALUE;
-	}
+        //#if MC >= 1.21.11
+        //$$ @Override
+        //$$ public VertexConsumer setLineWidth(float width) {
+        //$$ 	this.delegate.setLineWidth(width);
+        //$$ 	return this;
+        //$$ }
+        //#endif
+    }
 
-	@Override
-	public boolean hasFailure() {
-		return this.buildFailures >= MAX_BUILD_ATTEMPTS;
-	}
+    @Override
+    public void clearModel() {
+        // 仅释放与当前快照关联的网格，离屏目标和通用 Uniform 留给下一次预览复用
+        this.closeMeshes();
+        this.builtRevision = Long.MIN_VALUE;
+    }
 
-	// 快照变化时重建 GPU 缓冲区
-	private record SectionBuffers(GpuBuffer vertexBuffer, GpuBuffer indexBuffer, int indexCount,
-			IndexType indexType) implements AutoCloseable {
-		@Override
-		public void close() {
-			this.vertexBuffer.close();
-			if (this.indexBuffer != null) {
-				this.indexBuffer.close();
-			}
-		}
-	}
+    @Override
+    public boolean hasFailure() {
+        return this.buildFailures >= MAX_BUILD_ATTEMPTS;
+    }
 
-	// 每个区块的网格构建器，按 ChunkSectionLayer 分组管理 BufferBuilder
-	private static final class ChunkMeshBuilder {
-		private final Map<ChunkSectionLayer, ByteBufferBuilder> allocators;
-		private final Map<ChunkSectionLayer, BufferBuilder> builders = new EnumMap<>(ChunkSectionLayer.class);
+    // 快照变化时重建 GPU 缓冲区
+    private record SectionBuffers(GpuBuffer vertexBuffer, GpuBuffer indexBuffer, int indexCount,
+                                  IndexType indexType) implements AutoCloseable {
+        @Override
+        public void close() {
+            this.vertexBuffer.close();
+            if (this.indexBuffer != null) {
+                this.indexBuffer.close();
+            }
+        }
+    }
 
-		private ChunkMeshBuilder(Map<ChunkSectionLayer, ByteBufferBuilder> allocators) {
-			this.allocators = allocators;
-		}
+    // 每个区块的网格构建器，按 ChunkSectionLayer 分组管理 BufferBuilder
+    private static final class ChunkMeshBuilder {
+        private final Map<ChunkSectionLayer, ByteBufferBuilder> allocators;
+        private final Map<ChunkSectionLayer, BufferBuilder> builders = new EnumMap<>(ChunkSectionLayer.class);
 
-		private BufferBuilder builder(ChunkSectionLayer layer) {
-			return this.builders.computeIfAbsent(layer, ignored -> new BufferBuilder(
-					this.allocators.computeIfAbsent(layer, unused -> new ByteBufferBuilder(4096)),
-					//#if MC >= 26.3
-					//$$ layer.pipeline(false).getPrimitiveTopology(), layer.vertexFormat()
-					//#elseif MC >= 26.2
-					//$$ layer.pipeline().getPrimitiveTopology(), layer.vertexFormat()
-					//#else
-					layer.pipeline().getVertexFormatMode(), layer.pipeline().getVertexFormat()
-					//#endif
-			));
-		}
+        private ChunkMeshBuilder(Map<ChunkSectionLayer, ByteBufferBuilder> allocators) {
+            this.allocators = allocators;
+        }
 
-		// 将 BufferBuilder 中的网格数据上传到 GPU，创建顶点和索引缓冲区
-		// 返回包含各渲染层 GPU 缓冲区的 ChunkMesh
-		private ChunkMesh build(ChunkPos position, float centerY) {
-			Map<ChunkSectionLayer, SectionBuffers> buffers = new EnumMap<>(ChunkSectionLayer.class);
-			try {
-				for (Map.Entry<ChunkSectionLayer, BufferBuilder> entry : this.builders.entrySet()) {
-					// MeshData 上传完成后立即关闭
-					// CPU 侧缓冲不跨帧持有
-					try (MeshData mesh = entry.getValue().build()) {
-						if (mesh == null) {
-							continue;
-						}
-						GpuBuffer vertex = RenderSystem.getDevice().createBuffer(
-								() -> "ListMore preview vertex buffer",
-								GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST, mesh.vertexBuffer());
-						GpuBuffer index = null;
-						try {
-							index = mesh.indexBuffer() == null ? null : RenderSystem.getDevice().createBuffer(
-									() -> "ListMore preview index buffer",
-									GpuBuffer.USAGE_INDEX | GpuBuffer.USAGE_COPY_DST, mesh.indexBuffer());
-							buffers.put(entry.getKey(), new SectionBuffers(vertex, index,
-									mesh.drawState().indexCount(), mesh.drawState().indexType()));
-						} catch (Throwable throwable) {
-							vertex.close();
-							if (index != null) {
-								index.close();
-							}
-							throw throwable;
-						}
-					}
-				}
-				return buffers.isEmpty() ? null : new ChunkMesh(position, centerY, buffers);
-			} catch (Throwable throwable) {
-				buffers.values().forEach(SectionBuffers::close);
-				throw throwable;
-			} finally {
-				this.discard();
-			}
-		}
+        private BufferBuilder builder(ChunkSectionLayer layer) {
+            return this.builders.computeIfAbsent(layer, ignored -> new BufferBuilder(
+                    this.allocators.computeIfAbsent(layer, unused -> new ByteBufferBuilder(4096)),
+                    //#if MC >= 26.3
+                    //$$ layer.pipeline(false).getPrimitiveTopology(), layer.vertexFormat()
+                    //#elseif MC >= 26.2
+                    //$$ layer.pipeline().getPrimitiveTopology(), layer.vertexFormat()
+                    //#else
+                    layer.pipeline().getVertexFormatMode(), layer.pipeline().getVertexFormat()
+                    //#endif
+            ));
+        }
 
-		private void discard() {
-			try {
-				this.allocators.values().forEach(ByteBufferBuilder::discard);
-			} finally {
-				this.builders.clear();
-			}
-		}
+        // 将 BufferBuilder 中的网格数据上传到 GPU，创建顶点和索引缓冲区
+        // 返回包含各渲染层 GPU 缓冲区的 ChunkMesh
+        private ChunkMesh build(ChunkPos position, float centerY) {
+            Map<ChunkSectionLayer, SectionBuffers> buffers = new EnumMap<>(ChunkSectionLayer.class);
+            try {
+                for (Map.Entry<ChunkSectionLayer, BufferBuilder> entry : this.builders.entrySet()) {
+                    // MeshData 上传完成后立即关闭
+                    // CPU 侧缓冲不跨帧持有
+                    try (MeshData mesh = entry.getValue().build()) {
+                        if (mesh == null) {
+                            continue;
+                        }
+                        GpuBuffer vertex = RenderSystem.getDevice().createBuffer(
+                                () -> "ListMore preview vertex buffer",
+                                GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST, mesh.vertexBuffer());
+                        GpuBuffer index = null;
+                        try {
+                            index = mesh.indexBuffer() == null ? null : RenderSystem.getDevice().createBuffer(
+                                    () -> "ListMore preview index buffer",
+                                    GpuBuffer.USAGE_INDEX | GpuBuffer.USAGE_COPY_DST, mesh.indexBuffer());
+                            buffers.put(entry.getKey(), new SectionBuffers(vertex, index,
+                                    mesh.drawState().indexCount(), mesh.drawState().indexType()));
+                        } catch (Throwable throwable) {
+                            vertex.close();
+                            if (index != null) {
+                                index.close();
+                            }
+                            throw throwable;
+                        }
+                    }
+                }
+                return buffers.isEmpty() ? null : new ChunkMesh(position, centerY, buffers);
+            } catch (Throwable throwable) {
+                buffers.values().forEach(SectionBuffers::close);
+                throw throwable;
+            } finally {
+                this.discard();
+            }
+        }
 
-	}
+        private void discard() {
+            try {
+                this.allocators.values().forEach(ByteBufferBuilder::discard);
+            } finally {
+                this.builders.clear();
+            }
+        }
 
-	// 一个 Section 的 GPU 网格数据
-	private record ChunkMesh(ChunkPos chunk, float centerY,
-			Map<ChunkSectionLayer, SectionBuffers> buffers) implements AutoCloseable {
-		// 计算 Section 中心到相机的三维距离平方，用于远到近的排序
-		private double distanceTo(Vector3f camera) {
-			float x = this.chunk.getMinBlockX() + 8.0F;
-			float z = this.chunk.getMinBlockZ() + 8.0F;
-			return Mth.square(x - camera.x) + Mth.square(this.centerY - camera.y) + Mth.square(z - camera.z);
-		}
+    }
 
-		@Override
-		public void close() {
-			this.buffers.values().forEach(SectionBuffers::close);
-		}
-	}
+    // 一个 Section 的 GPU 网格数据
+    private record ChunkMesh(ChunkPos chunk, float centerY,
+                             Map<ChunkSectionLayer, SectionBuffers> buffers) implements AutoCloseable {
+        // 计算 Section 中心到相机的三维距离平方，用于远到近的排序
+        private double distanceTo(Vector3f camera) {
+            float x = this.chunk.getMinBlockX() + 8.0F;
+            float z = this.chunk.getMinBlockZ() + 8.0F;
+            return Mth.square(x - camera.x) + Mth.square(this.centerY - camera.y) + Mth.square(z - camera.z);
+        }
 
-	//#if MC >= 1.21.10 && MC < 26.1
-	//$$ private static final class PreviewCamera extends Camera {
-	//$$ 	private void setPreviewPose(Vector3f position, float yaw, float pitch) {
-	//$$ 		this.setPosition(position.x, position.y, position.z);
-	//$$ 		this.setRotation(yaw, pitch);
-	//$$ 	}
-	//$$ }
-	//#elseif MC < 1.21.10
-	private static final class PreviewCamera extends Camera {
-		private void setPreviewPose(Vector3f position, float yaw, float pitch) {
-			this.setPosition(position.x, position.y, position.z);
-			this.setRotation(yaw, pitch);
-		}
-	}
-	//#endif
+        @Override
+        public void close() {
+            this.buffers.values().forEach(SectionBuffers::close);
+        }
+    }
 
-	@Override
-	public void close() {
-		this.closeMeshes();
-		this.builtRevision = Long.MIN_VALUE;
-		this.world = null;
-		//#if MC >= 1.21.10
-		//$$ if (this.blockEntityFeatureDispatcher != null) {
-		//$$ 	this.blockEntityFeatureDispatcher.close();
-		//$$ 	this.blockEntityFeatureDispatcher = null;
-		//$$ }
-		//$$ this.blockEntitySubmitNodes = null;
-		//#if MC >= 26.2
-		//$$ if (this.blockEntityRenderBuffers != null) {
-		//$$ 	this.blockEntityRenderBuffers.close();
-		//$$ 	this.blockEntityRenderBuffers = null;
-		//$$ }
-		//#else
-		//$$ this.blockEntityRenderBuffers = null;
-		//#endif
-		//#if MC >= 26.1
-		//$$ this.blockEntityGameRenderState = null;
-		//#endif
-		//#endif
-		if (this.target != null) { this.target.destroyBuffers(); this.target = null; }
-		//#if MC >= 1.21.11
-		//$$ if (this.sampler != null) { this.sampler.close(); this.sampler = null; }
-		//#endif
-		if (this.projection != null) { this.projection.close(); this.projection = null; }
-		if (this.globalUniform != null) { this.globalUniform.close(); this.globalUniform = null; }
-		this.sectionAllocators.values().forEach(ByteBufferBuilder::close);
-		this.sectionAllocators.clear();
-	}
+    //#if MC >= 1.21.10 && MC < 26.1
+    //$$ private static final class PreviewCamera extends Camera {
+    //$$ 	private void setPreviewPose(Vector3f position, float yaw, float pitch) {
+    //$$ 		this.setPosition(position.x, position.y, position.z);
+    //$$ 		this.setRotation(yaw, pitch);
+    //$$ 	}
+    //$$ }
+    //#elseif MC < 1.21.10
+    private static final class PreviewCamera extends Camera {
+        private void setPreviewPose(Vector3f position, float yaw, float pitch) {
+            this.setPosition(position.x, position.y, position.z);
+            this.setRotation(yaw, pitch);
+        }
+    }
+    //#endif
+
+    @Override
+    public void close() {
+        this.closeMeshes();
+        this.builtRevision = Long.MIN_VALUE;
+        this.world = null;
+        //#if MC >= 1.21.10
+        //$$ if (this.blockEntityFeatureDispatcher != null) {
+        //$$ 	this.blockEntityFeatureDispatcher.close();
+        //$$ 	this.blockEntityFeatureDispatcher = null;
+        //$$ }
+        //$$ this.blockEntitySubmitNodes = null;
+        //#if MC >= 26.2
+        //$$ if (this.blockEntityRenderBuffers != null) {
+        //$$ 	this.blockEntityRenderBuffers.close();
+        //$$ 	this.blockEntityRenderBuffers = null;
+        //$$ }
+        //#else
+        //$$ this.blockEntityRenderBuffers = null;
+        //#endif
+        //#if MC >= 26.1
+        //$$ this.blockEntityGameRenderState = null;
+        //#endif
+        //#endif
+        if (this.target != null) {
+            this.target.destroyBuffers();
+            this.target = null;
+        }
+        //#if MC >= 1.21.11
+        //$$ if (this.sampler != null) { this.sampler.close(); this.sampler = null; }
+        //#endif
+        if (this.projection != null) {
+            this.projection.close();
+            this.projection = null;
+        }
+        if (this.globalUniform != null) {
+            this.globalUniform.close();
+            this.globalUniform = null;
+        }
+        this.sectionAllocators.values().forEach(ByteBufferBuilder::close);
+        this.sectionAllocators.clear();
+    }
 }

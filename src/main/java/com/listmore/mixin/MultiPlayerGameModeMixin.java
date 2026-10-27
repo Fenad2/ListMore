@@ -24,48 +24,48 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(MultiPlayerGameMode.class)
 public class MultiPlayerGameModeMixin {
-	@Unique
-	private boolean listmore$skipUseItemOnPacket;
+    @Unique
+    private boolean listmore$skipUseItemOnPacket;
 
-	@Inject(method = "useItemOn", at = @At("HEAD"))
-	private void listmore$beginSingleBlockPlacement(LocalPlayer player, InteractionHand hand,
-			BlockHitResult hitResult, CallbackInfoReturnable<InteractionResult> cir) {
-		SingleBlockPlacement.beginBlockInteraction();
-	}
+    @Inject(method = "useItemOn", at = @At("HEAD"))
+    private void listmore$beginSingleBlockPlacement(LocalPlayer player, InteractionHand hand,
+                                                    BlockHitResult hitResult, CallbackInfoReturnable<InteractionResult> cir) {
+        SingleBlockPlacement.beginBlockInteraction();
+    }
 
-	@Inject(method = "useItemOn", at = @At("RETURN"))
-	private void listmore$endSingleBlockPlacement(LocalPlayer player, InteractionHand hand,
-			BlockHitResult hitResult, CallbackInfoReturnable<InteractionResult> cir) {
-		SingleBlockPlacement.endBlockInteraction();
-	}
+    @Inject(method = "useItemOn", at = @At("RETURN"))
+    private void listmore$endSingleBlockPlacement(LocalPlayer player, InteractionHand hand,
+                                                  BlockHitResult hitResult, CallbackInfoReturnable<InteractionResult> cir) {
+        SingleBlockPlacement.endBlockInteraction();
+    }
 
-	@Inject(method = "performUseItemOn", at = @At(value = "INVOKE", target =
-			"Lnet/minecraft/world/item/ItemStack;useOn(Lnet/minecraft/world/item/context/UseOnContext;)Lnet/minecraft/world/InteractionResult;"),
-			cancellable = true)
-	private void listmore$stopAdditionalBlockPlacement(LocalPlayer player, InteractionHand hand,
-			BlockHitResult hitResult, CallbackInfoReturnable<InteractionResult> cir) {
-		ItemStack stack = player.getItemInHand(hand);
-		if (SingleBlockPlacement.isUseConsumed() && stack.getItem() instanceof BlockItem) {
-			this.listmore$skipUseItemOnPacket = true;
-			cir.setReturnValue(InteractionResult.FAIL);
-		}
-	}
+    @Inject(method = "performUseItemOn", at = @At(value = "INVOKE", target =
+            "Lnet/minecraft/world/item/ItemStack;useOn(Lnet/minecraft/world/item/context/UseOnContext;)Lnet/minecraft/world/InteractionResult;"),
+            cancellable = true)
+    private void listmore$stopAdditionalBlockPlacement(LocalPlayer player, InteractionHand hand,
+                                                       BlockHitResult hitResult, CallbackInfoReturnable<InteractionResult> cir) {
+        ItemStack stack = player.getItemInHand(hand);
+        if (SingleBlockPlacement.isUseConsumed() && stack.getItem() instanceof BlockItem) {
+            this.listmore$skipUseItemOnPacket = true;
+            cir.setReturnValue(InteractionResult.FAIL);
+        }
+    }
 
-	@Redirect(method = "startPrediction", at = @At(value = "INVOKE", target =
-			"Lnet/minecraft/client/multiplayer/ClientPacketListener;send(Lnet/minecraft/network/protocol/Packet;)V"))
-	private void listmore$skipBlockedUseItemOnPacket(ClientPacketListener connection, Packet<?> packet) {
-		if (this.listmore$skipUseItemOnPacket) {
-			this.listmore$skipUseItemOnPacket = false;
-			return;
-		}
+    @Redirect(method = "startPrediction", at = @At(value = "INVOKE", target =
+            "Lnet/minecraft/client/multiplayer/ClientPacketListener;send(Lnet/minecraft/network/protocol/Packet;)V"))
+    private void listmore$skipBlockedUseItemOnPacket(ClientPacketListener connection, Packet<?> packet) {
+        if (this.listmore$skipUseItemOnPacket) {
+            this.listmore$skipUseItemOnPacket = false;
+            return;
+        }
 
-		connection.send(packet);
-	}
+        connection.send(packet);
+    }
 
-	@Inject(method = "destroyBlock", at = @At("RETURN"))
-	private void listmore$markSingleBlockMining(BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
-		if (cir.getReturnValueZ()) {
-			SingleBlockMining.markBlockDestroyed();
-		}
-	}
+    @Inject(method = "destroyBlock", at = @At("RETURN"))
+    private void listmore$markSingleBlockMining(BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
+        if (cir.getReturnValueZ()) {
+            SingleBlockMining.markBlockDestroyed();
+        }
+    }
 }
