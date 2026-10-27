@@ -56,6 +56,7 @@ public class ListMoreConfigs implements IConfigHandler {
         public static final ConfigBoolean SCHEMATIC_DYNAMIC_PREVIEW = createSchematicDynamicPreview();
         public static final ConfigBoolean SINGLE_BLOCK_MINING = createSingleBlockMining();
         public static final ConfigBoolean SINGLE_BLOCK_PLACEMENT = createSingleBlockPlacement();
+        public static final ConfigBoolean PLACEMENT_ASSIST = createPlacementAssist();
 
         public static final ImmutableList<IConfigBase> GENERIC_OPTIONS = ImmutableList.of(
                 COPY_TARGET_ID,
@@ -75,7 +76,8 @@ public class ListMoreConfigs implements IConfigHandler {
                 TNT_EXPLOSION_PREVIEW_MODE,
                 PROJECTILE_LANDING_PREDICTION,
                 SINGLE_BLOCK_MINING,
-                SINGLE_BLOCK_PLACEMENT
+                SINGLE_BLOCK_PLACEMENT,
+                PLACEMENT_ASSIST
         );
 
         public static final ImmutableList<IConfigBase> LITEMATICA_OPTIONS = ImmutableList.of(
@@ -101,7 +103,8 @@ public class ListMoreConfigs implements IConfigHandler {
                 PROJECTILE_LANDING_PREDICTION,
                 SCHEMATIC_DYNAMIC_PREVIEW,
                 SINGLE_BLOCK_MINING,
-                SINGLE_BLOCK_PLACEMENT
+                SINGLE_BLOCK_PLACEMENT,
+                PLACEMENT_ASSIST
         );
     }
 
@@ -190,6 +193,10 @@ public class ListMoreConfigs implements IConfigHandler {
 
     private static ConfigBoolean createSingleBlockPlacement() {
         return createConfig(new ConfigBoolean("singleBlockPlacement", false));
+    }
+
+    private static ConfigBoolean createPlacementAssist() {
+        return createConfig(new ConfigBoolean("placementAssist", false));
     }
 
     private static <T extends ConfigBase<T>> T createConfig(T config) {

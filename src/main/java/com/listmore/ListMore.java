@@ -5,6 +5,7 @@ import com.listmore.config.ListMoreConfigs;
 import com.listmore.feature.copyTargetId.CopyTargetIdInputHandler;
 import com.listmore.feature.invalidFurnaceInput.InvalidFurnaceInputRenderer;
 import com.listmore.feature.projectileLandingPrediction.ProjectileLandingRenderer;
+import com.listmore.feature.placementAssist.PlacementAssistRenderer;
 import com.listmore.feature.soundSourceHighlight.SoundSourceHighlightManager;
 import com.listmore.feature.soundSourceHighlight.SoundSourceHighlightRenderer;
 import com.listmore.feature.tntExplosionPreview.TntExplosionPreviewRenderer;
@@ -37,6 +38,7 @@ public class ListMore implements ClientModInitializer {
                 RenderEventHandler.getInstance().registerWorldLastRenderer(InvalidFurnaceInputRenderer.getInstance());
                 RenderEventHandler.getInstance().registerWorldLastRenderer(TntExplosionPreviewRenderer.getInstance());
                 RenderEventHandler.getInstance().registerWorldLastRenderer(SoundSourceHighlightRenderer.getInstance());
+                RenderEventHandler.getInstance().registerWorldLastRenderer(PlacementAssistRenderer.getInstance());
                 Registry.CONFIG_SCREEN.registerConfigScreenFactory(new ModInfo(MOD_ID, "ListMore", ListMoreConfigGui::new));
             }
         });
