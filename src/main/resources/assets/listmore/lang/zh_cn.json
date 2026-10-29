@@ -59,9 +59,6 @@
   "listmore.config.generic.name.singleBlockPlacement": "单方块放置",
   "listmore.config.generic.prettyName.singleBlockPlacement": "单方块放置",
   "listmore.config.generic.comment.singleBlockPlacement": "每次按住右键最多放置一个方块，完成后必须重新点击/按住才可进行下一次放置",
-  "listmore.config.generic.name.placementAssist": "放置辅助",
-  "listmore.config.generic.prettyName.placementAssist": "放置辅助",
-  "listmore.config.generic.comment.placementAssist": "手持栅栏或玻璃板瞄准方块顶面或底面时吸附到面中心；按住潜行键可暂时停用",
   "listmore.config.generic.name.soundSourceHighlightEnabled": "声音源高亮",
   "listmore.config.generic.prettyName.soundSourceHighlightEnabled": "声音源高亮",
   "listmore.config.generic.comment.soundSourceHighlightEnabled": "临时高亮能够确认来源的实体和方块声音",
@@ -73,5 +70,8 @@
   "listmore.config.generic.comment.soundSourceHighlightBlockColor": "设置被高亮方块声音源的描边颜色",
   "listmore.config.generic.name.soundSourceHighlightBlockOpacity": "声音源高亮-方块填充透明度",
   "listmore.config.generic.prettyName.soundSourceHighlightBlockOpacity": "声音源方块填充透明度",
-  "listmore.config.generic.comment.soundSourceHighlightBlockOpacity": "设置被高亮方块声音源填充部分的透明度"
+  "listmore.config.generic.comment.soundSourceHighlightBlockOpacity": "设置被高亮方块声音源填充部分的透明度",
+  "listmore.config.generic.name.placementAssist": "放置辅助",
+  "listmore.config.generic.prettyName.placementAssist": "放置辅助",
+  "listmore.config.generic.comment.placementAssist": "手持栅栏或玻璃板瞄准方块侧面上部或下部时吸附到方块上面或下面"
 }

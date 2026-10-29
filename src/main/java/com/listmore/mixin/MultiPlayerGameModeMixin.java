@@ -2,6 +2,7 @@ package com.listmore.mixin;
 
 import com.listmore.feature.singleBlockInteraction.SingleBlockMining;
 import com.listmore.feature.singleBlockInteraction.SingleBlockPlacement;
+import com.listmore.feature.placementAssist.PlacementAssistHandler;
 
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
@@ -19,6 +20,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -26,6 +28,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class MultiPlayerGameModeMixin {
     @Unique
     private boolean listmore$skipUseItemOnPacket;
+
+    @ModifyVariable(method = "useItemOn", at = @At("HEAD"), argsOnly = true)
+    private BlockHitResult listmore$applyPlacementAssist(BlockHitResult hitResult, LocalPlayer player, InteractionHand hand) {
+        if (player == null || player.level() == null) {
+            return hitResult;
+        }
+        return PlacementAssistHandler.adjustHitResult(player, player.level(), player.getItemInHand(hand), hitResult);
+    }
 
     @Inject(method = "useItemOn", at = @At("HEAD"))
     private void listmore$beginSingleBlockPlacement(LocalPlayer player, InteractionHand hand,

@@ -23,9 +23,7 @@ import net.minecraft.client.renderer.culling.Frustum;
 //$$ import net.minecraft.client.renderer.state.level.CameraRenderState;
 //#endif
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 //#if MC >= 26.1 && MC < 26.3
 //$$ import org.joml.Matrix4fc;
@@ -82,17 +80,12 @@ public final class PlacementAssistRenderer implements IRenderer {
 
     private static void renderPreview() {
         Minecraft client = Minecraft.getInstance();
-        if (!PlacementAssistHandler.canAssist(client) || client.level == null ||
-                !(client.hitResult instanceof BlockHitResult hitResult)) {
+        PlacementAssistHandler.PlacementOffset offset = PlacementAssistHandler.getOffset(client);
+        if (offset == null) {
             return;
         }
 
-        Direction direction = hitResult.getDirection();
-        if (direction != Direction.UP && direction != Direction.DOWN) {
-            return;
-        }
-
-        BlockPos placementPosition = hitResult.getBlockPos().relative(direction);
+        BlockPos placementPosition = offset.position();
         Vec3 cameraPosition = WorldRenderUtils.getCameraPosition();
         WorldRenderUtils.drawFilledOutlinedBlockBoxes(
                 "listmore:placement_assist",
