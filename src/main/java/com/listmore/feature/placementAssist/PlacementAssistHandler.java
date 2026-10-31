@@ -6,13 +6,17 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.FenceBlock;
 import net.minecraft.world.level.block.IronBarsBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
@@ -82,19 +86,23 @@ public final class PlacementAssistHandler {
         }
 
         BlockPos clickedPosition = hitResult.getBlockPos();
-        Block clickedBlock = level.getBlockState(clickedPosition).getBlock();
+        BlockState clickedState = level.getBlockState(clickedPosition);
+        Block clickedBlock = clickedState.getBlock();
         if (!isSameFamily(block, clickedBlock)) {
             return null;
         }
 
-        Direction direction = getVerticalAssistDirection(clickedPosition, hitResult);
+        boolean chainAssist = isChain(block);
+        Direction direction = chainAssist
+                ? getChainAssistDirection(clickedPosition, clickedState, hitResult)
+                : getVerticalAssistDirection(clickedPosition, hitResult);
         if (direction == null) {
             return null;
         }
         BlockPos position = clickedPosition;
         int extensionLength = 0;
         while (extensionLength < MAX_EXTENSION_LENGTH
-                && isSameFamily(block, level.getBlockState(position.relative(direction)).getBlock())) {
+                && matchesExtension(block, clickedState, level.getBlockState(position.relative(direction)))) {
             BlockPos nextPosition = position.relative(direction);
             position = nextPosition;
             extensionLength++;
@@ -105,7 +113,24 @@ public final class PlacementAssistHandler {
             return null;
         }
 
-        return new PlacementOffset(position, direction);
+        BlockPos supportingPosition = position.relative(direction.getOpposite());
+        Vec3 placementHitLocation = new Vec3(
+                supportingPosition.getX() + 0.5D + direction.getStepX() * 0.5D,
+                supportingPosition.getY() + 0.5D + direction.getStepY() * 0.5D,
+                supportingPosition.getZ() + 0.5D + direction.getStepZ() * 0.5D
+        );
+        BlockHitResult placementHit = new BlockHitResult(placementHitLocation, direction, supportingPosition, false);
+        InteractionHand hand = player.getMainHandItem() == stack ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
+        BlockPlaceContext placementContext = new BlockPlaceContext(player, hand, stack, placementHit);
+        BlockState placementState = block.getStateForPlacement(placementContext);
+        if (placementState == null) {
+            return null;
+        }
+        if (chainAssist) {
+            placementState = withChainAxis(placementState, clickedState);
+        }
+
+        return new PlacementOffset(position, direction, placementState);
     }
 
     private static Direction getVerticalAssistDirection(BlockPos clickedPosition, BlockHitResult hitResult) {
@@ -115,6 +140,27 @@ public final class PlacementAssistHandler {
         }
         if (localY >= 1.0D - VERTICAL_ASSIST_EDGE) {
             return Direction.UP;
+        }
+        return null;
+    }
+
+    private static Direction getChainAssistDirection(BlockPos clickedPosition, BlockState clickedState,
+                                                     BlockHitResult hitResult) {
+        Direction.Axis axis = getChainAxis(clickedState);
+        if (axis == null) {
+            return null;
+        }
+
+        double localAxisPosition = switch (axis) {
+            case X -> hitResult.getLocation().x - clickedPosition.getX();
+            case Y -> hitResult.getLocation().y - clickedPosition.getY();
+            case Z -> hitResult.getLocation().z - clickedPosition.getZ();
+        };
+        if (localAxisPosition <= VERTICAL_ASSIST_EDGE) {
+            return Direction.get(Direction.AxisDirection.NEGATIVE, axis);
+        }
+        if (localAxisPosition >= 1.0D - VERTICAL_ASSIST_EDGE) {
+            return Direction.get(Direction.AxisDirection.POSITIVE, axis);
         }
         return null;
     }
@@ -129,14 +175,57 @@ public final class PlacementAssistHandler {
         }
 
         Block block = blockItem.getBlock();
-        return block instanceof FenceBlock || block instanceof IronBarsBlock ? block : null;
+        return block instanceof FenceBlock || block instanceof IronBarsBlock || isChain(block) ? block : null;
     }
 
     private static boolean isSameFamily(Block first, Block second) {
         return first instanceof FenceBlock && second instanceof FenceBlock
-                || first instanceof IronBarsBlock && second instanceof IronBarsBlock;
+                || first instanceof IronBarsBlock && second instanceof IronBarsBlock
+                || isChain(first) && isChain(second);
     }
 
-    public record PlacementOffset(BlockPos position, Direction direction) {
+    private static boolean matchesExtension(Block heldBlock, BlockState clickedState, BlockState candidateState) {
+        Block candidateBlock = candidateState.getBlock();
+        if (!isSameFamily(heldBlock, candidateBlock)) {
+            return false;
+        }
+        if (!isChain(heldBlock)) {
+            return true;
+        }
+        Direction.Axis clickedAxis = getChainAxis(clickedState);
+        return clickedAxis != null && clickedAxis == getChainAxis(candidateState);
+    }
+
+    private static boolean isChain(Block block) {
+        String descriptionId = block.getDescriptionId();
+        return descriptionId.endsWith(".chain") || descriptionId.endsWith("_chain");
+    }
+
+    private static Direction.Axis getChainAxis(BlockState state) {
+        for (Property<?> property : state.getProperties()) {
+            if (property.getName().equals("axis")
+                    && property.getValueClass() == Direction.Axis.class) {
+                return (Direction.Axis) state.getValue(property);
+            }
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static BlockState withChainAxis(BlockState placementState, BlockState clickedState) {
+        Direction.Axis axis = getChainAxis(clickedState);
+        if (axis == null) {
+            return placementState;
+        }
+        for (Property<?> property : placementState.getProperties()) {
+            if (property.getName().equals("axis")
+                    && property.getValueClass() == Direction.Axis.class) {
+                return placementState.setValue((Property<Direction.Axis>) property, axis);
+            }
+        }
+        return placementState;
+    }
+
+    public record PlacementOffset(BlockPos position, Direction direction, BlockState state) {
     }
 }

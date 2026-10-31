@@ -10,7 +10,8 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 @Mixin(GuiGraphics.class)
 public interface GuiGraphicsAccessor {
     @Accessor("scissorStack")
-    Object listmore$getScissorStack();
+    //TODO: Fix this
+    GuiGraphics.ScissorStack listmore$getScissorStack();
 
     @Accessor("guiRenderState")
     GuiRenderState listmore$getGuiRenderState();
