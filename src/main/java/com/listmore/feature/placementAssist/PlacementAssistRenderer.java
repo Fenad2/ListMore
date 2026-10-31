@@ -20,7 +20,6 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.listmore.utils.WorldRenderUtils;
 
 import fi.dy.masa.malilib.interfaces.IRenderer;
-import fi.dy.masa.malilib.util.data.Color4f;
 //#if MC >= 26.1
 //#if MC >= 26.2
 //$$ import fi.dy.masa.malilib.render.RenderUtils;
@@ -74,14 +73,12 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 //#endif
 
-import java.util.List;
-
 public final class PlacementAssistRenderer implements IRenderer {
-    private static final float BOX_INSET = 0.04F;
-    private static final Color4f FILL_COLOR = new Color4f(0.15F, 0.75F, 1.0F, 0.24F);
-    private static final Color4f OUTLINE_COLOR = new Color4f(0.25F, 0.9F, 1.0F, 0.95F);
-    //#if MC < 26.1
+    // 幽灵方块的唯一透明度真值，两个渲染路径都从这里派生
     private static final float GHOST_ALPHA = 0.4F;
+    //#if MC >= 26.1
+    //$$ // 26.x 的 quad 只接受打包颜色，这里由 GHOST_ALPHA 推导，避免再写一套透明度字面量
+    //$$ private static final int GHOST_ALPHA_ARGB = (Math.round(GHOST_ALPHA * 255.0F) << 24) | 0x00FFFFFF;
     //#endif
     private static final PlacementAssistRenderer INSTANCE = new PlacementAssistRenderer();
 
@@ -155,7 +152,7 @@ public final class PlacementAssistRenderer implements IRenderer {
     //$$     QuadEmitter emitter = ((FabricBlockModelRenderState) renderState).setupMesh(new Matrix4f(), true);
     //$$     emitter.pushTransform(quad -> {
     //$$         quad.chunkLayer(ChunkSectionLayer.TRANSLUCENT);
-    //$$         quad.multiplyColor(0x66FFFFFF);
+    //$$         quad.multiplyColor(GHOST_ALPHA_ARGB);
     //$$         return true;
     //$$     });
     //$$     ((FabricBlockStateModel) model).emitQuads(
