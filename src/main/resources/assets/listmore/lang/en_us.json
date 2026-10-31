@@ -70,5 +70,8 @@
   "listmore.config.generic.comment.soundSourceHighlightBlockColor": "Set the outline color for highlighted block sound sources",
   "listmore.config.generic.name.soundSourceHighlightBlockOpacity": "Sound Source Block Fill Opacity",
   "listmore.config.generic.prettyName.soundSourceHighlightBlockOpacity": "Sound Source Block Fill Opacity",
-  "listmore.config.generic.comment.soundSourceHighlightBlockOpacity": "Set the fill opacity of highlighted block sound sources"
+  "listmore.config.generic.comment.soundSourceHighlightBlockOpacity": "Set the fill opacity of highlighted block sound sources",
+  "listmore.config.generic.name.placementAssist": "Placement Assist",
+  "listmore.config.generic.prettyName.placementAssist": "Placement Assist",
+  "listmore.config.generic.comment.placementAssist": "When aiming at the upper or lower part of a block's side while holding a fence or glass pane, it snaps to the top or bottom of the block."
 }

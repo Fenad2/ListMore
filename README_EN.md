@@ -40,6 +40,10 @@
 
 - **Single Block Placement**: Place at most one block per use press; release and press again to place another.
 
+- **Sound Source Highlight**: Highlight entities or blocks that are currently emitting sounds.
+
+- **Placement Assist** -: When holding a fence or glass pane and other similar blocks and aiming at the upper or lower portion of a `block's side`, it snaps to the `top or bottom of the block`.
+
 ## Supported Versions
 
 |Minecraft Version|Mod Loader|Status|

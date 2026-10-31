@@ -1,40 +1,40 @@
 {
-	"schemaVersion": 1,
-	"id": "listmore",
-	"version": "${version}",
-	"name": "ListMore",
-	"description": "ListMore!",
-	"authors": [
-		"Fenad2"
-	],
-	"contact": {
-		"homepage": "https://github.com/Fenad2/ListMore",
-		"sources": "https://github.com/Fenad2/ListMore",
-		"issues": "https://github.com/Fenad2/ListMore/issues"
-	},
-	"license": "LGPL-3.0",
-	"icon": "assets/listmore/icon.png",
-	"environment": "client",
-	"entrypoints": {
-		"client": [
-			"com.listmore.ListMore"
-		],
-		"modmenu": [
-			"com.listmore.ListMoreModMenuApiImpl"
-		]
-	},
-	"mixins": [
-		"listmore.mixins.json"
-	],
-	"depends": {
-		"fabricloader": ">=${loader_version}",
-		"minecraft": "${minecraft_dependency}",
-		"java": ">=${java_version}",
-		"fabric-api": "*",
-		"malilib": "*"
-	},
-	"custom": {
-		"conditional-mixin": ">=0.2.0",
-		"modmenu:clientsideOnly": true
-	}
+  "schemaVersion": 1,
+  "id": "listmore",
+  "version": "${version}",
+  "name": "ListMore",
+  "description": "ListMore!",
+  "authors": [
+    "Fenad2"
+  ],
+  "contact": {
+    "homepage": "https://github.com/Fenad2/ListMore",
+    "sources": "https://github.com/Fenad2/ListMore",
+    "issues": "https://github.com/Fenad2/ListMore/issues"
+  },
+  "license": "LGPL-3.0",
+  "icon": "assets/listmore/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.listmore.ListMore"
+    ],
+    "modmenu": [
+      "com.listmore.ListMoreModMenuApiImpl"
+    ]
+  },
+  "mixins": [
+    "listmore.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "minecraft": "${minecraft_dependency}",
+    "java": ">=${java_version}",
+    "fabric-api": "*",
+    "malilib": "*"
+  },
+  "custom": {
+    "conditional-mixin": ">=0.2.0",
+    "modmenu:clientsideOnly": true
+  }
 }

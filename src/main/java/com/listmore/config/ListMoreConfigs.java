@@ -31,257 +31,264 @@ import fi.dy.masa.malilib.util.JsonUtils;
 //#endif
 
 public class ListMoreConfigs implements IConfigHandler {
-	private static final String LEGACY_CONFIG_FILE_NAME = "ohmylist.json";
-	private static final String CONFIG_FILE_NAME = ListMore.MOD_ID + ".json";
-	private static final String GENERIC_KEY = ListMore.MOD_ID + ".config.generic";
-	private static final ListMoreConfigs INSTANCE = new ListMoreConfigs();
+    private static final String LEGACY_CONFIG_FILE_NAME = "ohmylist.json";
+    private static final String CONFIG_FILE_NAME = ListMore.MOD_ID + ".json";
+    private static final String GENERIC_KEY = ListMore.MOD_ID + ".config.generic";
+    private static final ListMoreConfigs INSTANCE = new ListMoreConfigs();
 
-	public static class Generic {
-		public static final ConfigHotkey COPY_TARGET_ID = createCopyTargetId();
-		public static final ConfigBoolean ENTITY_HIGHLIGHT_OUTLINE_ENABLED = createEntityHighlightOutlineEnabled();
-		public static final ConfigStringList ENTITY_HIGHLIGHT_OUTLINE_LIST = createEntityHighlightOutlineList();
-		public static final ConfigColor ENTITY_HIGHLIGHT_OUTLINE_COLOR = createEntityHighlightOutlineColor();
-		public static final ConfigBoolean SOUND_SOURCE_HIGHLIGHT_ENABLED = createSoundSourceHighlightEnabled();
-		public static final ConfigInteger SOUND_SOURCE_HIGHLIGHT_DURATION_TICKS = createSoundSourceHighlightDurationTicks();
-		public static final ConfigColor SOUND_SOURCE_HIGHLIGHT_BLOCK_COLOR = createSoundSourceHighlightBlockColor();
-		public static final ConfigFloat SOUND_SOURCE_HIGHLIGHT_BLOCK_OPACITY = createSoundSourceHighlightBlockOpacity();
-		public static final ConfigBoolean ENTITY_RENDERING_BLACKLIST = createEntityRenderingBlacklist();
-		public static final ConfigStringList ENTITY_RENDERING_BLACKLIST_LIST = createEntityRenderingBlacklistList();
-		public static final ConfigInteger ENTITY_RENDERING_BLACKLIST_RANGE = createEntityRenderingBlacklistRange();
-		public static final ConfigBoolean INVALID_FURNACE_INPUT_HIGHLIGHTER = createInvalidFurnaceInputHighlighter();
-		public static final ConfigInteger INVALID_FURNACE_INPUT_HIGHLIGHTER_RANGE = createInvalidFurnaceInputHighlighterRange();
-		public static final ConfigBoolean TNT_EXPLOSION_PREVIEW = createTntExplosionPreview();
-		public static final ConfigOptionList TNT_EXPLOSION_PREVIEW_MODE = createTntExplosionPreviewMode();
-		public static final ConfigBoolean PROJECTILE_LANDING_PREDICTION = createProjectileLandingPrediction();
-		public static final ConfigBoolean SCHEMATIC_DYNAMIC_PREVIEW = createSchematicDynamicPreview();
-		public static final ConfigBoolean SINGLE_BLOCK_MINING = createSingleBlockMining();
-		public static final ConfigBoolean SINGLE_BLOCK_PLACEMENT = createSingleBlockPlacement();
+    public static class Generic {
+        public static final ConfigHotkey COPY_TARGET_ID = createCopyTargetId();
+        public static final ConfigBoolean ENTITY_HIGHLIGHT_OUTLINE_ENABLED = createEntityHighlightOutlineEnabled();
+        public static final ConfigStringList ENTITY_HIGHLIGHT_OUTLINE_LIST = createEntityHighlightOutlineList();
+        public static final ConfigColor ENTITY_HIGHLIGHT_OUTLINE_COLOR = createEntityHighlightOutlineColor();
+        public static final ConfigBoolean SOUND_SOURCE_HIGHLIGHT_ENABLED = createSoundSourceHighlightEnabled();
+        public static final ConfigInteger SOUND_SOURCE_HIGHLIGHT_DURATION_TICKS = createSoundSourceHighlightDurationTicks();
+        public static final ConfigColor SOUND_SOURCE_HIGHLIGHT_BLOCK_COLOR = createSoundSourceHighlightBlockColor();
+        public static final ConfigFloat SOUND_SOURCE_HIGHLIGHT_BLOCK_OPACITY = createSoundSourceHighlightBlockOpacity();
+        public static final ConfigBoolean ENTITY_RENDERING_BLACKLIST = createEntityRenderingBlacklist();
+        public static final ConfigStringList ENTITY_RENDERING_BLACKLIST_LIST = createEntityRenderingBlacklistList();
+        public static final ConfigInteger ENTITY_RENDERING_BLACKLIST_RANGE = createEntityRenderingBlacklistRange();
+        public static final ConfigBoolean INVALID_FURNACE_INPUT_HIGHLIGHTER = createInvalidFurnaceInputHighlighter();
+        public static final ConfigInteger INVALID_FURNACE_INPUT_HIGHLIGHTER_RANGE = createInvalidFurnaceInputHighlighterRange();
+        public static final ConfigBoolean TNT_EXPLOSION_PREVIEW = createTntExplosionPreview();
+        public static final ConfigOptionList TNT_EXPLOSION_PREVIEW_MODE = createTntExplosionPreviewMode();
+        public static final ConfigBoolean PROJECTILE_LANDING_PREDICTION = createProjectileLandingPrediction();
+        public static final ConfigBoolean SCHEMATIC_DYNAMIC_PREVIEW = createSchematicDynamicPreview();
+        public static final ConfigBoolean SINGLE_BLOCK_MINING = createSingleBlockMining();
+        public static final ConfigBoolean SINGLE_BLOCK_PLACEMENT = createSingleBlockPlacement();
+        public static final ConfigBoolean PLACEMENT_ASSIST = createPlacementAssist();
 
-		public static final ImmutableList<IConfigBase> GENERIC_OPTIONS = ImmutableList.of(
-			COPY_TARGET_ID,
-			ENTITY_HIGHLIGHT_OUTLINE_ENABLED,
-			ENTITY_HIGHLIGHT_OUTLINE_LIST,
-			ENTITY_HIGHLIGHT_OUTLINE_COLOR,
-			SOUND_SOURCE_HIGHLIGHT_ENABLED,
-			SOUND_SOURCE_HIGHLIGHT_DURATION_TICKS,
-			SOUND_SOURCE_HIGHLIGHT_BLOCK_COLOR,
-			SOUND_SOURCE_HIGHLIGHT_BLOCK_OPACITY,
-			ENTITY_RENDERING_BLACKLIST,
-			ENTITY_RENDERING_BLACKLIST_LIST,
-			ENTITY_RENDERING_BLACKLIST_RANGE,
-			INVALID_FURNACE_INPUT_HIGHLIGHTER,
-			INVALID_FURNACE_INPUT_HIGHLIGHTER_RANGE,
-			TNT_EXPLOSION_PREVIEW,
-			TNT_EXPLOSION_PREVIEW_MODE,
-			PROJECTILE_LANDING_PREDICTION,
-			SINGLE_BLOCK_MINING,
-			SINGLE_BLOCK_PLACEMENT
-		);
+        public static final ImmutableList<IConfigBase> GENERIC_OPTIONS = ImmutableList.of(
+                COPY_TARGET_ID,
+                ENTITY_HIGHLIGHT_OUTLINE_ENABLED,
+                ENTITY_HIGHLIGHT_OUTLINE_LIST,
+                ENTITY_HIGHLIGHT_OUTLINE_COLOR,
+                SOUND_SOURCE_HIGHLIGHT_ENABLED,
+                SOUND_SOURCE_HIGHLIGHT_DURATION_TICKS,
+                SOUND_SOURCE_HIGHLIGHT_BLOCK_COLOR,
+                SOUND_SOURCE_HIGHLIGHT_BLOCK_OPACITY,
+                ENTITY_RENDERING_BLACKLIST,
+                ENTITY_RENDERING_BLACKLIST_LIST,
+                ENTITY_RENDERING_BLACKLIST_RANGE,
+                INVALID_FURNACE_INPUT_HIGHLIGHTER,
+                INVALID_FURNACE_INPUT_HIGHLIGHTER_RANGE,
+                TNT_EXPLOSION_PREVIEW,
+                TNT_EXPLOSION_PREVIEW_MODE,
+                PROJECTILE_LANDING_PREDICTION,
+                SINGLE_BLOCK_MINING,
+                SINGLE_BLOCK_PLACEMENT,
+                PLACEMENT_ASSIST
+        );
 
-		public static final ImmutableList<IConfigBase> LITEMATICA_OPTIONS = ImmutableList.of(
-			SCHEMATIC_DYNAMIC_PREVIEW
-		);
+        public static final ImmutableList<IConfigBase> LITEMATICA_OPTIONS = ImmutableList.of(
+                SCHEMATIC_DYNAMIC_PREVIEW
+        );
 
-		public static final ImmutableList<IConfigBase> OPTIONS = ImmutableList.of(
-			COPY_TARGET_ID,
-			ENTITY_HIGHLIGHT_OUTLINE_ENABLED,
-			ENTITY_HIGHLIGHT_OUTLINE_LIST,
-			ENTITY_HIGHLIGHT_OUTLINE_COLOR,
-			SOUND_SOURCE_HIGHLIGHT_ENABLED,
-			SOUND_SOURCE_HIGHLIGHT_DURATION_TICKS,
-			SOUND_SOURCE_HIGHLIGHT_BLOCK_COLOR,
-			SOUND_SOURCE_HIGHLIGHT_BLOCK_OPACITY,
-			ENTITY_RENDERING_BLACKLIST,
-			ENTITY_RENDERING_BLACKLIST_LIST,
-			ENTITY_RENDERING_BLACKLIST_RANGE,
-			INVALID_FURNACE_INPUT_HIGHLIGHTER,
-			INVALID_FURNACE_INPUT_HIGHLIGHTER_RANGE,
-			TNT_EXPLOSION_PREVIEW,
-			TNT_EXPLOSION_PREVIEW_MODE,
-			PROJECTILE_LANDING_PREDICTION,
-			SCHEMATIC_DYNAMIC_PREVIEW,
-			SINGLE_BLOCK_MINING,
-			SINGLE_BLOCK_PLACEMENT
-		);
-	}
+        public static final ImmutableList<IConfigBase> OPTIONS = ImmutableList.of(
+                COPY_TARGET_ID,
+                ENTITY_HIGHLIGHT_OUTLINE_ENABLED,
+                ENTITY_HIGHLIGHT_OUTLINE_LIST,
+                ENTITY_HIGHLIGHT_OUTLINE_COLOR,
+                SOUND_SOURCE_HIGHLIGHT_ENABLED,
+                SOUND_SOURCE_HIGHLIGHT_DURATION_TICKS,
+                SOUND_SOURCE_HIGHLIGHT_BLOCK_COLOR,
+                SOUND_SOURCE_HIGHLIGHT_BLOCK_OPACITY,
+                ENTITY_RENDERING_BLACKLIST,
+                ENTITY_RENDERING_BLACKLIST_LIST,
+                ENTITY_RENDERING_BLACKLIST_RANGE,
+                INVALID_FURNACE_INPUT_HIGHLIGHTER,
+                INVALID_FURNACE_INPUT_HIGHLIGHTER_RANGE,
+                TNT_EXPLOSION_PREVIEW,
+                TNT_EXPLOSION_PREVIEW_MODE,
+                PROJECTILE_LANDING_PREDICTION,
+                SCHEMATIC_DYNAMIC_PREVIEW,
+                SINGLE_BLOCK_MINING,
+                SINGLE_BLOCK_PLACEMENT,
+                PLACEMENT_ASSIST
+        );
+    }
 
-	private static ConfigHotkey createCopyTargetId() {
-		return createConfig(new ConfigHotkey("copyTargetId", ""));
-	}
+    private static ConfigHotkey createCopyTargetId() {
+        return createConfig(new ConfigHotkey("copyTargetId", ""));
+    }
 
-	private static ConfigBoolean createEntityHighlightOutlineEnabled() {
-		return createConfig(new ConfigBoolean("entityHighlightOutlineEnabled", false));
-	}
+    private static ConfigBoolean createEntityHighlightOutlineEnabled() {
+        return createConfig(new ConfigBoolean("entityHighlightOutlineEnabled", false));
+    }
 
-	private static ConfigStringList createEntityHighlightOutlineList() {
-		ConfigStringList config = createConfig(new ConfigStringList("entityHighlightOutlineList", ImmutableList.of()), value -> {
-			ListEntryToggleConfig.refresh(value);
-			INSTANCE.save();
-		});
-		ListEntryToggleConfig.register(config, "entityHighlightOutline");
-		return config;
-	}
+    private static ConfigStringList createEntityHighlightOutlineList() {
+        ConfigStringList config = createConfig(new ConfigStringList("entityHighlightOutlineList", ImmutableList.of()), value -> {
+            ListEntryToggleConfig.refresh(value);
+            INSTANCE.save();
+        });
+        ListEntryToggleConfig.register(config, "entityHighlightOutline");
+        return config;
+    }
 
-	private static ConfigColor createEntityHighlightOutlineColor() {
-		return createConfig(new ConfigColor("entityHighlightOutlineColor", "#FFFFFFFF"));
-	}
+    private static ConfigColor createEntityHighlightOutlineColor() {
+        return createConfig(new ConfigColor("entityHighlightOutlineColor", "#FFFFFFFF"));
+    }
 
-	private static ConfigBoolean createSoundSourceHighlightEnabled() {
-		return createConfig(new ConfigBoolean("soundSourceHighlightEnabled", false));
-	}
+    private static ConfigBoolean createSoundSourceHighlightEnabled() {
+        return createConfig(new ConfigBoolean("soundSourceHighlightEnabled", false));
+    }
 
-	private static ConfigInteger createSoundSourceHighlightDurationTicks() {
-		return createConfig(new ConfigInteger("soundSourceHighlightDurationTicks", 10, 1, 100));
-	}
+    private static ConfigInteger createSoundSourceHighlightDurationTicks() {
+        return createConfig(new ConfigInteger("soundSourceHighlightDurationTicks", 10, 1, 100));
+    }
 
-	private static ConfigColor createSoundSourceHighlightBlockColor() {
-		return createConfig(new ConfigColor("soundSourceHighlightBlockColor", "#FFFFFFFF"));
-	}
+    private static ConfigColor createSoundSourceHighlightBlockColor() {
+        return createConfig(new ConfigColor("soundSourceHighlightBlockColor", "#FFFFFFFF"));
+    }
 
-	private static ConfigFloat createSoundSourceHighlightBlockOpacity() {
-		return createConfig(new ConfigFloat("soundSourceHighlightBlockOpacity", 0.1F, 0.0F, 1.0F));
-	}
+    private static ConfigFloat createSoundSourceHighlightBlockOpacity() {
+        return createConfig(new ConfigFloat("soundSourceHighlightBlockOpacity", 0.1F, 0.0F, 1.0F));
+    }
 
-	private static ConfigBoolean createEntityRenderingBlacklist() {
-		return createConfig(new ConfigBoolean("entityRenderingBlacklist", false));
-	}
+    private static ConfigBoolean createEntityRenderingBlacklist() {
+        return createConfig(new ConfigBoolean("entityRenderingBlacklist", false));
+    }
 
-	private static ConfigStringList createEntityRenderingBlacklistList() {
-		ConfigStringList config = createConfig(new ConfigStringList("entityRenderingBlacklistList", ImmutableList.of()), value -> {
-			ListEntryToggleConfig.refresh(value);
-			EntityRenderBlacklist.refreshBlockedEntityTypes(value.getStrings());
-			INSTANCE.save();
-		});
-		ListEntryToggleConfig.register(config, "entityRenderingBlacklistStates");
-		return config;
-	}
+    private static ConfigStringList createEntityRenderingBlacklistList() {
+        ConfigStringList config = createConfig(new ConfigStringList("entityRenderingBlacklistList", ImmutableList.of()), value -> {
+            ListEntryToggleConfig.refresh(value);
+            EntityRenderBlacklist.refreshBlockedEntityTypes(value.getStrings());
+            INSTANCE.save();
+        });
+        ListEntryToggleConfig.register(config, "entityRenderingBlacklistStates");
+        return config;
+    }
 
-	private static ConfigInteger createEntityRenderingBlacklistRange() {
-		return createConfig(new ConfigInteger("entityRenderingBlacklistRange", 0, 0, 256));
-	}
+    private static ConfigInteger createEntityRenderingBlacklistRange() {
+        return createConfig(new ConfigInteger("entityRenderingBlacklistRange", 0, 0, 256));
+    }
 
-	private static ConfigBoolean createInvalidFurnaceInputHighlighter() {
-		return createConfig(new ConfigBoolean("invalidFurnaceInputHighlighter", false));
-	}
+    private static ConfigBoolean createInvalidFurnaceInputHighlighter() {
+        return createConfig(new ConfigBoolean("invalidFurnaceInputHighlighter", false));
+    }
 
-	private static ConfigInteger createInvalidFurnaceInputHighlighterRange() {
-		return createConfig(new ConfigInteger("invalidFurnaceInputHighlighterRange", 1, 0, 8));
-	}
+    private static ConfigInteger createInvalidFurnaceInputHighlighterRange() {
+        return createConfig(new ConfigInteger("invalidFurnaceInputHighlighterRange", 1, 0, 8));
+    }
 
-	private static ConfigBoolean createTntExplosionPreview() {
-		return createConfig(new ConfigBoolean("tntExplosionPreview", false));
-	}
+    private static ConfigBoolean createTntExplosionPreview() {
+        return createConfig(new ConfigBoolean("tntExplosionPreview", false));
+    }
 
-	private static ConfigOptionList createTntExplosionPreviewMode() {
-		return createConfig(new ConfigOptionList("tntExplosionPreviewMode", TntExplosionPreviewMode.FULL));
-	}
+    private static ConfigOptionList createTntExplosionPreviewMode() {
+        return createConfig(new ConfigOptionList("tntExplosionPreviewMode", TntExplosionPreviewMode.FULL));
+    }
 
-	private static ConfigBoolean createProjectileLandingPrediction() {
-		return createConfig(new ConfigBoolean("projectileLandingPrediction", false));
-	}
+    private static ConfigBoolean createProjectileLandingPrediction() {
+        return createConfig(new ConfigBoolean("projectileLandingPrediction", false));
+    }
 
-	private static ConfigBoolean createSchematicDynamicPreview() {
-		return createConfig(new ConfigBoolean("schematicDynamicPreview", false));
-	}
+    private static ConfigBoolean createSchematicDynamicPreview() {
+        return createConfig(new ConfigBoolean("schematicDynamicPreview", false));
+    }
 
-	private static ConfigBoolean createSingleBlockMining() {
-		return createConfig(new ConfigBoolean("singleBlockMining", false));
-	}
+    private static ConfigBoolean createSingleBlockMining() {
+        return createConfig(new ConfigBoolean("singleBlockMining", false));
+    }
 
-	private static ConfigBoolean createSingleBlockPlacement() {
-		return createConfig(new ConfigBoolean("singleBlockPlacement", false));
-	}
+    private static ConfigBoolean createSingleBlockPlacement() {
+        return createConfig(new ConfigBoolean("singleBlockPlacement", false));
+    }
 
-	private static <T extends ConfigBase<T>> T createConfig(T config) {
-		return createConfig(config, value -> INSTANCE.save());
-	}
+    private static ConfigBoolean createPlacementAssist() {
+        return createConfig(new ConfigBoolean("placementAssist", false));
+    }
 
-	private static <T extends ConfigBase<T>> T createConfig(T config, IValueChangeCallback<T> callback) {
-		config.apply(GENERIC_KEY);
-		config.setValueChangeCallback(callback);
-		return config;
-	}
+    private static <T extends ConfigBase<T>> T createConfig(T config) {
+        return createConfig(config, value -> INSTANCE.save());
+    }
 
-	public static void init() {
-		ConfigManager.getInstance().registerConfigHandler(ListMore.MOD_ID, INSTANCE);
-	}
+    private static <T extends ConfigBase<T>> T createConfig(T config, IValueChangeCallback<T> callback) {
+        config.apply(GENERIC_KEY);
+        config.setValueChangeCallback(callback);
+        return config;
+    }
 
-	public static void loadFromFile() {
-		//#if MC>=26.1
-		//$$ Path configDirectory = FileUtils.getConfigDirectory();
-		//#else
-		Path configDirectory = FileUtils.getConfigDirectoryAsPath();
-		//#endif
-		migrateLegacyConfig(configDirectory);
-		Path configFile = configDirectory.resolve(CONFIG_FILE_NAME);
+    public static void init() {
+        ConfigManager.getInstance().registerConfigHandler(ListMore.MOD_ID, INSTANCE);
+    }
 
-		if (!Files.exists(configFile) || !Files.isReadable(configFile)) {
-			return;
-		}
+    public static void loadFromFile() {
+        //#if MC>=26.1
+        //$$ Path configDirectory = FileUtils.getConfigDirectory();
+        //#else
+        Path configDirectory = FileUtils.getConfigDirectoryAsPath();
+        //#endif
+        migrateLegacyConfig(configDirectory);
+        Path configFile = configDirectory.resolve(CONFIG_FILE_NAME);
 
-		//#if MC>=26.1
-		//$$ JsonElement element = JsonUtils.parseJsonFile(configFile);
-		//#else
-		JsonElement element = JsonUtils.parseJsonFileAsPath(configFile);
-		//#endif
-		if (element != null && element.isJsonObject()) {
-			JsonObject root = element.getAsJsonObject();
-			JsonElement genericElement = root.get("Generic");
-			if (genericElement != null && genericElement.isJsonObject()) {
-				ListEntryToggleConfig.read(genericElement.getAsJsonObject());
-			}
-			ConfigUtils.readConfigBase(root, "Generic", Generic.OPTIONS);
-		}
-	}
+        if (!Files.exists(configFile) || !Files.isReadable(configFile)) {
+            return;
+        }
 
-	private static void migrateLegacyConfig(Path configDirectory) {
-		Path configFile = configDirectory.resolve(CONFIG_FILE_NAME);
-		Path legacyConfigFile = configDirectory.resolve(LEGACY_CONFIG_FILE_NAME);
+        //#if MC>=26.1
+        //$$ JsonElement element = JsonUtils.parseJsonFile(configFile);
+        //#else
+        JsonElement element = JsonUtils.parseJsonFileAsPath(configFile);
+        //#endif
+        if (element != null && element.isJsonObject()) {
+            JsonObject root = element.getAsJsonObject();
+            JsonElement genericElement = root.get("Generic");
+            if (genericElement != null && genericElement.isJsonObject()) {
+                ListEntryToggleConfig.read(genericElement.getAsJsonObject());
+            }
+            ConfigUtils.readConfigBase(root, "Generic", Generic.OPTIONS);
+        }
+    }
 
-		if (Files.exists(configFile) || !Files.isRegularFile(legacyConfigFile)) {
-			return;
-		}
+    private static void migrateLegacyConfig(Path configDirectory) {
+        Path configFile = configDirectory.resolve(CONFIG_FILE_NAME);
+        Path legacyConfigFile = configDirectory.resolve(LEGACY_CONFIG_FILE_NAME);
 
-		try {
-			Files.copy(legacyConfigFile, configFile);
-		} catch (IOException exception) {
-			ListMore.LOGGER.warn("Failed to migrate legacy config file {}", legacyConfigFile, exception);
-		}
-	}
+        if (Files.exists(configFile) || !Files.isRegularFile(legacyConfigFile)) {
+            return;
+        }
 
-	public static void saveToFile() {
-		//#if MC>=26.1
-		//$$ Path dir = FileUtils.getConfigDirectory();
-		//#else
-		Path dir = FileUtils.getConfigDirectoryAsPath();
-		//#endif
-		if (!Files.exists(dir)) {
-			FileUtils.createDirectoriesIfMissing(dir);
-		}
+        try {
+            Files.copy(legacyConfigFile, configFile);
+        } catch (IOException exception) {
+            ListMore.LOGGER.warn("Failed to migrate legacy config file {}", legacyConfigFile, exception);
+        }
+    }
 
-		if (!Files.isDirectory(dir)) {
-			return;
-		}
+    public static void saveToFile() {
+        //#if MC>=26.1
+        //$$ Path dir = FileUtils.getConfigDirectory();
+        //#else
+        Path dir = FileUtils.getConfigDirectoryAsPath();
+        //#endif
+        if (!Files.exists(dir)) {
+            FileUtils.createDirectoriesIfMissing(dir);
+        }
 
-		JsonObject root = new JsonObject();
-		ConfigUtils.writeConfigBase(root, "Generic", Generic.OPTIONS);
-		ListEntryToggleConfig.write(root.getAsJsonObject("Generic"));
-		//#if MC>=26.1
-		//$$ JsonUtils.writeJsonToFile(root, dir.resolve(CONFIG_FILE_NAME));
-		//#else
-		JsonUtils.writeJsonToFileAsPath(root, dir.resolve(CONFIG_FILE_NAME));
-		//#endif
-	}
+        if (!Files.isDirectory(dir)) {
+            return;
+        }
 
-	@Override
-	public void load() {
-		loadFromFile();
-		ListEntryToggleConfig.refreshAll();
-		EntityRenderBlacklist.refreshBlockedEntityTypes();
-	}
+        JsonObject root = new JsonObject();
+        ConfigUtils.writeConfigBase(root, "Generic", Generic.OPTIONS);
+        ListEntryToggleConfig.write(root.getAsJsonObject("Generic"));
+        //#if MC>=26.1
+        //$$ JsonUtils.writeJsonToFile(root, dir.resolve(CONFIG_FILE_NAME));
+        //#else
+        JsonUtils.writeJsonToFileAsPath(root, dir.resolve(CONFIG_FILE_NAME));
+        //#endif
+    }
 
-	@Override
-	public void save() {
-		saveToFile();
-	}
+    @Override
+    public void load() {
+        loadFromFile();
+        ListEntryToggleConfig.refreshAll();
+        EntityRenderBlacklist.refreshBlockedEntityTypes();
+    }
+
+    @Override
+    public void save() {
+        saveToFile();
+    }
 }

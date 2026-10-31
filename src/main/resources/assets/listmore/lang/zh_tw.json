@@ -70,5 +70,8 @@
   "listmore.config.generic.comment.soundSourceHighlightBlockColor": "設定被凸顯方塊聲音源的邊框顏色",
   "listmore.config.generic.name.soundSourceHighlightBlockOpacity": "聲音源凸顯-方塊填充透明度",
   "listmore.config.generic.prettyName.soundSourceHighlightBlockOpacity": "聲音源方塊填充透明度",
-  "listmore.config.generic.comment.soundSourceHighlightBlockOpacity": "設定被凸顯方塊聲音源填充部分的透明度"
+  "listmore.config.generic.comment.soundSourceHighlightBlockOpacity": "設定被凸顯方塊聲音源填充部分的透明度",
+  "listmore.config.generic.name.placementAssist": "放置輔助",
+  "listmore.config.generic.prettyName.placementAssist": "放置輔助",
+  "listmore.config.generic.comment.placementAssist": "手持柵欄或玻璃板瞄準方塊側面上部或下部時，吸附到方塊上面或下面"
 }

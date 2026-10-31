@@ -22,46 +22,47 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Restriction(require = @Condition("litematica"))
 @Mixin(value = GuiSchematicBrowserBase.class, remap = false)
 public abstract class GuiSchematicBrowserBaseMixin {
-	@Shadow protected abstract ISelectionListener<DirectoryEntry> getSelectionListener();
+    @Shadow
+    protected abstract ISelectionListener<DirectoryEntry> getSelectionListener();
 
-	@Inject(method = "createListWidget(II)Lfi/dy/masa/litematica/gui/widgets/WidgetSchematicBrowser;",
-			at = @At("HEAD"), cancellable = true, remap = false)
-	private void listmore$createPreviewBrowser(int listX, int listY,
-			CallbackInfoReturnable<WidgetSchematicBrowser> cir) {
-		if (!ListMoreConfigs.Generic.SCHEMATIC_DYNAMIC_PREVIEW.getBooleanValue()) {
-			return;
-		}
-		try {
-			Class<?> browserClass = Class.forName("com.listmore.compat.litematica.schematic.browser.ListMoreSchematicBrowser");
-			Object browser = browserClass.getConstructor(int.class, int.class, int.class, int.class,
-					GuiSchematicBrowserBase.class, ISelectionListener.class)
-					.newInstance(listX, listY, 100, 100, (GuiSchematicBrowserBase) (Object) this,
-							this.getSelectionListener());
-			cir.setReturnValue((WidgetSchematicBrowser) browser);
-		} catch (ReflectiveOperationException ignored) {
-		}
-	}
+    @Inject(method = "createListWidget(II)Lfi/dy/masa/litematica/gui/widgets/WidgetSchematicBrowser;",
+            at = @At("HEAD"), cancellable = true, remap = false)
+    private void listmore$createPreviewBrowser(int listX, int listY,
+                                               CallbackInfoReturnable<WidgetSchematicBrowser> cir) {
+        if (!ListMoreConfigs.Generic.SCHEMATIC_DYNAMIC_PREVIEW.getBooleanValue()) {
+            return;
+        }
+        try {
+            Class<?> browserClass = Class.forName("com.listmore.compat.litematica.schematic.browser.ListMoreSchematicBrowser");
+            Object browser = browserClass.getConstructor(int.class, int.class, int.class, int.class,
+                            GuiSchematicBrowserBase.class, ISelectionListener.class)
+                    .newInstance(listX, listY, 100, 100, (GuiSchematicBrowserBase) (Object) this,
+                            this.getSelectionListener());
+            cir.setReturnValue((WidgetSchematicBrowser) browser);
+        } catch (ReflectiveOperationException ignored) {
+        }
+    }
 
-	//#if MC >= 1.21.11
-	//$$ public boolean onMouseDragged(MouseButtonEvent click, double dragX, double dragY) {
-	//$$ 	return this.listmore$getListWidget() instanceof com.listmore.compat.litematica.schematic.browser.ListMoreSchematicBrowser browser
-	//$$ 			&& browser.handlePreviewMouseDragged(click.x(), click.y(), click.input(), dragX, dragY);
-	//$$ }
-	//#endif
+    //#if MC >= 1.21.11
+    //$$ public boolean onMouseDragged(MouseButtonEvent click, double dragX, double dragY) {
+    //$$ 	return this.listmore$getListWidget() instanceof com.listmore.compat.litematica.schematic.browser.ListMoreSchematicBrowser browser
+    //$$ 			&& browser.handlePreviewMouseDragged(click.x(), click.y(), click.input(), dragX, dragY);
+    //$$ }
+    //#endif
 
-	//#if MC >= 1.21.10 && MC < 1.21.11
-	//$$ public boolean mouseDragged(MouseButtonEvent click, double dragX, double dragY) {
-	//$$ 	return this.listmore$getListWidget() instanceof com.listmore.compat.litematica.schematic.browser.ListMoreSchematicBrowser browser
-	//$$ 			&& browser.handlePreviewMouseDragged(click.x(), click.y(), click.input(), dragX, dragY);
-	//$$ }
-	//#elseif MC < 1.21.10
-	//$$ public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-	//$$ 	return this.listmore$getListWidget() instanceof com.listmore.compat.litematica.schematic.browser.ListMoreSchematicBrowser browser
-	//$$ 			&& browser.handlePreviewMouseDragged(mouseX, mouseY, button, dragX, dragY);
-	//$$ }
-	//#endif
+    //#if MC >= 1.21.10 && MC < 1.21.11
+    //$$ public boolean mouseDragged(MouseButtonEvent click, double dragX, double dragY) {
+    //$$ 	return this.listmore$getListWidget() instanceof com.listmore.compat.litematica.schematic.browser.ListMoreSchematicBrowser browser
+    //$$ 			&& browser.handlePreviewMouseDragged(click.x(), click.y(), click.input(), dragX, dragY);
+    //$$ }
+    //#elseif MC < 1.21.10
+    //$$ public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+    //$$ 	return this.listmore$getListWidget() instanceof com.listmore.compat.litematica.schematic.browser.ListMoreSchematicBrowser browser
+    //$$ 			&& browser.handlePreviewMouseDragged(mouseX, mouseY, button, dragX, dragY);
+    //$$ }
+    //#endif
 
-	private WidgetSchematicBrowser listmore$getListWidget() {
-		return (WidgetSchematicBrowser) ((GuiListBaseAccessor) this).listmore$getListWidget();
-	}
+    private WidgetSchematicBrowser listmore$getListWidget() {
+        return (WidgetSchematicBrowser) ((GuiListBaseAccessor) this).listmore$getListWidget();
+    }
 }

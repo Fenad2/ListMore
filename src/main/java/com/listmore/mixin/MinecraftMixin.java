@@ -18,42 +18,42 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Minecraft.class)
 public class MinecraftMixin {
-	@Shadow
-	public HitResult hitResult;
+    @Shadow
+    public HitResult hitResult;
 
-	@Shadow
-	public Options options;
+    @Shadow
+    public Options options;
 
-	@Inject(method = "startAttack", at = @At("HEAD"))
-	private void listmore$resetSingleBlockMining(CallbackInfoReturnable<Boolean> cir) {
-		SingleBlockMining.resetAttackCycle();
-	}
+    @Inject(method = "startAttack", at = @At("HEAD"))
+    private void listmore$resetSingleBlockMining(CallbackInfoReturnable<Boolean> cir) {
+        SingleBlockMining.resetAttackCycle();
+    }
 
-	@Inject(method = "continueAttack", at = @At("HEAD"), cancellable = true)
-	private void listmore$stopAfterSingleBlockMining(boolean leftClick, CallbackInfo ci) {
-		if (!leftClick) {
-			return;
-		}
+    @Inject(method = "continueAttack", at = @At("HEAD"), cancellable = true)
+    private void listmore$stopAfterSingleBlockMining(boolean leftClick, CallbackInfo ci) {
+        if (!leftClick) {
+            return;
+        }
 
-		if (!SingleBlockMining.isAttackCycleConsumed()) {
-			return;
-		}
+        if (!SingleBlockMining.isAttackCycleConsumed()) {
+            return;
+        }
 
-		if (this.hitResult != null && this.hitResult.getType() == HitResult.Type.BLOCK) {
-			((Minecraft) (Object) this).gameMode.stopDestroyBlock();
-			ci.cancel();
-		}
-	}
+        if (this.hitResult != null && this.hitResult.getType() == HitResult.Type.BLOCK) {
+            ((Minecraft) (Object) this).gameMode.stopDestroyBlock();
+            ci.cancel();
+        }
+    }
 
-	@Inject(method = "handleKeybinds", at = @At("HEAD"))
-	private void listmore$trackSingleBlockPlacement(CallbackInfo ci) {
-		SingleBlockPlacement.updateUseKeyState(this.options.keyUse.isDown());
-	}
+    @Inject(method = "handleKeybinds", at = @At("HEAD"))
+    private void listmore$trackSingleBlockPlacement(CallbackInfo ci) {
+        SingleBlockPlacement.updateUseKeyState(this.options.keyUse.isDown());
+    }
 
-	@Inject(method = "shouldEntityAppearGlowing", at = @At("RETURN"), cancellable = true)
-	private void listmore$entityHighlightOutline(Entity entity, CallbackInfoReturnable<Boolean> cir) {
-		if (!cir.getReturnValue() && EntityOutlineRenderer.shouldRender(entity)) {
-			cir.setReturnValue(true);
-		}
-	}
+    @Inject(method = "shouldEntityAppearGlowing", at = @At("RETURN"), cancellable = true)
+    private void listmore$entityHighlightOutline(Entity entity, CallbackInfoReturnable<Boolean> cir) {
+        if (!cir.getReturnValue() && EntityOutlineRenderer.shouldRender(entity)) {
+            cir.setReturnValue(true);
+        }
+    }
 }

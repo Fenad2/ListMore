@@ -24,59 +24,59 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(value = WidgetConfigOption.class, remap = false)
 public abstract class WidgetConfigOptionMixin extends WidgetConfigOptionBase<GuiConfigsBase.ConfigOptionWrapper> {
-	@Shadow
-	@Final
-	protected IKeybindConfigGui host;
+    @Shadow
+    @Final
+    protected IKeybindConfigGui host;
 
-	public WidgetConfigOptionMixin(
-		int x,
-		int y,
-		int width,
-		int height,
-		WidgetListConfigOptionsBase<?, ?> parent,
-		GuiConfigsBase.ConfigOptionWrapper entry,
-		int listIndex
-	) {
-		super(x, y, width, height, parent, entry, listIndex);
-	}
+    public WidgetConfigOptionMixin(
+            int x,
+            int y,
+            int width,
+            int height,
+            WidgetListConfigOptionsBase<?, ?> parent,
+            GuiConfigsBase.ConfigOptionWrapper entry,
+            int listIndex
+    ) {
+        super(x, y, width, height, parent, entry, listIndex);
+    }
 
-	@Shadow
-	protected abstract void addKeybindResetButton(int x, int y, IKeybind keybind, ConfigButtonKeybind buttonHotkey);
+    @Shadow
+    protected abstract void addKeybindResetButton(int x, int y, IKeybind keybind, ConfigButtonKeybind buttonHotkey);
 
-	@Inject(method = "addHotkeyConfigElements", at = @At("HEAD"), cancellable = true)
-	private void listmore$addCopyTargetIdTrigger(
-		int x,
-		int y,
-		int configWidth,
-		String configName,
-		IHotkey hotkey,
-		CallbackInfo ci
-	) {
-		if (hotkey != ListMoreConfigs.Generic.COPY_TARGET_ID) {
-			return;
-		}
+    @Inject(method = "addHotkeyConfigElements", at = @At("HEAD"), cancellable = true)
+    private void listmore$addCopyTargetIdTrigger(
+            int x,
+            int y,
+            int configWidth,
+            String configName,
+            IHotkey hotkey,
+            CallbackInfo ci
+    ) {
+        if (hotkey != ListMoreConfigs.Generic.COPY_TARGET_ID) {
+            return;
+        }
 
-		ButtonGeneric triggerButton = new ButtonGeneric(
-			x,
-			y,
-			-1,
-			20,
-			StringUtils.translate("listmore.gui.button.trigger")
-		);
-		int triggerButtonWidth = triggerButton.getWidth();
-		x += triggerButtonWidth + 2;
-		configWidth -= triggerButtonWidth + 2 + 22;
+        ButtonGeneric triggerButton = new ButtonGeneric(
+                x,
+                y,
+                -1,
+                20,
+                StringUtils.translate("listmore.gui.button.trigger")
+        );
+        int triggerButtonWidth = triggerButton.getWidth();
+        x += triggerButtonWidth + 2;
+        configWidth -= triggerButtonWidth + 2 + 22;
 
-		IKeybind keybind = hotkey.getKeybind();
-		ConfigButtonKeybind keybindButton = new ConfigButtonKeybind(x, y, configWidth, 20, keybind, this.host);
-		x += configWidth + 2;
+        IKeybind keybind = hotkey.getKeybind();
+        ConfigButtonKeybind keybindButton = new ConfigButtonKeybind(x, y, configWidth, 20, keybind, this.host);
+        x += configWidth + 2;
 
-		this.addWidget(new WidgetKeybindSettings(x, y, 20, 20, keybind, configName, this.parent, this.host.getDialogHandler()));
-		x += 22;
+        this.addWidget(new WidgetKeybindSettings(x, y, 20, 20, keybind, configName, this.parent, this.host.getDialogHandler()));
+        x += 22;
 
-		this.addButton(triggerButton, (button, mouseButton) -> CopyTargetIdFeature.copyTargetId());
-		this.addButton(keybindButton, this.host.getButtonPressListener());
-		this.addKeybindResetButton(x, y, keybind, keybindButton);
-		ci.cancel();
-	}
+        this.addButton(triggerButton, (button, mouseButton) -> CopyTargetIdFeature.copyTargetId());
+        this.addButton(keybindButton, this.host.getButtonPressListener());
+        this.addKeybindResetButton(x, y, keybind, keybindButton);
+        ci.cancel();
+    }
 }

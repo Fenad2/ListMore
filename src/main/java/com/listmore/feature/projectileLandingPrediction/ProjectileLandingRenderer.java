@@ -42,179 +42,180 @@ import net.minecraft.world.phys.Vec3;
 //$$ import org.joml.Vector4f;
 //#else
 import org.joml.Matrix4f;
+
 //#endif
 //弓、三叉戟、雪球、末影珍珠、鸡蛋。"弩"？
 public final class ProjectileLandingRenderer implements IRenderer {
-	private static final int MAX_TICKS = 200;
-	private static final double HIT_RADIUS = 0.1D;
-	private static final float HALF_SIZE = 0.125F;
-	private static final ProjectileLandingRenderer INSTANCE = new ProjectileLandingRenderer();
-	private LandingPoint pendingLanding;
+    private static final int MAX_TICKS = 200;
+    private static final double HIT_RADIUS = 0.1D;
+    private static final float HALF_SIZE = 0.125F;
+    private static final ProjectileLandingRenderer INSTANCE = new ProjectileLandingRenderer();
+    private LandingPoint pendingLanding;
 
-	private ProjectileLandingRenderer() {
-	}
+    private ProjectileLandingRenderer() {
+    }
 
-	public static ProjectileLandingRenderer getInstance() {
-		return INSTANCE;
-	}
+    public static ProjectileLandingRenderer getInstance() {
+        return INSTANCE;
+    }
 
-	//#if MC >= 26.1
-	//$$ @Override
-	//$$ public void onExtractWorldLast(DeltaTracker deltaTracker, Camera camera, float partialTicks, ProfilerFiller profiler) {
-	//$$ 	updateLanding();
-	//$$ }
-	//#else
-	@Override
-	public void onRenderWorldLastAdvanced(RenderTarget framebuffer, Matrix4f posMatrix, Matrix4f projMatrix,
-									Frustum frustum, Camera camera, RenderBuffers buffers, ProfilerFiller profiler) {
-		updateLanding();
-		if (this.pendingLanding != null) {
-			drawMarker(this.pendingLanding);
-		}
-	}
-	//#endif
+    //#if MC >= 26.1
+    //$$ @Override
+    //$$ public void onExtractWorldLast(DeltaTracker deltaTracker, Camera camera, float partialTicks, ProfilerFiller profiler) {
+    //$$ 	updateLanding();
+    //$$ }
+    //#else
+    @Override
+    public void onRenderWorldLastAdvanced(RenderTarget framebuffer, Matrix4f posMatrix, Matrix4f projMatrix,
+                                          Frustum frustum, Camera camera, RenderBuffers buffers, ProfilerFiller profiler) {
+        updateLanding();
+        if (this.pendingLanding != null) {
+            drawMarker(this.pendingLanding);
+        }
+    }
+    //#endif
 
-	//#if MC >= 26.3
-	//$$ @Override
-	//$$ public void onRenderWorldLast(RenderTarget framebuffer, CameraRenderState cameraState,
-	//$$ 								  Frustum culling, RenderBuffers buffers, GpuBufferSlice terrainFog,
-	//$$ 								  Vector4f fogColor, ProfilerFiller profiler) {
-	//$$ 	if (this.pendingLanding != null) {
-	//$$ 		drawMarker(this.pendingLanding);
-	//$$ 	}
-	//$$ }
-	//#elseif MC >= 26.1
-	//$$ @Override
-	//$$ public void onRenderWorldLast(RenderTarget framebuffer, Matrix4fc modelViewMatrix, CameraRenderState cameraState,
-	//$$ 								  Frustum culling, RenderBuffers buffers, GpuBufferSlice terrainFog,
-	//$$ 								  Vector4f fogColor, ProfilerFiller profiler) {
-	//$$ 	if (this.pendingLanding != null) {
-	//$$ 		drawMarker(this.pendingLanding);
-	//$$ 	}
-	//$$ }
-	//#endif
+    //#if MC >= 26.3
+    //$$ @Override
+    //$$ public void onRenderWorldLast(RenderTarget framebuffer, CameraRenderState cameraState,
+    //$$ 								  Frustum culling, RenderBuffers buffers, GpuBufferSlice terrainFog,
+    //$$ 								  Vector4f fogColor, ProfilerFiller profiler) {
+    //$$ 	if (this.pendingLanding != null) {
+    //$$ 		drawMarker(this.pendingLanding);
+    //$$ 	}
+    //$$ }
+    //#elseif MC >= 26.1
+    //$$ @Override
+    //$$ public void onRenderWorldLast(RenderTarget framebuffer, Matrix4fc modelViewMatrix, CameraRenderState cameraState,
+    //$$ 								  Frustum culling, RenderBuffers buffers, GpuBufferSlice terrainFog,
+    //$$ 								  Vector4f fogColor, ProfilerFiller profiler) {
+    //$$ 	if (this.pendingLanding != null) {
+    //$$ 		drawMarker(this.pendingLanding);
+    //$$ 	}
+    //$$ }
+    //#endif
 
-	private void updateLanding() {
-		Minecraft client = Minecraft.getInstance();
-		LocalPlayer player = client.player;
-		Level level = client.level;
-		if (player == null || level == null || !ListMoreConfigs.Generic.PROJECTILE_LANDING_PREDICTION.getBooleanValue()) {
-			this.pendingLanding = null;
-			return;
-		}
+    private void updateLanding() {
+        Minecraft client = Minecraft.getInstance();
+        LocalPlayer player = client.player;
+        Level level = client.level;
+        if (player == null || level == null || !ListMoreConfigs.Generic.PROJECTILE_LANDING_PREDICTION.getBooleanValue()) {
+            this.pendingLanding = null;
+            return;
+        }
 
-		//获取主手物品弹射物信息
-		ProjectileSpec spec = ProjectileSpec.from(player.getMainHandItem().getItem());
-		//如果为空或未蓄力则null
-		if (spec == null || (spec.requiresUse && !player.isUsingItem())) {
-			this.pendingLanding = null;
-			return;
-		}
-		if (spec.requiresUse && ProjectileSpec.from(player.getUseItem().getItem()) != spec) {
-			this.pendingLanding = null;
-			return;
-		}
+        //获取主手物品弹射物信息
+        ProjectileSpec spec = ProjectileSpec.from(player.getMainHandItem().getItem());
+        //如果为空或未蓄力则null
+        if (spec == null || (spec.requiresUse && !player.isUsingItem())) {
+            this.pendingLanding = null;
+            return;
+        }
+        if (spec.requiresUse && ProjectileSpec.from(player.getUseItem().getItem()) != spec) {
+            this.pendingLanding = null;
+            return;
+        }
 
-		double speed = spec.speed;
-		if (spec == ProjectileSpec.BOW) {
-			float pull = BowItem.getPowerForTime(player.getTicksUsingItem());
-			if (pull < 0.1F) {	// 力度太小，忽略
-				this.pendingLanding = null;
-				return;
-			}
-			speed *= pull;
-		}
+        double speed = spec.speed;
+        if (spec == ProjectileSpec.BOW) {
+            float pull = BowItem.getPowerForTime(player.getTicksUsingItem());
+            if (pull < 0.1F) {    // 力度太小，忽略
+                this.pendingLanding = null;
+                return;
+            }
+            speed *= pull;
+        }
 
-		this.pendingLanding = predict(player, level, spec, speed);
-	}
+        this.pendingLanding = predict(player, level, spec, speed);
+    }
 
-	private static LandingPoint predict(LocalPlayer player, Level level, ProjectileSpec spec, double speed) {
-		Vec3 current = player.getEyePosition().add(0.0D, -0.1D, 0.0D);
-		Vec3 velocity = player.getLookAngle().scale(speed);
+    private static LandingPoint predict(LocalPlayer player, Level level, ProjectileSpec spec, double speed) {
+        Vec3 current = player.getEyePosition().add(0.0D, -0.1D, 0.0D);
+        Vec3 velocity = player.getLookAngle().scale(speed);
 
-		for (int tick = 1; tick <= MAX_TICKS; tick++) {
-			Vec3 next = current.add(velocity);
-			HitResult blockHit = level.clip(new ClipContext(current, next, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-			EntityHit entityHit = findEntityHit(level, player, current, next);
+        for (int tick = 1; tick <= MAX_TICKS; tick++) {
+            Vec3 next = current.add(velocity);
+            HitResult blockHit = level.clip(new ClipContext(current, next, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+            EntityHit entityHit = findEntityHit(level, player, current, next);
 
-			// 取方块和实体中更近的碰撞点
-			double blockDistance = blockHit.getType() == HitResult.Type.MISS ? Double.MAX_VALUE : current.distanceToSqr(blockHit.getLocation());
-			if (entityHit != null && entityHit.distanceSquared < blockDistance) {
-				return new LandingPoint(entityHit.position, true);
-			}
-			if (blockDistance != Double.MAX_VALUE) {
-				return new LandingPoint(blockHit.getLocation(), false);
-			}
+            // 取方块和实体中更近的碰撞点
+            double blockDistance = blockHit.getType() == HitResult.Type.MISS ? Double.MAX_VALUE : current.distanceToSqr(blockHit.getLocation());
+            if (entityHit != null && entityHit.distanceSquared < blockDistance) {
+                return new LandingPoint(entityHit.position, true);
+            }
+            if (blockDistance != Double.MAX_VALUE) {
+                return new LandingPoint(blockHit.getLocation(), false);
+            }
 
-			current = next;
-			velocity = new Vec3(velocity.x * spec.drag, velocity.y * spec.drag - spec.gravity, velocity.z * spec.drag);
-			if (current.y < -64.0D || velocity.lengthSqr() < 0.0001D) {
-				return new LandingPoint(current, false);
-			}
-		}
-		return new LandingPoint(current, false);
-	}
+            current = next;
+            velocity = new Vec3(velocity.x * spec.drag, velocity.y * spec.drag - spec.gravity, velocity.z * spec.drag);
+            if (current.y < -64.0D || velocity.lengthSqr() < 0.0001D) {
+                return new LandingPoint(current, false);
+            }
+        }
+        return new LandingPoint(current, false);
+    }
 
-	private static EntityHit findEntityHit(Level level, LocalPlayer player, Vec3 start, Vec3 end) {
-		AABB searchBox = new AABB(start, end).inflate(HIT_RADIUS);
-		EntityHit closest = null;
-		for (Entity entity : level.getEntities(player, searchBox, entity -> entity.isAlive() && entity.isPickable())) {
-			// 检测射线是否穿过实体的碰撞箱
-			var hit = entity.getBoundingBox().inflate(HIT_RADIUS).clip(start, end);
-			if (hit.isEmpty()) {
-				continue;
-			}
-			double distance = start.distanceToSqr(hit.get());
-			if (closest == null || distance < closest.distanceSquared) {
-				closest = new EntityHit(hit.get(), distance);
-			}
-		}
-		return closest;
-	}
+    private static EntityHit findEntityHit(Level level, LocalPlayer player, Vec3 start, Vec3 end) {
+        AABB searchBox = new AABB(start, end).inflate(HIT_RADIUS);
+        EntityHit closest = null;
+        for (Entity entity : level.getEntities(player, searchBox, entity -> entity.isAlive() && entity.isPickable())) {
+            // 检测射线是否穿过实体的碰撞箱
+            var hit = entity.getBoundingBox().inflate(HIT_RADIUS).clip(start, end);
+            if (hit.isEmpty()) {
+                continue;
+            }
+            double distance = start.distanceToSqr(hit.get());
+            if (closest == null || distance < closest.distanceSquared) {
+                closest = new EntityHit(hit.get(), distance);
+            }
+        }
+        return closest;
+    }
 
-	private static void drawMarker(LandingPoint landing) {
-		Vec3 position = landing.position.subtract(WorldRenderUtils.getCameraPosition());
-		Color4f color = landing.hitEntity ? new Color4f(1.0F, 0.0F, 0.0F, 0.6F) : new Color4f(0.0F, 1.0F, 0.2F, 0.6F);
-		WorldRenderUtils.drawOutlinedBox(
-			"listmore:projectile_landing",
-			position,
-			HALF_SIZE,
-			color
-		);
-	}
+    private static void drawMarker(LandingPoint landing) {
+        Vec3 position = landing.position.subtract(WorldRenderUtils.getCameraPosition());
+        Color4f color = landing.hitEntity ? new Color4f(1.0F, 0.0F, 0.0F, 0.6F) : new Color4f(0.0F, 1.0F, 0.2F, 0.6F);
+        WorldRenderUtils.drawOutlinedBox(
+                "listmore:projectile_landing",
+                position,
+                HALF_SIZE,
+                color
+        );
+    }
 
-	private enum ProjectileSpec {
-		BOW(3.0D, 0.05D, 0.99D, true),
-		TRIDENT(2.5D, 0.05D, 0.99D, true),
-		SNOWBALL(1.5D, 0.03D, 0.99D, false),
-		ENDER_PEARL(1.5D, 0.03D, 0.99D, false),
-		EGG(1.5D, 0.03D, 0.99D, false);
+    private enum ProjectileSpec {
+        BOW(3.0D, 0.05D, 0.99D, true),
+        TRIDENT(2.5D, 0.05D, 0.99D, true),
+        SNOWBALL(1.5D, 0.03D, 0.99D, false),
+        ENDER_PEARL(1.5D, 0.03D, 0.99D, false),
+        EGG(1.5D, 0.03D, 0.99D, false);
 
-		private final double speed;
-		private final double gravity;
-		private final double drag;
-		private final boolean requiresUse;
+        private final double speed;
+        private final double gravity;
+        private final double drag;
+        private final boolean requiresUse;
 
-		ProjectileSpec(double speed, double gravity, double drag, boolean requiresUse) {
-			this.speed = speed;
-			this.gravity = gravity;
-			this.drag = drag;
-			this.requiresUse = requiresUse;
-		}
+        ProjectileSpec(double speed, double gravity, double drag, boolean requiresUse) {
+            this.speed = speed;
+            this.gravity = gravity;
+            this.drag = drag;
+            this.requiresUse = requiresUse;
+        }
 
-		private static ProjectileSpec from(Item item) {
-			if (item instanceof BowItem) return BOW;
-			if (item instanceof TridentItem) return TRIDENT;
-			if (item instanceof SnowballItem) return SNOWBALL;
-			if (item instanceof EnderpearlItem) return ENDER_PEARL;
-			if (item instanceof EggItem) return EGG;
-			return null;
-		}
-	}
+        private static ProjectileSpec from(Item item) {
+            if (item instanceof BowItem) return BOW;
+            if (item instanceof TridentItem) return TRIDENT;
+            if (item instanceof SnowballItem) return SNOWBALL;
+            if (item instanceof EnderpearlItem) return ENDER_PEARL;
+            if (item instanceof EggItem) return EGG;
+            return null;
+        }
+    }
 
-	private record LandingPoint(Vec3 position, boolean hitEntity) {
-	}
+    private record LandingPoint(Vec3 position, boolean hitEntity) {
+    }
 
-	private record EntityHit(Vec3 position, double distanceSquared) {
-	}
+    private record EntityHit(Vec3 position, double distanceSquared) {
+    }
 }

@@ -8,6 +8,6 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(EntityBoundSoundInstance.class)
 public interface EntityBoundSoundInstanceAccessor {
-	@Accessor("entity")
-	Entity listmore$getEntity();
+    @Accessor("entity")
+    Entity listmore$getEntity();
 }

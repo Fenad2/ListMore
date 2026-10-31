@@ -15,72 +15,72 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 
 public final class EntityRenderBlacklist {
-	private static Set<String> blockedEntityIds = Set.of();
+    private static Set<String> blockedEntityIds = Set.of();
 
-	private EntityRenderBlacklist() {
-	}
+    private EntityRenderBlacklist() {
+    }
 
-	// 判断是否应被跳过渲染
-	public static boolean shouldSkipRendering(Entity entity) {
-		if (entity == null || !ListMoreConfigs.Generic.ENTITY_RENDERING_BLACKLIST.getBooleanValue()) {
-			return false;
-		}
+    // 判断是否应被跳过渲染
+    public static boolean shouldSkipRendering(Entity entity) {
+        if (entity == null || !ListMoreConfigs.Generic.ENTITY_RENDERING_BLACKLIST.getBooleanValue()) {
+            return false;
+        }
 
-		String entityId = String.valueOf(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()));
-		if (!blockedEntityIds.contains(entityId)
-			|| !ListEntryToggleConfig.isEnabled(ListMoreConfigs.Generic.ENTITY_RENDERING_BLACKLIST_LIST, entityId)) {
-			return false;
-		}
+        String entityId = String.valueOf(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()));
+        if (!blockedEntityIds.contains(entityId)
+                || !ListEntryToggleConfig.isEnabled(ListMoreConfigs.Generic.ENTITY_RENDERING_BLACKLIST_LIST, entityId)) {
+            return false;
+        }
 
-		int range = ListMoreConfigs.Generic.ENTITY_RENDERING_BLACKLIST_RANGE.getIntegerValue();
-		if (range <= 0) {
-			return true;
-		}
+        int range = ListMoreConfigs.Generic.ENTITY_RENDERING_BLACKLIST_RANGE.getIntegerValue();
+        if (range <= 0) {
+            return true;
+        }
 
-		Minecraft client = Minecraft.getInstance();
-		if (client.level == null) {
-			return true;
-		}
+        Minecraft client = Minecraft.getInstance();
+        if (client.level == null) {
+            return true;
+        }
 
-		Vec3 cameraPosition = WorldRenderUtils.getCameraPosition();
-		return cameraPosition.distanceToSqr(entity.position()) > (double) range * range;
-	}
+        Vec3 cameraPosition = WorldRenderUtils.getCameraPosition();
+        return cameraPosition.distanceToSqr(entity.position()) > (double) range * range;
+    }
 
-	public static void refreshBlockedEntityTypes() {
-		refreshBlockedEntityTypes(ListMoreConfigs.Generic.ENTITY_RENDERING_BLACKLIST_LIST.getStrings());
-	}
+    public static void refreshBlockedEntityTypes() {
+        refreshBlockedEntityTypes(ListMoreConfigs.Generic.ENTITY_RENDERING_BLACKLIST_LIST.getStrings());
+    }
 
-	// 根据填写的实体 ID 列表刷新实体类型集合
-	public static void refreshBlockedEntityTypes(List<String> entries) {
-		Set<String> entityIds = new HashSet<>();
+    // 根据填写的实体 ID 列表刷新实体类型集合
+    public static void refreshBlockedEntityTypes(List<String> entries) {
+        Set<String> entityIds = new HashSet<>();
 
-		for (String entry : entries) {
-			String entityId = parseEntityId(entry);
-			if (entityId != null) {
-				entityIds.add(entityId);
-			}
-		}
+        for (String entry : entries) {
+            String entityId = parseEntityId(entry);
+            if (entityId != null) {
+                entityIds.add(entityId);
+            }
+        }
 
-		blockedEntityIds = Set.copyOf(entityIds);
-	}
+        blockedEntityIds = Set.copyOf(entityIds);
+    }
 
-	private static String parseEntityId(String entry) {
-		if (entry == null) {
-			return null;
-		}
+    private static String parseEntityId(String entry) {
+        if (entry == null) {
+            return null;
+        }
 
-		String entityIdText = entry.trim().toLowerCase(Locale.ROOT);
-		if (entityIdText.isEmpty()) {
-			return null;
-		}
+        String entityIdText = entry.trim().toLowerCase(Locale.ROOT);
+        if (entityIdText.isEmpty()) {
+            return null;
+        }
 
-		for (var entityType : BuiltInRegistries.ENTITY_TYPE) {
-			String entityId = String.valueOf(BuiltInRegistries.ENTITY_TYPE.getKey(entityType));
-			if (entityIdText.equals(entityId)) {
-				return entityId;
-			}
-		}
+        for (var entityType : BuiltInRegistries.ENTITY_TYPE) {
+            String entityId = String.valueOf(BuiltInRegistries.ENTITY_TYPE.getKey(entityType));
+            if (entityIdText.equals(entityId)) {
+                return entityId;
+            }
+        }
 
-		return null;
-	}
+        return null;
+    }
 }

@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 
 @Mixin(targets = "net.minecraft.client.gui.GuiGraphics$ScissorStack")
 public interface GuiGraphicsScissorStackAccessor {
-	@Invoker("peek")
-	ScreenRectangle listmore$peek();
+    @Invoker("peek")
+    ScreenRectangle listmore$peek();
 }
 //#endif
