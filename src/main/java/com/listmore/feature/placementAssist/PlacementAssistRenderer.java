@@ -58,7 +58,11 @@ import net.minecraft.util.RandomSource;
 //#endif
 import net.minecraft.core.BlockPos;
 //#if MC >= 26.1
+//$$ import net.minecraft.core.Direction;
 //$$ import net.minecraft.util.LightCoordsUtil;
+//$$ import net.minecraft.world.level.BlockGetter;
+//$$ import net.minecraft.world.level.block.Block;
+//$$ import net.minecraft.world.level.block.state.BlockState;
 //#endif
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.phys.Vec3;
@@ -74,10 +78,8 @@ import org.joml.Matrix4f;
 //#endif
 
 public final class PlacementAssistRenderer implements IRenderer {
-    // 幽灵方块的唯一透明度真值，两个渲染路径都从这里派生
     private static final float GHOST_ALPHA = 0.4F;
     //#if MC >= 26.1
-    //$$ // 26.x 的 quad 只接受打包颜色，这里由 GHOST_ALPHA 推导，避免再写一套透明度字面量
     //$$ private static final int GHOST_ALPHA_ARGB = (Math.round(GHOST_ALPHA * 255.0F) << 24) | 0x00FFFFFF;
     //#endif
     private static final PlacementAssistRenderer INSTANCE = new PlacementAssistRenderer();
@@ -161,7 +163,8 @@ public final class PlacementAssistRenderer implements IRenderer {
     //$$             offset.position(),
     //$$             offset.state(),
     //$$             renderState.scratchRandomSource(offset.state().getSeed(offset.position())),
-    //$$             direction -> false
+    //$$             direction -> shouldCullGhostFace(
+    //$$                     client.level, offset.state(), offset.position(), direction)
     //$$     );
     //$$     emitter.popTransform();
     //$$     Vec3 cameraPosition = camera.position();
@@ -173,6 +176,17 @@ public final class PlacementAssistRenderer implements IRenderer {
     //$$     );
     //$$     renderState.submit(poseStack, nodeStorage, LightCoordsUtil.pack(15, 15),
     //$$             OverlayTexture.NO_OVERLAY, 0);
+    //$$ }
+    //#endif
+
+    //#if MC >= 26.1
+    //$$ // 与旧版 renderBatched(checkSides = true) 对齐
+    //$$ private static boolean shouldCullGhostFace(BlockGetter level, BlockState state, BlockPos position,
+    //$$                                             Direction direction) {
+    //$$     if (direction == null) {
+    //$$         return false;
+    //$$     }
+    //$$     return !Block.shouldRenderFace(state, level.getBlockState(position.relative(direction)), direction);
     //$$ }
     //#endif
 
