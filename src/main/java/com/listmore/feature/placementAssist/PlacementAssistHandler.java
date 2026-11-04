@@ -22,7 +22,7 @@ import net.minecraft.world.phys.Vec3;
 
 public final class PlacementAssistHandler {
     private static final int MAX_EXTENSION_LENGTH = 64;
-    private static final double VERTICAL_ASSIST_EDGE = 4.0D / 16.0D;
+    private static final double VERTICAL_ASSIST_EDGE = 3.0D / 16.0D;
 
     private PlacementAssistHandler() {
     }

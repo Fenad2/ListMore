@@ -7,6 +7,7 @@ package com.listmore.feature.placementAssist;
 //#endif
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
+import net.fabricmc.loader.api.FabricLoader;
 //#if MC >= 26.1
 //$$ import com.mojang.blaze3d.vertex.PoseStack;
 //$$ import net.fabricmc.fabric.api.client.renderer.v1.mesh.QuadEmitter;
@@ -91,7 +92,14 @@ public final class PlacementAssistRenderer implements IRenderer {
         return INSTANCE;
     }
 
-    //#if MC >= 26.1
+    //#if MC >= 26.1 && MC < 26.2
+    //$$ @Override
+    //$$ public void onExtractWorldLast(DeltaTracker deltaTracker, Camera camera, float partialTicks, ProfilerFiller profiler) {
+    //$$     if (!usesCarpet26_1()) {
+    //$$         renderPreview(camera);
+    //$$     }
+    //$$ }
+    //#elseif MC >= 26.2
     //$$ @Override
     //$$ public void onExtractWorldLast(DeltaTracker deltaTracker, Camera camera, float partialTicks, ProfilerFiller profiler) {
     //$$     renderPreview(camera);
@@ -110,11 +118,34 @@ public final class PlacementAssistRenderer implements IRenderer {
     //$$                               Frustum culling, RenderBuffers buffers, GpuBufferSlice terrainFog,
     //$$                               Vector4f fogColor, ProfilerFiller profiler) {
     //$$ }
-    //#elseif MC >= 26.1
+    //#elseif MC >= 26.1 && MC < 26.2
     //$$ @Override
     //$$ public void onRenderWorldLast(RenderTarget framebuffer, Matrix4fc modelViewMatrix,
     //$$                               CameraRenderState cameraState, Frustum culling, RenderBuffers buffers,
     //$$                               GpuBufferSlice terrainFog, Vector4f fogColor, ProfilerFiller profiler) {
+    //$$     if (usesCarpet26_1()) {
+    //$$         Minecraft client = Minecraft.getInstance();
+    //$$         PlacementAssistHandler.PlacementOffset offset = PlacementAssistHandler.getOffset(client);
+    //$$         if (offset != null) {
+    //$$             renderBlockGhost(client, offset, cameraState.pos);
+    //$$             client.gameRenderer.getFeatureRenderDispatcher().renderAllFeatures();
+    //$$             buffers.bufferSource().endLastBatch();
+    //$$         }
+    //$$     }
+    //$$ }
+    //#elseif MC >= 26.2
+    //$$ @Override
+    //$$ public void onRenderWorldLast(RenderTarget framebuffer, Matrix4fc modelViewMatrix,
+    //$$                               CameraRenderState cameraState, Frustum culling, RenderBuffers buffers,
+    //$$                               GpuBufferSlice terrainFog, Vector4f fogColor, ProfilerFiller profiler) {
+    //$$ }
+    //#endif
+
+    //TODO: 这里是一处兼容性修复，因为carpet在26.1版本会在世界渲染流程中额外调用一次 FeatureRenderDispatcher.renderAllFeatures()，并立即结束缓冲区批次。
+    // 而在之后的版本则没有该问题;w;
+    //#if MC >= 26.1 && MC < 26.2
+    //$$ private static boolean usesCarpet26_1() {
+    //$$     return FabricLoader.getInstance().isModLoaded("carpet");
     //$$ }
     //#endif
 
@@ -144,6 +175,10 @@ public final class PlacementAssistRenderer implements IRenderer {
 
     //#if MC >= 26.1
     //$$ private static void renderBlockGhost(Minecraft client, PlacementAssistHandler.PlacementOffset offset, Camera camera) {
+    //$$     renderBlockGhost(client, offset, camera.position());
+    //$$ }
+    //$$
+    //$$ private static void renderBlockGhost(Minecraft client, PlacementAssistHandler.PlacementOffset offset, Vec3 cameraPosition) {
     //$$     if (client.level == null || offset.state().getRenderShape() != net.minecraft.world.level.block.RenderShape.MODEL) {
     //$$         return;
     //$$     }
@@ -167,7 +202,6 @@ public final class PlacementAssistRenderer implements IRenderer {
     //$$                     client.level, offset.state(), offset.position(), direction)
     //$$     );
     //$$     emitter.popTransform();
-    //$$     Vec3 cameraPosition = camera.position();
     //$$     PoseStack poseStack = new PoseStack();
     //$$     poseStack.translate(
     //$$             offset.position().getX() - cameraPosition.x,
