@@ -3,6 +3,7 @@ package com.listmore.mixin;
 import com.listmore.feature.singleBlockInteraction.SingleBlockMining;
 import com.listmore.feature.singleBlockInteraction.SingleBlockPlacement;
 import com.listmore.feature.placementAssist.PlacementAssistHandler;
+import com.listmore.feature.containerSignalPreview.ContainerSignalPreviewTracker;
 
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
@@ -29,6 +30,11 @@ public class MultiPlayerGameModeMixin {
     @Unique
     private boolean listmore$skipUseItemOnPacket;
 
+    @Inject(method = {"interact", "interactAt"}, at = @At("HEAD"))
+    private void listmore$clearContainerInteraction(CallbackInfoReturnable<InteractionResult> cir) {
+        ContainerSignalPreviewTracker.clearInteraction();
+    }
+
     @ModifyVariable(method = "useItemOn", at = @At("HEAD"), argsOnly = true)
     private BlockHitResult listmore$applyPlacementAssist(BlockHitResult hitResult, LocalPlayer player, InteractionHand hand) {
         if (player == null || player.level() == null) {
@@ -41,6 +47,7 @@ public class MultiPlayerGameModeMixin {
     private void listmore$beginSingleBlockPlacement(LocalPlayer player, InteractionHand hand,
                                                     BlockHitResult hitResult, CallbackInfoReturnable<InteractionResult> cir) {
         SingleBlockPlacement.beginBlockInteraction();
+        ContainerSignalPreviewTracker.rememberInteraction(hitResult.getBlockPos());
     }
 
     @Inject(method = "useItemOn", at = @At("RETURN"))

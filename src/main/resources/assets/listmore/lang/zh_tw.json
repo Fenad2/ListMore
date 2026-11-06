@@ -73,5 +73,8 @@
   "listmore.config.generic.comment.soundSourceHighlightBlockOpacity": "設定被凸顯方塊聲音源填充部分的透明度",
   "listmore.config.generic.name.placementAssist": "放置輔助",
   "listmore.config.generic.prettyName.placementAssist": "放置輔助",
-  "listmore.config.generic.comment.placementAssist": "手持柵欄或玻璃板瞄準方塊側面上部或下部時，吸附到方塊上面或下面"
+  "listmore.config.generic.comment.placementAssist": "手持柵欄或玻璃板等瞄準方塊側面上部或下部時，吸附到方塊上面或下面",
+  "listmore.config.generic.name.containerSignalPreview": "容器訊號預覽",
+  "listmore.config.generic.prettyName.containerSignalPreview": "容器訊號預覽",
+  "listmore.config.generic.comment.containerSignalPreview": "在開啟的方塊容器介面左上角顯示比較器訊號強度"
 }
