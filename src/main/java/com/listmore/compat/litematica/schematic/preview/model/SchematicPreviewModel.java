@@ -75,13 +75,8 @@ public final class SchematicPreviewModel {
             this.blockCount = count;
         }
 
-        //TODO: 删了
         public int sectionX() {
             return this.sectionX;
-        }
-
-        public int sectionY() {
-            return this.sectionY;
         }
 
         public int sectionZ() {
