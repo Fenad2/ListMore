@@ -44,6 +44,8 @@
 
 - **Placement Assist** -: When holding a fence or glass pane and other similar blocks and aiming at the upper or lower portion of a `block's side`, it snaps to the `top or bottom of the block`.
 
+- **Container Signal Preview**: Shows the container's current output signal strength as a number in real-time at the top-left corner.
+
 ## Supported Versions
 
 |Minecraft Version|Mod Loader|Status|

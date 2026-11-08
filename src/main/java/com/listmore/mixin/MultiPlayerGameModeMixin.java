@@ -3,6 +3,7 @@ package com.listmore.mixin;
 import com.listmore.feature.singleBlockInteraction.SingleBlockMining;
 import com.listmore.feature.singleBlockInteraction.SingleBlockPlacement;
 import com.listmore.feature.placementAssist.PlacementAssistHandler;
+import com.listmore.feature.containerSignalPreview.ContainerSignalPreviewTracker;
 
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
@@ -13,7 +14,6 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.phys.BlockHitResult;
 
 import org.spongepowered.asm.mixin.Mixin;
@@ -21,13 +21,19 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 
 @Mixin(MultiPlayerGameMode.class)
 public class MultiPlayerGameModeMixin {
     @Unique
     private boolean listmore$skipUseItemOnPacket;
+
+    @Inject(method = {"interact", "interactAt"}, at = @At("HEAD"))
+    private void listmore$clearContainerInteraction(CallbackInfoReturnable<InteractionResult> cir) {
+        ContainerSignalPreviewTracker.clearInteraction();
+    }
 
     @ModifyVariable(method = "useItemOn", at = @At("HEAD"), argsOnly = true)
     private BlockHitResult listmore$applyPlacementAssist(BlockHitResult hitResult, LocalPlayer player, InteractionHand hand) {
@@ -41,6 +47,7 @@ public class MultiPlayerGameModeMixin {
     private void listmore$beginSingleBlockPlacement(LocalPlayer player, InteractionHand hand,
                                                     BlockHitResult hitResult, CallbackInfoReturnable<InteractionResult> cir) {
         SingleBlockPlacement.beginBlockInteraction();
+        ContainerSignalPreviewTracker.rememberInteraction(hitResult.getBlockPos());
     }
 
     @Inject(method = "useItemOn", at = @At("RETURN"))
@@ -61,15 +68,15 @@ public class MultiPlayerGameModeMixin {
         }
     }
 
-    @Redirect(method = "startPrediction", at = @At(value = "INVOKE", target =
+    @WrapOperation(method = "startPrediction", at = @At(value = "INVOKE", target =
             "Lnet/minecraft/client/multiplayer/ClientPacketListener;send(Lnet/minecraft/network/protocol/Packet;)V"))
-    private void listmore$skipBlockedUseItemOnPacket(ClientPacketListener connection, Packet<?> packet) {
+    private void listmore$skipBlockedUseItemOnPacket(ClientPacketListener connection, Packet<?> packet,
+                                                     Operation<Void> original) {
         if (this.listmore$skipUseItemOnPacket) {
             this.listmore$skipUseItemOnPacket = false;
             return;
         }
-
-        connection.send(packet);
+        original.call(connection, packet);
     }
 
     @Inject(method = "destroyBlock", at = @At("RETURN"))

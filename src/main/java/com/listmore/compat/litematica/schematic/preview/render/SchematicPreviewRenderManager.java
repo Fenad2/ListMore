@@ -51,15 +51,8 @@ public final class SchematicPreviewRenderManager implements AutoCloseable {
         this.modelRevision++;
     }
 
-    // 通过反射加载版本专属的渲染后端
-    // 如果当前版本没有对应的 SchematicPreviewRenderer 类，回退到 null（GUI 占位预览）
+    // 创建当前版本的专属渲染后端
     private static SchematicPreviewRenderBackend createBackend() {
-        try {
-            Class<?> backendClass = Class.forName("com.listmore.compat.litematica.schematic.preview.render.SchematicPreviewRenderer");
-            return backendClass.asSubclass(SchematicPreviewRenderBackend.class).getConstructor().newInstance();
-        } catch (ReflectiveOperationException ignored) {
-            // 当前版本尚未提供专属后端时保留 GUI 占位预览
-            return null;
-        }
+        return new SchematicPreviewRenderer();
     }
 }

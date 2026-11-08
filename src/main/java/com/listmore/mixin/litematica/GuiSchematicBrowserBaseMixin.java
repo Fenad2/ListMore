@@ -32,15 +32,8 @@ public abstract class GuiSchematicBrowserBaseMixin {
         if (!ListMoreConfigs.Generic.SCHEMATIC_DYNAMIC_PREVIEW.getBooleanValue()) {
             return;
         }
-        try {
-            Class<?> browserClass = Class.forName("com.listmore.compat.litematica.schematic.browser.ListMoreSchematicBrowser");
-            Object browser = browserClass.getConstructor(int.class, int.class, int.class, int.class,
-                            GuiSchematicBrowserBase.class, ISelectionListener.class)
-                    .newInstance(listX, listY, 100, 100, (GuiSchematicBrowserBase) (Object) this,
-                            this.getSelectionListener());
-            cir.setReturnValue((WidgetSchematicBrowser) browser);
-        } catch (ReflectiveOperationException ignored) {
-        }
+        cir.setReturnValue(new com.listmore.compat.litematica.schematic.browser.ListMoreSchematicBrowser(
+                listX, listY, 100, 100, (GuiSchematicBrowserBase) (Object) this, this.getSelectionListener()));
     }
 
     //#if MC >= 1.21.11

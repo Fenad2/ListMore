@@ -73,5 +73,8 @@
   "listmore.config.generic.comment.soundSourceHighlightBlockOpacity": "Set the fill opacity of highlighted block sound sources",
   "listmore.config.generic.name.placementAssist": "Placement Assist",
   "listmore.config.generic.prettyName.placementAssist": "Placement Assist",
-  "listmore.config.generic.comment.placementAssist": "When aiming at the upper or lower part of a block's side while holding a fence or glass pane, it snaps to the top or bottom of the block."
+  "listmore.config.generic.comment.placementAssist": "When aiming at the upper or lower part of a block's side while holding a fence or glass pane, it snaps to the top or bottom of the block.",
+  "listmore.config.generic.name.containerSignalPreview": "Container Signal Preview",
+  "listmore.config.generic.prettyName.containerSignalPreview": "Container Signal Preview",
+  "listmore.config.generic.comment.containerSignalPreview": "Show the comparator signal strength of the open block container."
 }

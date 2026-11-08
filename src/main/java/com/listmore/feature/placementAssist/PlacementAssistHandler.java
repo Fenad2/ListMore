@@ -33,13 +33,7 @@ public final class PlacementAssistHandler {
             return hitResult;
         }
 
-        BlockPos supportingPosition = offset.position().relative(offset.direction().getOpposite());
-        Vec3 hitLocation = new Vec3(
-                supportingPosition.getX() + 0.5D + offset.direction().getStepX() * 0.5D,
-                supportingPosition.getY() + 0.5D + offset.direction().getStepY() * 0.5D,
-                supportingPosition.getZ() + 0.5D + offset.direction().getStepZ() * 0.5D
-        );
-        return new BlockHitResult(hitLocation, offset.direction(), supportingPosition, false);
+        return createPlacementHit(offset.position(), offset.direction());
     }
 
     public static boolean canAssist(Minecraft client) {
@@ -113,13 +107,7 @@ public final class PlacementAssistHandler {
             return null;
         }
 
-        BlockPos supportingPosition = position.relative(direction.getOpposite());
-        Vec3 placementHitLocation = new Vec3(
-                supportingPosition.getX() + 0.5D + direction.getStepX() * 0.5D,
-                supportingPosition.getY() + 0.5D + direction.getStepY() * 0.5D,
-                supportingPosition.getZ() + 0.5D + direction.getStepZ() * 0.5D
-        );
-        BlockHitResult placementHit = new BlockHitResult(placementHitLocation, direction, supportingPosition, false);
+        BlockHitResult placementHit = createPlacementHit(position, direction);
         InteractionHand hand = player.getMainHandItem() == stack ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
         BlockPlaceContext placementContext = new BlockPlaceContext(player, hand, stack, placementHit);
         BlockState placementState = block.getStateForPlacement(placementContext);
@@ -131,6 +119,16 @@ public final class PlacementAssistHandler {
         }
 
         return new PlacementOffset(position, direction, placementState);
+    }
+
+    private static BlockHitResult createPlacementHit(BlockPos position, Direction direction) {
+        BlockPos supportingPosition = position.relative(direction.getOpposite());
+        Vec3 hitLocation = new Vec3(
+                supportingPosition.getX() + 0.5D + direction.getStepX() * 0.5D,
+                supportingPosition.getY() + 0.5D + direction.getStepY() * 0.5D,
+                supportingPosition.getZ() + 0.5D + direction.getStepZ() * 0.5D
+        );
+        return new BlockHitResult(hitLocation, direction, supportingPosition, false);
     }
 
     private static Direction getVerticalAssistDirection(BlockPos clickedPosition, BlockHitResult hitResult) {

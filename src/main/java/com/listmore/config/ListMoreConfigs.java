@@ -57,6 +57,7 @@ public class ListMoreConfigs implements IConfigHandler {
         public static final ConfigBoolean SINGLE_BLOCK_MINING = createSingleBlockMining();
         public static final ConfigBoolean SINGLE_BLOCK_PLACEMENT = createSingleBlockPlacement();
         public static final ConfigBoolean PLACEMENT_ASSIST = createPlacementAssist();
+        public static final ConfigBoolean CONTAINER_SIGNAL_PREVIEW = createContainerSignalPreview();
 
         public static final ImmutableList<IConfigBase> GENERIC_OPTIONS = ImmutableList.of(
                 COPY_TARGET_ID,
@@ -77,35 +78,18 @@ public class ListMoreConfigs implements IConfigHandler {
                 PROJECTILE_LANDING_PREDICTION,
                 SINGLE_BLOCK_MINING,
                 SINGLE_BLOCK_PLACEMENT,
-                PLACEMENT_ASSIST
+                PLACEMENT_ASSIST,
+                CONTAINER_SIGNAL_PREVIEW
         );
 
         public static final ImmutableList<IConfigBase> LITEMATICA_OPTIONS = ImmutableList.of(
                 SCHEMATIC_DYNAMIC_PREVIEW
         );
 
-        public static final ImmutableList<IConfigBase> OPTIONS = ImmutableList.of(
-                COPY_TARGET_ID,
-                ENTITY_HIGHLIGHT_OUTLINE_ENABLED,
-                ENTITY_HIGHLIGHT_OUTLINE_LIST,
-                ENTITY_HIGHLIGHT_OUTLINE_COLOR,
-                SOUND_SOURCE_HIGHLIGHT_ENABLED,
-                SOUND_SOURCE_HIGHLIGHT_DURATION_TICKS,
-                SOUND_SOURCE_HIGHLIGHT_BLOCK_COLOR,
-                SOUND_SOURCE_HIGHLIGHT_BLOCK_OPACITY,
-                ENTITY_RENDERING_BLACKLIST,
-                ENTITY_RENDERING_BLACKLIST_LIST,
-                ENTITY_RENDERING_BLACKLIST_RANGE,
-                INVALID_FURNACE_INPUT_HIGHLIGHTER,
-                INVALID_FURNACE_INPUT_HIGHLIGHTER_RANGE,
-                TNT_EXPLOSION_PREVIEW,
-                TNT_EXPLOSION_PREVIEW_MODE,
-                PROJECTILE_LANDING_PREDICTION,
-                SCHEMATIC_DYNAMIC_PREVIEW,
-                SINGLE_BLOCK_MINING,
-                SINGLE_BLOCK_PLACEMENT,
-                PLACEMENT_ASSIST
-        );
+        public static final ImmutableList<IConfigBase> OPTIONS = ImmutableList.<IConfigBase>builder()
+                .addAll(GENERIC_OPTIONS)
+                .addAll(LITEMATICA_OPTIONS)
+                .build();
     }
 
     private static ConfigHotkey createCopyTargetId() {
@@ -197,6 +181,10 @@ public class ListMoreConfigs implements IConfigHandler {
 
     private static ConfigBoolean createPlacementAssist() {
         return createConfig(new ConfigBoolean("placementAssist", false));
+    }
+
+    private static ConfigBoolean createContainerSignalPreview() {
+        return createConfig(new ConfigBoolean("containerSignalPreview", false));
     }
 
     private static <T extends ConfigBase<T>> T createConfig(T config) {
