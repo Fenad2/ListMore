@@ -21,8 +21,9 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 
 @Mixin(MultiPlayerGameMode.class)
 public class MultiPlayerGameModeMixin {
@@ -67,15 +68,15 @@ public class MultiPlayerGameModeMixin {
         }
     }
 
-    @Redirect(method = "startPrediction", at = @At(value = "INVOKE", target =
+    @WrapOperation(method = "startPrediction", at = @At(value = "INVOKE", target =
             "Lnet/minecraft/client/multiplayer/ClientPacketListener;send(Lnet/minecraft/network/protocol/Packet;)V"))
-    private void listmore$skipBlockedUseItemOnPacket(ClientPacketListener connection, Packet<?> packet) {
+    private void listmore$skipBlockedUseItemOnPacket(ClientPacketListener connection, Packet<?> packet,
+                                                     Operation<Void> original) {
         if (this.listmore$skipUseItemOnPacket) {
             this.listmore$skipUseItemOnPacket = false;
             return;
         }
-
-        connection.send(packet);
+        original.call(connection, packet);
     }
 
     @Inject(method = "destroyBlock", at = @At("RETURN"))

@@ -81,6 +81,7 @@ dependencies {
 	autoImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	autoImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 	autoImplementation malilibCoordinate
+	include(autoImplementation("io.github.llamalad7:mixinextras-fabric:${project.mixinextras_version}"))
 	autoCompileOnly(project.litematica_version) {
 		exclude group: 'com.github.sakura-ryoko', module: 'malilib'
 	}

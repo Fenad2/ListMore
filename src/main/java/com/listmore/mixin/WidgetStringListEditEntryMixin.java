@@ -16,8 +16,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.Constant;
-import org.spongepowered.asm.mixin.injection.ModifyConstant;
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 
 import fi.dy.masa.malilib.util.StringUtils;
 
@@ -50,7 +49,7 @@ public abstract class WidgetStringListEditEntryMixin extends WidgetConfigOptionB
     @Shadow
     public abstract void applyNewValueToConfig();
 
-    @ModifyConstant(method = "<init>", constant = @Constant(intValue = 160))
+    @ModifyExpressionValue(method = "<init>", at = @At(value = "CONSTANT", args = "intValue=160"))
     private int listmore$makeRoomForToggleButton(int original) {
         return ListEntryToggleConfig.isRegistered(this.parent.getConfig())
                 ? original + TOGGLE_BUTTON_WIDTH + 2
