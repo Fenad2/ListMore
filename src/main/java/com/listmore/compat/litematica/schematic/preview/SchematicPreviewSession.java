@@ -140,7 +140,11 @@ public final class SchematicPreviewSession {
     }
 
     // clear() 保留渲染后端以便复用；close() 同时销毁后端持有的 GPU 资源
+    // onClose()/removed() 都可能触发
     public void close() {
+        if (this.closed) {
+            return;
+        }
         this.closed = true;
         this.generation.incrementAndGet();
         if (this.loadRequest != null) {

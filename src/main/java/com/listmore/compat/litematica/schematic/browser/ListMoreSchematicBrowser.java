@@ -2,6 +2,7 @@ package com.listmore.compat.litematica.schematic.browser;
 
 import java.util.Date;
 
+import com.listmore.ListMore;
 import com.listmore.compat.litematica.schematic.preview.SchematicPreviewSession;
 import com.listmore.compat.litematica.schematic.preview.gui.SchematicPreviewLayout;
 import com.listmore.compat.litematica.schematic.preview.gui.SchematicPreviewOverlay;
@@ -232,8 +233,24 @@ public final class ListMoreSchematicBrowser extends WidgetSchematicBrowser {
 
     @Override
     public void onClose() {
-        this.previewSession.close();
+        this.closePreviewSession();
         super.onClose();
+    }
+
+    // 界面销毁时由 GuiListBase.removed() 调用 widget.removed()
+    @Override
+    public void removed() {
+        this.closePreviewSession();
+        super.removed();
+    }
+
+    // 关闭预览会话
+    private void closePreviewSession() {
+        try {
+            this.previewSession.close();
+        } catch (Exception exception) {
+            ListMore.LOGGER.warn("Failed to release schematic preview resources", exception);
+        }
     }
 
     private static boolean isLitematic(@Nullable DirectoryEntry entry) {
