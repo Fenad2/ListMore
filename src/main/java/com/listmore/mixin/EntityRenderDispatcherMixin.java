@@ -20,6 +20,7 @@ public class EntityRenderDispatcherMixin {
             double x,
             double y,
             double z,
+            //26.3新增了float partialTicks这个形参。后续版本更新别漏改子版本覆盖内的覆盖类
             CallbackInfoReturnable<Boolean> cir
     ) {
         if (EntityRenderBlacklist.shouldSkipRendering(entity)) {
