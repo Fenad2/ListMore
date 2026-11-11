@@ -1,6 +1,7 @@
 {
   "required": true,
   "package": "com.listmore.mixin",
+  "plugin": "com.listmore.mixin.ListMoreMixinConfigPlugin",
   "compatibilityLevel": "JAVA_${java_version}",
   "client": [
     "MinecraftMixin",

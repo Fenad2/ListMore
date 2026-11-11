@@ -85,7 +85,7 @@ dependencies {
 	autoCompileOnly(project.litematica_version) {
 		exclude group: 'com.github.sakura-ryoko', module: 'malilib'
 	}
-	autoCompileOnly "me.fallenbreath:conditional-mixin-fabric:${project.conditionalmixin_version}"
+	include(implementation("me.fallenbreath:conditional-mixin-fabric:${project.conditionalmixin_version}"))
 
 	def modMenuVersion = project.findProperty('dependencies.api.modmenu_version')
 	if (modMenuVersion != null) {

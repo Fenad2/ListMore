@@ -31,10 +31,13 @@
     "minecraft": "${minecraft_dependency}",
     "java": ">=${java_version}",
     "fabric-api": "*",
-    "malilib": "*"
+    "malilib": "*",
+    "conditional-mixin": ">=0.6.4"
+  },
+  "suggests": {
+    "litematica": "*"
   },
   "custom": {
-    "conditional-mixin": ">=0.2.0",
     "mixinextras": ">=0.5.0",
     "modmenu:clientsideOnly": true
   }
