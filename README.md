@@ -65,7 +65,7 @@
 
 ## 问题反馈
 
-请在 [GitHub Issues](https://github.com/Fenad2/ListMore/issues) 提交问题与建议。源码位于 [Fenad2/ListMore](https://github.com/Fenad2/ListMore)。
+请在 [GitHub Issues](https://github.com/Fenad2/ListMore/issues) 提交问题与建议。
 
 ## 许可证
 

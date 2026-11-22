@@ -65,7 +65,7 @@
 
 ## Feedback
 
-Please report issues and suggestions via [GitHub Issues](https://github.com/Fenad2/ListMore/issues). The source code is available at [Fenad2/ListMore](https://github.com/Fenad2/ListMore).
+Please report issues and suggestions via [GitHub Issues](https://github.com/Fenad2/ListMore/issues).
 
 ## License
 
