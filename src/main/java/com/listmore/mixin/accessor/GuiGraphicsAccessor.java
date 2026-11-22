@@ -10,8 +10,8 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 @Mixin(GuiGraphics.class)
 public interface GuiGraphicsAccessor {
     @Accessor("scissorStack")
-    //TODO: Fix this
-    GuiGraphics.ScissorStack listmore$getScissorStack();
+    // TODO: 此处在 173bfb8 从 Object 改成了 GuiGraphics.ScissorStack ，我有点记不清为什么要这么改了。这里仍需要测试
+    Object listmore$getScissorStack();
 
     @Accessor("guiRenderState")
     GuiRenderState listmore$getGuiRenderState();

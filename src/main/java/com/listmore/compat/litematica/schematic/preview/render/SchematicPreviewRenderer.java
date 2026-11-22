@@ -152,6 +152,8 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
     private long nextBuildAttemptNanos;
     private int buildFailures;
     private long builtRevision = Long.MIN_VALUE;
+    private long meshBuildStartedNanos;
+    private boolean meshBuildCompleteLogged;
     private SchematicPreviewWorld world;
     private TextureTarget target;
     private final Map<ChunkSectionLayer, ByteBufferBuilder> sectionAllocators =
@@ -218,6 +220,12 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
             this.buildPendingSections(model);
             if (this.nextSection > previousSection) {
                 this.rebuildFailureLogged = false;
+            }
+            if (!this.meshBuildCompleteLogged && this.nextSection >= this.pendingSections.size()) {
+                this.meshBuildCompleteLogged = true;
+                ListMore.LOGGER.debug("Schematic preview meshes ready in {} ms ({} sections)",
+                        (System.nanoTime() - this.meshBuildStartedNanos) / 1_000_000.0,
+                        this.pendingSections.size());
             }
         } catch (Throwable throwable) {
             if (!this.rebuildFailureLogged) {
@@ -310,6 +318,8 @@ public final class SchematicPreviewRenderer implements SchematicPreviewRenderBac
         this.nextSection = 0;
         this.nextBuildAttemptNanos = 0L;
         this.buildFailures = 0;
+        this.meshBuildStartedNanos = System.nanoTime();
+        this.meshBuildCompleteLogged = false;
         if (this.world == null) {
             this.world = new SchematicPreviewWorld(Minecraft.getInstance());
         }

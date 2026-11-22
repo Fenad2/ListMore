@@ -41,7 +41,9 @@ public final class SchematicPreviewOverlay {
             boolean rendered = session.renderer().render(context, layout, session.transform(), session.model());
             if (session.renderer().hasFailure()) {
                 drawCentered(context, layout, StringUtils.translate("listmore.schematic_preview.failed"));
-            } else if (!rendered) {
+            } else if (rendered) {
+                session.previewRendered();
+            } else {
                 drawModelPlaceholder(context, layout, session.model().blockCount());
             }
         } else {

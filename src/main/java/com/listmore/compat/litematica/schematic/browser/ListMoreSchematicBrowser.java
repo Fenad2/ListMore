@@ -3,6 +3,7 @@ package com.listmore.compat.litematica.schematic.browser;
 import java.util.Date;
 
 import com.listmore.ListMore;
+import com.listmore.compat.litematica.schematic.preview.SchematicPreviewLoader.SchematicInfo;
 import com.listmore.compat.litematica.schematic.preview.SchematicPreviewSession;
 import com.listmore.compat.litematica.schematic.preview.gui.SchematicPreviewLayout;
 import com.listmore.compat.litematica.schematic.preview.gui.SchematicPreviewOverlay;
@@ -11,7 +12,6 @@ import org.jetbrains.annotations.Nullable;
 import fi.dy.masa.litematica.gui.GuiSchematicBrowserBase;
 import fi.dy.masa.litematica.gui.widgets.WidgetSchematicBrowser;
 import fi.dy.masa.litematica.schematic.LitematicaSchematic;
-import fi.dy.masa.litematica.schematic.SchematicMetadata;
 import fi.dy.masa.litematica.schematic.SchematicSchema;
 import fi.dy.masa.malilib.gui.interfaces.ISelectionListener;
 import fi.dy.masa.malilib.gui.widgets.WidgetFileBrowserBase.DirectoryEntry;
@@ -26,8 +26,6 @@ import fi.dy.masa.malilib.util.data.Schema;
 //#if MC >= 1.21.10
 //$$ import net.minecraft.client.input.MouseButtonEvent;
 //#endif
-import net.minecraft.core.Vec3i;
-import org.apache.commons.lang3.tuple.Pair;
 
 public final class ListMoreSchematicBrowser extends WidgetSchematicBrowser {
     private final SchematicPreviewSession previewSession = new SchematicPreviewSession();
@@ -76,57 +74,57 @@ public final class ListMoreSchematicBrowser extends WidgetSchematicBrowser {
             super.drawSelectedSchematicInfo(context, entry);
             return;
         }
-
-        Pair<SchematicSchema, SchematicMetadata> metaPair = this.getSchematicVersionAndMetadata(entry);
-        if (metaPair == null || metaPair.getRight() == null) {
-            this.previewLayout = null;
-            this.previewSession.clear();
-            super.drawSelectedSchematicInfo(context, entry);
-            return;
-        }
-
+        this.previewSession.setFile(entry.getFullPath());
+        this.previewSession.update();
+        SchematicInfo meta = this.previewSession.info();
         int x = this.posX + this.totalWidth - this.infoWidth;
         int y = this.posY;
         int height = Math.min(this.infoHeight, this.parent.getMaxInfoHeight());
         RenderUtils.drawOutlinedBox(context, x, y, this.infoWidth, height, 0xA0000000, COLOR_HORIZONTAL_BAR);
+        if (meta == null) {
+            this.previewLayout = null;
+            String statusKey = this.previewSession.hasFailure()
+                    ? "listmore.schematic_preview.failed" : "listmore.schematic_preview.loading";
+            this.drawString(context, StringUtils.translate(statusKey), x + 8,
+                    y + Math.max(8, height / 2 - 4), 0xFFB9C6D0);
+            return;
+        }
         x += 3;
         y += 3;
         int textColor = 0xC0C0C0C0;
         int valueColor = 0xFFFFFFFF;
-        SchematicMetadata meta = metaPair.getRight();
-        SchematicSchema version = metaPair.getLeft();
+        SchematicSchema version = meta.schema();
 
         this.drawString(context, StringUtils.translate("litematica.gui.label.schematic_info.name"), x, y, textColor);
         y += 12;
-        this.drawString(context, meta.getName(), x + 4, y, valueColor);
+        this.drawString(context, meta.name(), x + 4, y, valueColor);
         y += 12;
-        this.drawString(context, StringUtils.translate("litematica.gui.label.schematic_info.schematic_author", meta.getAuthor()), x, y, textColor);
+        this.drawString(context, StringUtils.translate("litematica.gui.label.schematic_info.schematic_author", meta.author()), x, y, textColor);
         y += 12;
-        this.drawString(context, StringUtils.translate("litematica.gui.label.schematic_info.time_created", DATE_FORMAT.format(new Date(meta.getTimeCreated()))), x, y, textColor);
+        this.drawString(context, StringUtils.translate("litematica.gui.label.schematic_info.time_created", DATE_FORMAT.format(new Date(meta.timeCreated()))), x, y, textColor);
         y += 12;
-        if (meta.hasBeenModified()) {
-            this.drawString(context, StringUtils.translate("litematica.gui.label.schematic_info.time_modified", DATE_FORMAT.format(new Date(meta.getTimeModified()))), x, y, textColor);
+        if (meta.modified()) {
+            this.drawString(context, StringUtils.translate("litematica.gui.label.schematic_info.time_modified", DATE_FORMAT.format(new Date(meta.timeModified()))), x, y, textColor);
             y += 12;
         }
-        this.drawString(context, StringUtils.translate("litematica.gui.label.schematic_info.region_count", meta.getRegionCount()), x, y, textColor);
+        this.drawString(context, StringUtils.translate("litematica.gui.label.schematic_info.region_count", meta.regionCount()), x, y, textColor);
         y += 12;
+        String size = String.format("%d x %d x %d", meta.sizeX(), meta.sizeY(), meta.sizeZ());
         if (this.parent.getScreenHeight() >= 340) {
-            this.drawString(context, StringUtils.translate("litematica.gui.label.schematic_info.total_volume", meta.getTotalVolume()), x, y, textColor);
+            this.drawString(context, StringUtils.translate("litematica.gui.label.schematic_info.total_volume", meta.totalVolume()), x, y, textColor);
             y += 12;
-            if (meta.getTotalBlocks() > 0) {
-                this.drawString(context, StringUtils.translate("litematica.gui.label.schematic_info.total_blocks", meta.getTotalBlocks()), x, y, textColor);
+            if (meta.totalBlocks() > 0) {
+                this.drawString(context, StringUtils.translate("litematica.gui.label.schematic_info.total_blocks", meta.totalBlocks()), x, y, textColor);
                 y += 12;
             }
             this.drawString(context, StringUtils.translate("litematica.gui.label.schematic_info.enclosing_size"), x, y, textColor);
             y += 12;
-            Vec3i areaSize = meta.getEnclosingSize();
-            this.drawString(context, String.format("%d x %d x %d", areaSize.getX(), areaSize.getY(), areaSize.getZ()), x + 4, y, valueColor);
+            this.drawString(context, size, x + 4, y, valueColor);
             y += 12;
         } else {
-            String size = String.format("%d x %d x %d", meta.getEnclosingSize().getX(), meta.getEnclosingSize().getY(), meta.getEnclosingSize().getZ());
-            String total = meta.getTotalBlocks() > 0
-                    ? StringUtils.translate("litematica.gui.label.schematic_info.total_blocks_and_volume", meta.getTotalBlocks(), meta.getTotalVolume())
-                    : StringUtils.translate("litematica.gui.label.schematic_info.total_volume", meta.getTotalVolume());
+            String total = meta.totalBlocks() > 0
+                    ? StringUtils.translate("litematica.gui.label.schematic_info.total_blocks_and_volume", meta.totalBlocks(), meta.totalVolume())
+                    : StringUtils.translate("litematica.gui.label.schematic_info.total_volume", meta.totalVolume());
             this.drawString(context, total, x, y, textColor);
             y += 12;
             this.drawString(context, StringUtils.translate("litematica.gui.label.schematic_info.enclosing_size_value", size), x, y, textColor);
@@ -143,16 +141,11 @@ public final class ListMoreSchematicBrowser extends WidgetSchematicBrowser {
                 y += 12;
             }
         }
-
         y += 12;
         int previewHeight = height - (y - this.posY) - 6;
         this.previewLayout = previewHeight >= 64 ? new SchematicPreviewLayout(x + 4, y, this.infoWidth - 10, previewHeight) : null;
         if (this.previewLayout != null) {
-            this.previewSession.setFile(entry.getFullPath());
-            this.previewSession.update();
             SchematicPreviewOverlay.draw(context, this.previewLayout, this.previewSession, this.lastMouseX, this.lastMouseY);
-        } else {
-            this.previewSession.clear();
         }
     }
 

@@ -1,38 +1,44 @@
 package com.listmore.compat.litematica.schematic.preview;
 
-import com.listmore.compat.litematica.schematic.preview.model.SchematicPreviewModel;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Objects;
-import java.util.concurrent.atomic.AtomicLong;
-
+import com.listmore.ListMore;
+import com.listmore.compat.litematica.schematic.preview.SchematicPreviewLoader.FileStamp;
 import com.listmore.compat.litematica.schematic.preview.SchematicPreviewLoader.LoadRequest;
+import com.listmore.compat.litematica.schematic.preview.SchematicPreviewLoader.SchematicInfo;
+import com.listmore.compat.litematica.schematic.preview.model.SchematicPreviewModel;
 import com.listmore.compat.litematica.schematic.preview.render.SchematicPreviewRenderManager;
 
-// 单个原理图浏览器的预览状态
+import java.nio.file.Path;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+
+// The GUI thread owns all session state and consumes only the currently selected futures.
 public final class SchematicPreviewSession {
-    private final AtomicLong generation = new AtomicLong();
+    private static final long FILE_CHECK_INTERVAL_NANOS = 1_000_000_000L;
     private final SchematicPreviewTransform transform = new SchematicPreviewTransform();
     private final SchematicPreviewRenderManager renderer = new SchematicPreviewRenderManager();
     private Path file;
     private FileStamp fileStamp;
+    private CompletableFuture<FileStamp> fileCheck;
     private long nextFileCheckNanos;
+    private long loadStartedNanos;
+    private boolean firstFrameReported;
     private LoadRequest loadRequest;
+    private SchematicInfo info;
     private SchematicPreviewModel model;
     private Throwable loadFailure;
-    // 后台加载线程写入，GUI绘制线程读取
-    private volatile LoadResult pendingResult;
     private boolean closed;
 
     public SchematicPreviewTransform transform() {
         return this.transform;
     }
 
-    // 返回当前浏览器专属的预览渲染器
     public SchematicPreviewRenderManager renderer() {
         return this.renderer;
+    }
+
+    public SchematicInfo info() {
+        return this.info;
     }
 
     public SchematicPreviewModel model() {
@@ -40,132 +46,146 @@ public final class SchematicPreviewSession {
     }
 
     public boolean isLoading() {
-        return this.loadRequest != null && !this.loadRequest.future().isDone();
+        return this.loadRequest != null || (this.info == null && this.fileCheck != null);
     }
 
     public boolean hasFailure() {
         return this.loadFailure != null;
     }
 
-    // 仅在文件路径或文件版本变化时启动新的加载任务
-    // generation 防止旧请求的结果覆盖新请求
     public void setFile(Path file) {
-        Path normalizedFile = file.toAbsolutePath().normalize();
         if (this.closed) {
             return;
         }
-        long now = System.nanoTime();
-        if (normalizedFile.equals(this.file) && now < this.nextFileCheckNanos) {
-            return;
+        Path normalizedFile = file.toAbsolutePath().normalize();
+        if (!normalizedFile.equals(this.file)) {
+            this.clear();
+            this.file = normalizedFile;
+            this.transform.reset();
+            this.startFileCheck(System.nanoTime());
         }
-        FileStamp stamp = FileStamp.read(normalizedFile);
-        this.nextFileCheckNanos = now + 1_000_000_000L;
-        if (normalizedFile.equals(this.file) && Objects.equals(stamp, this.fileStamp)) {
-            return;
-        }
-
-        // 重置所有状态，准备新文件加载
-        if (this.loadRequest != null) {
-            this.loadRequest.cancel();
-        }
-        this.file = normalizedFile;
-        this.fileStamp = stamp;
-        this.model = null;
-        this.renderer.clearModel();
-        this.loadFailure = null;
-        this.pendingResult = null;
-        this.transform.reset();
-        // 递增 generation 使旧请求的回调失效
-        long requestGeneration = this.generation.incrementAndGet();
-        LoadRequest request = SchematicPreviewLoader.load(normalizedFile);
-        this.loadRequest = request;
-        request.future().whenComplete((loaded, throwable) -> {
-            // 检查：未关闭 + generation 匹配 + 未被新任务替换
-            if (this.closed || requestGeneration != this.generation.get() || request != this.loadRequest) {
-                return;
-            }
-            this.pendingResult = new LoadResult(requestGeneration, loaded, throwable);
-        });
     }
 
-    // 预览区域暂时不可见时释放模型和网格，但保留可复用的渲染后端资源
     public void clear() {
-        if (this.file == null && this.model == null && this.loadRequest == null) {
+        if (this.file == null) {
             return;
         }
-        this.generation.incrementAndGet();
-        if (this.loadRequest != null) {
-            this.loadRequest.cancel();
+        if (this.fileCheck != null) {
+            this.fileCheck.cancel(false);
+            this.fileCheck = null;
         }
         this.file = null;
         this.fileStamp = null;
-        this.nextFileCheckNanos = 0L;
-        this.loadRequest = null;
-        this.pendingResult = null;
+        this.clearPreview();
+    }
+
+    private void clearPreview() {
+        this.releaseLoad();
+        this.info = null;
         this.model = null;
         this.loadFailure = null;
+        this.firstFrameReported = false;
         this.renderer.clearModel();
     }
 
-    // 在 GUI 绘制线程调用，消费后台加载线程写入的 pendingResult
-    // 检查 generation 确保只处理最新请求的结果，忽略已过期的加载任务
-    // 加载成功后将后台生成的模型提交给渲染器
     public void update() {
-        LoadResult result = this.pendingResult;
-        if (result == null || result.generation() != this.generation.get()) {
+        if (this.file == null || this.closed) {
             return;
         }
-
-        this.pendingResult = null;
-        if (this.loadRequest != null) {
-            this.loadRequest.cancel();
-            this.loadRequest = null;
+        if (this.fileCheck != null && this.fileCheck.isDone()) {
+            this.consumeFileCheck();
         }
-        if (result.throwable() != null) {
-            this.loadFailure = result.throwable();
+        long now = System.nanoTime();
+        if (this.fileCheck == null && now - this.nextFileCheckNanos >= 0) {
+            this.startFileCheck(now);
+        }
+        if (this.loadRequest == null) {
             return;
         }
-        if (result.model() == null) {
-            this.loadFailure = new IllegalStateException("Litematica returned no preview");
-            return;
-        }
-
         try {
-            // 加载成功 -> 提交模型给渲染器
-            this.model = result.model();
-            this.renderer.modelChanged();
-        } catch (Throwable throwable) {
-            this.loadFailure = throwable;
+            if (this.info == null) {
+                if (!this.loadRequest.infoFuture().isDone()) {
+                    return;
+                }
+                this.info = this.loadRequest.infoFuture().join();
+                ListMore.LOGGER.debug("Schematic preview info ready for {} after {} ms",
+                        this.file.getFileName(), this.elapsedMillis());
+            }
+            if (this.loadRequest.modelFuture().isDone()) {
+                this.model = this.loadRequest.modelFuture().join();
+                this.releaseLoad();
+                this.renderer.modelChanged();
+                ListMore.LOGGER.debug("Schematic preview model ready for {} after {} ms",
+                        this.file.getFileName(), this.elapsedMillis());
+            }
+        } catch (CompletionException | CancellationException exception) {
+            this.loadFailure = exception instanceof CompletionException ? exception.getCause() : exception;
+            this.releaseLoad();
+            ListMore.LOGGER.debug("Schematic preview load failed for {}", this.file.getFileName(), this.loadFailure);
         }
     }
 
-    // clear() 保留渲染后端以便复用；close() 同时销毁后端持有的 GPU 资源
-    // onClose()/removed() 都可能触发
+    private void startFileCheck(long now) {
+        this.nextFileCheckNanos = now + FILE_CHECK_INTERVAL_NANOS;
+        this.fileCheck = SchematicPreviewLoader.checkFile(this.file);
+        if (this.fileStamp == null) {
+            this.loadStartedNanos = now;
+        }
+    }
+
+    private void consumeFileCheck() {
+        CompletableFuture<FileStamp> check = this.fileCheck;
+        this.fileCheck = null;
+        FileStamp stamp;
+        try {
+            stamp = check.join();
+        } catch (CompletionException exception) {
+            if (this.fileStamp != null) {
+                this.clearPreview();
+                this.fileStamp = null;
+            }
+            this.loadFailure = exception.getCause();
+            return;
+        }
+        if (stamp.equals(this.fileStamp)) {
+            return;
+        }
+        if (this.fileStamp != null) {
+            this.clearPreview();
+            this.transform.reset();
+            this.loadStartedNanos = this.nextFileCheckNanos - FILE_CHECK_INTERVAL_NANOS;
+        }
+        this.fileStamp = stamp;
+        this.loadFailure = null;
+        this.loadRequest = SchematicPreviewLoader.load(this.file, stamp);
+    }
+
+    private void releaseLoad() {
+        if (this.loadRequest != null) {
+            this.loadRequest.release();
+            this.loadRequest = null;
+        }
+    }
+
+    public void previewRendered() {
+        if (this.firstFrameReported) {
+            return;
+        }
+        this.firstFrameReported = true;
+        ListMore.LOGGER.debug("Schematic preview first frame submitted for {} after {} ms",
+                this.file.getFileName(), this.elapsedMillis());
+    }
+
+    private double elapsedMillis() {
+        return (System.nanoTime() - this.loadStartedNanos) / 1_000_000.0;
+    }
+
     public void close() {
         if (this.closed) {
             return;
         }
+        this.clear();
         this.closed = true;
-        this.generation.incrementAndGet();
-        if (this.loadRequest != null) {
-            this.loadRequest.cancel();
-        }
-        this.loadRequest = null;
-        this.pendingResult = null;
-        this.model = null;
         this.renderer.close();
-    }
-
-    private record LoadResult(long generation, SchematicPreviewModel model, Throwable throwable) {
-    }
-
-    private record FileStamp(long modifiedTime, long size) {
-        private static FileStamp read(Path file) {
-            try {
-                return new FileStamp(Files.getLastModifiedTime(file).toMillis(), Files.size(file));
-            } catch (IOException ignored) {
-                return null;
-            }
-        }
     }
 }
